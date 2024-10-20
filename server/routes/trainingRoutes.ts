@@ -7,9 +7,9 @@ const router = express.Router()
 
 // Генерация тренировочной программы
 router.post('/generate', async (req, res) => {
-    const { gender, muscleGroup, mainMuscle, complexNumber } = req.body
+    const { gender, muscleGroup, mainMuscle } = req.body
 
-    if (!gender || !muscleGroup || !mainMuscle || !complexNumber) {
+    if (!gender || !muscleGroup || !mainMuscle ) {
         return res.status(400).json({ message: 'Недостаточно данных для генерации тренировки' })
     }
 
@@ -19,7 +19,6 @@ router.post('/generate', async (req, res) => {
             gender,
             muscleGroup,
             mainMuscle,
-            complexNumber,
         })
 
         if (!selectedPattern) {
