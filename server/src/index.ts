@@ -95,7 +95,7 @@ app.get('/api/patterns', async (req: Request, res: Response) => {
 
 // Тестовый маршрут
 app.get('/', (req: Request, res: Response) => {
-    res.send('Привет, TypeScript с Express!')
+    res.send('Привет, я сервер на TypeScript с Express!')
 })
 
 app.listen(port, () => {

@@ -10,7 +10,7 @@ export interface IPattern extends Document {
     gender: string
     muscleGroup: string
     mainMuscle: string
-    complexNumber: number
+    complexNumber: string
     exercises: PatternExercise[]
 }
 
@@ -23,7 +23,7 @@ const PatternSchema: Schema = new Schema({
     gender: { type: String, required: true },
     muscleGroup: { type: String, required: true },
     mainMuscle: { type: String, required: true },
-    complexNumber: { type: Number, required: true },
+    complexNumber: { type: String, required: true },
     exercises: { type: [PatternExerciseSchema], required: true },
 })
 

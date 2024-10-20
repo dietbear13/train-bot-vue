@@ -21,35 +21,28 @@
           :disabled="!muscleGroup"
       ></v-select>
 
-      <!-- Выбор комплекса -->
-      <v-select
-          v-model="complexNumber"
-          :items="complexes"
-          label="Комплекс"
-          required
-          :disabled="!muscleSubgroup"
-      ></v-select>
+      <!-- Отображение результатов тренировки -->
+      <div v-if="workoutResults.length">
+        <h2>Результаты тренировки:</h2>
+        <div v-for="(exercise, index) in workoutResults" :key="index">
+          {{ exercise.name }} — {{ exercise.sets }}×{{ exercise.reps }}
+        </div>
+        <!-- Кнопка для отправки тренировки -->
+        <v-btn @click="sendWorkout" :disabled="!workoutResults.length || !telegramUserId">
+          Отправить сообщением
+        </v-btn>
+      </div>
+
 
       <!-- Кнопка для генерации тренировки -->
       <v-btn type="submit">Сгенерировать тренировку</v-btn>
     </v-form>
 
-    <!-- Отображение результатов тренировки -->
-    <div v-if="workoutResults.length">
-      <h2>Результаты тренировки:</h2>
-      <div v-for="(exercise, index) in workoutResults" :key="index">
-        {{ exercise.name }} — {{ exercise.sets }}×{{ exercise.reps }}
-      </div>
-      <!-- Кнопка для отправки тренировки -->
-      <v-btn @click="sendWorkout" :disabled="!workoutResults.length || !telegramUserId">
-        Отправить сообщением
-      </v-btn>
-    </div>
   </v-container>
 </template>
 
 <script lang="ts">
-import { defineComponent, inject, ref, onMounted, watch } from 'vue'
+import { defineComponent, ref, onMounted, watch } from 'vue'
 import axios from 'axios'
 
 // Интерфейсы
@@ -80,7 +73,7 @@ interface Pattern {
   gender: string
   muscleGroup: string
   mainMuscle: string
-  complexNumber: number
+  complexNumber: string
   exercises: PatternExercise[]
 }
 
@@ -96,6 +89,15 @@ interface TelegramUserData {
   last_name?: string
   username?: string
   language_code?: string
+}
+
+interface RepetitionLevels {
+  maleRepsLight: string
+  maleRepsMedium: string
+  maleRepsHeavy: string
+  femaleRepsLight: string
+  femaleRepsMedium: string
+  femaleRepsHeavy: string
 }
 
 import { retrieveLaunchParams  } from '@telegram-apps/sdk';
@@ -128,17 +130,15 @@ export default defineComponent({
       });
     }
 
-    // Определяем реактивные данные
     const gender = ref<string | null>(null)
     const muscleGroup = ref<string | null>(null)
     const muscleSubgroup = ref<string | null>(null)
-    const complexNumber = ref<number | null>(null)
+    const complexNumber = ref<string | null>(null)
 
     const genders = ['Мужчина', 'Женщина']
     const muscleGroups = ref<string[]>([])
     const muscleSubgroups = ref<string[]>([])
-    const complexes = ref<number[]>([])
-
+    const complexes = ref<string[]>([])
     const workoutResults = ref<WorkoutResult[]>([])
 
     const exercises = ref<Exercise[]>([])
@@ -156,12 +156,15 @@ export default defineComponent({
 
     const loadPatterns = async () => {
       try {
-        const response = await axios.get<Pattern[]>('http://localhost:3002/api/patterns')
-        patterns.value = response.data
+        const response = await axios.get<Pattern[]>('http://localhost:3002/api/patterns');
+        patterns.value = response.data;
+
+        // Отладочный вывод загруженных паттернов
+        console.log('Загруженные паттерны:', patterns.value);
       } catch (error: any) {
-        console.error('Ошибка при загрузке паттернов:', error.message)
+        console.error('Ошибка при загрузке паттернов:', error.message);
       }
-    }
+    };
 
     const populateMuscleGroups = () => {
       const groups = new Set(exercises.value.map((e) => e.category))
@@ -179,23 +182,56 @@ export default defineComponent({
       muscleSubgroups.value = Array.from(subgroups)
     }
 
+
     const populateComplexes = () => {
       if (!muscleSubgroup.value || !gender.value) {
-        complexes.value = []
-        return
+        complexes.value = [];
+        return;
       }
-      const availableComplexes = new Set(
-          patterns.value
-              .filter(
-                  (p) =>
-                      p.gender === gender.value &&
-                      p.muscleGroup === muscleGroup.value &&
-                      p.mainMuscle === muscleSubgroup.value
-              )
-              .map((p) => p.complexNumber)
-      )
-      complexes.value = Array.from(availableComplexes)
-    }
+
+      // Отладочный вывод значений перед фильтрацией
+      console.log('Gender:', gender.value);
+      console.log('Muscle Group:', muscleGroup.value);
+      console.log('Muscle Subgroup:', muscleSubgroup.value);
+
+      const availableComplexes = patterns.value.filter(
+          (p) =>
+              p.gender === gender.value &&
+              p.muscleGroup === muscleGroup.value &&
+              p.mainMuscle === muscleSubgroup.value
+      );
+
+      // Проверяем, есть ли complexNumber у паттернов
+      availableComplexes.forEach((pattern) => {
+        console.log('Паттерн:', pattern);
+        console.log('complexNumber у паттерна:', pattern.complexNumber);
+      });
+
+      // Проверяем, чтобы complexNumber не был undefined
+      complexes.value = availableComplexes.map((p) => p.complexNumber);
+      console.log('Доступные комплексы после фильтрации:', complexes.value);
+    };
+
+
+    const capitalize = (str: string): string => {
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    };
+
+    const levelMapping: { [key: string]: string } = {
+      'легкая': 'Light',
+      'средняя': 'Medium',
+      'тяжелая': 'Heavy',
+    };
+
+    const getRepsOptions = (exercise: Exercise, repetitionLevel: string, gender: string): string => {
+      // Преобразуем русское значение уровня сложности в английское
+      const mappedLevel = levelMapping[repetitionLevel.toLowerCase()] || repetitionLevel;
+      const repsKey = `${gender === 'Мужчина' ? 'male' : 'female'}Reps${capitalize(mappedLevel)}` as keyof RepetitionLevels;
+
+      console.log('+!! repsKey', repsKey);
+
+      return (exercise as RepetitionLevels)[repsKey];
+    };
 
     const getSets = (reps: number): number => {
       if (reps >= 15) return 3
@@ -204,76 +240,82 @@ export default defineComponent({
     }
 
     const generateWorkout = () => {
-      if (!gender.value || !muscleGroup.value || !muscleSubgroup.value || !complexNumber.value) {
-        return
+      if (!gender.value || !muscleGroup.value || !muscleSubgroup.value) {
+        console.error('Необходимо указать все параметры для генерации тренировки');
+        return;
       }
 
-      const selectedPattern = patterns.value.find(
+      // Фильтруем паттерны на основе выбранного пола, мышечной группы и подгруппы
+      const filteredPatterns = patterns.value.filter(
           (p) =>
               p.gender === gender.value &&
               p.muscleGroup === muscleGroup.value &&
-              p.mainMuscle === muscleSubgroup.value &&
-              p.complexNumber === complexNumber.value
-      )
+              p.mainMuscle === muscleSubgroup.value
+      );
 
-      if (!selectedPattern) {
-        console.error('Паттерн не найден')
-        return
+      // Проверяем, есть ли подходящие паттерны
+      if (filteredPatterns.length === 0) {
+        console.error('Подходящий паттерн не найден');
+        return;
       }
 
-      const workout: WorkoutResult[] = []
-      const usedExerciseIds = new Set<string>()
+      // Выбираем случайный паттерн из доступных
+      const selectedPattern = filteredPatterns[Math.floor(Math.random() * filteredPatterns.length)];
 
+      // Выводим содержимое поля `exercises` для отладки
+      console.log('Выбранный паттерн:', selectedPattern);
+      console.log('Exercises из паттерна:', selectedPattern.exercises);
+
+      const workout: WorkoutResult[] = [];
+      const usedExerciseIds = new Set<string>();
+
+      // Обрабатываем упражнения из паттерна
       for (const patternExercise of selectedPattern.exercises) {
+        // Ищем упражнения по уровню сложности и подгруппе мышц
         const matchingExercises = exercises.value.filter(
             (e) =>
                 e.subcategory === muscleSubgroup.value &&
                 e.difficultyLevel === patternExercise.exerciseLevel &&
-                !usedExerciseIds.has(e._id)
-        )
+                !usedExerciseIds.has(e._id) // Убедиться, что упражнение не было уже использовано
+        );
+
+        console.log('+ Подбор упражнений по паттерну matchingExercises', matchingExercises)
 
         if (matchingExercises.length === 0) {
-          console.warn('Нет доступных упражнений для заданных критериев')
-          continue
+          console.warn('Нет доступных упражнений для заданных критериев');
+          continue;
         }
 
-        const selectedExercise =
-            matchingExercises[Math.floor(Math.random() * matchingExercises.length)]
+        // Выбираем случайное упражнение из доступных
+        const selectedExercise = matchingExercises[Math.floor(Math.random() * matchingExercises.length)];
+        usedExerciseIds.add(selectedExercise._id);
 
-        usedExerciseIds.add(selectedExercise._id)
+        console.log('+1 selectedExercise', selectedExercise)
 
-        let repsOptions = ''
-        if (gender.value === 'Мужчина') {
-          if (patternExercise.repetitionLevel === 'легкая') {
-            repsOptions = selectedExercise.maleRepsLight
-          } else if (patternExercise.repetitionLevel === 'средняя') {
-            repsOptions = selectedExercise.maleRepsMedium
-          } else {
-            repsOptions = selectedExercise.maleRepsHeavy
-          }
-        } else {
-          if (patternExercise.repetitionLevel === 'легкая') {
-            repsOptions = selectedExercise.femaleRepsLight
-          } else if (patternExercise.repetitionLevel === 'средняя') {
-            repsOptions = selectedExercise.femaleRepsMedium
-          } else {
-            repsOptions = selectedExercise.femaleRepsHeavy
-          }
-        }
+        // Определяем количество повторений в зависимости от пола и уровня повторений
+        // TODO  ↓Тут↓ repsOptions undefined
 
-        const repsArray = repsOptions.split(',').map(Number)
-        const reps = repsArray[Math.floor(Math.random() * repsArray.length)]
-        const sets = getSets(reps)
+        const repsOptions = getRepsOptions(selectedExercise, patternExercise.repetitionLevel, gender.value);
+        console.log('++1 repsOptions', repsOptions)
+        const repsArray = repsOptions.split(',').map(Number);
+        console.log('++1 repsArray', repsArray)
+        const reps = repsArray[Math.floor(Math.random() * repsArray.length)];
+        console.log('++1 reps', reps)
+        const sets = getSets(reps);
+        console.log('++1 sets', sets)
 
+        console.log('+1 repsOptions', repsOptions)
+
+        // Добавляем упражнение в тренировку
         workout.push({
           name: selectedExercise.name,
           sets,
           reps,
-        })
+        });
       }
 
-      workoutResults.value = workout
-    }
+      workoutResults.value = workout;
+    };
 
     // Метод для отправки тренировки через Telegram
     const sendWorkout = async () => {
@@ -330,7 +372,7 @@ export default defineComponent({
       telegramUserId,
       initData,
       generateWorkout,
-      sendWorkout,
+      sendWorkout
     }
   },
 })
