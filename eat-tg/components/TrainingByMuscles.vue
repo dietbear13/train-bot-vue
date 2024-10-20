@@ -293,8 +293,6 @@ export default defineComponent({
         console.log('+1 selectedExercise', selectedExercise)
 
         // Определяем количество повторений в зависимости от пола и уровня повторений
-        // TODO  ↓Тут↓ repsOptions undefined
-
         const repsOptions = getRepsOptions(selectedExercise, patternExercise.repetitionLevel, gender.value);
         console.log('++1 repsOptions', repsOptions)
         const repsArray = repsOptions.split(',').map(Number);
