@@ -41,7 +41,7 @@ const users: { [key: number]: User } = {}
 
 // Function to send the workout to the user
 const sendWorkoutToUser = (chatId: number, workout: { name: string; sets: number; reps: number }[]) => {
-    let message = 'Ваша сгенерированная тренировка:\n\n'
+    let message = 'Тренировка на {подгруппа мышц}:\n\n'
     workout.forEach((exercise, index) => {
         message += `${index + 1}. ${exercise.name} — ${exercise.sets}×${exercise.reps}\n`
     })

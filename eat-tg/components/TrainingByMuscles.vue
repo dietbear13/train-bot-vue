@@ -42,15 +42,8 @@
       </div>
       <!-- Кнопка для отправки тренировки -->
       <v-btn @click="sendWorkout" :disabled="!workoutResults.length || !telegramUserId">
-        Отправить тренировку
+        Отправить сообщением
       </v-btn>
-    </div>
-
-    <!-- Для отладки: выводим initData и telegramUserId -->
-    <div>
-      <h3>Данные для отладки:</h3>
-      <p><strong>initData:</strong> {{ initData }}</p>
-      <p><strong>telegramUserId:</strong> {{ telegramUserId }}</p>
     </div>
   </v-container>
 </template>
@@ -105,33 +98,34 @@ interface TelegramUserData {
   language_code?: string
 }
 
+import { retrieveLaunchParams  } from '@telegram-apps/sdk';
+const { initData } = retrieveLaunchParams();
+
 export default defineComponent({
   name: 'WorkoutGenerator',
   setup() {
-    // Получаем данные пользователя из provide
-    const userData = ref<TelegramUserData | null>(null)
-    const telegramUserId = ref<number | null>(null)
-    const initData = ref<any>(null)
+    // Переменные для данных пользователя и initData
+    const userData = ref<TelegramUserData | null>(null);
+    const telegramUserId = ref<number | null>(null);
+    const initData = ref<any>(null);
 
     if (process.client) {
       onMounted(() => {
-        const injectedUserData = inject<any>('userData')
-        console.log('injectedUserData Component', injectedUserData)
+        // Получаем initData через retrieveLaunchParams из Telegram SDK
+        const launchParams = retrieveLaunchParams();
+        initData.value = launchParams.initData;
+        console.log('initData:', initData.value);
 
-        if (injectedUserData && injectedUserData.value) {
-          initData.value = injectedUserData.value
-          if (injectedUserData.value.user) {
-            userData.value = injectedUserData.value.user
-            telegramUserId.value = userData.value.id || null
-          }
-          console.log('initData:', initData.value)
-          console.log('userData in Component:', userData.value)
+        if (initData.value && initData.value.user) {
+          // Инициализация данных пользователя из initData
+          userData.value = initData.value.user;
+          telegramUserId.value = userData.value.id || null;
+          console.log('userData in Component:', userData.value);
+          console.log('telegramUserId Component', telegramUserId)
         } else {
-          console.error(
-              'Не удалось получить данные пользователя. Убедитесь, что приложение запущено внутри Telegram.'
-          )
+          console.error('Не удалось получить данные пользователя. Убедитесь, что приложение запущено внутри Telegram.');
         }
-      })
+      });
     }
 
     // Определяем реактивные данные
