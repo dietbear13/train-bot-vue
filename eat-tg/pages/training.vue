@@ -1,31 +1,52 @@
 <!-- pages/training.vue -->
 <template>
   <v-container>
-    <h2 class="my-4">Тренировки</h2>
-    <v-tabs v-model="activeTab" background-color="primary" dark>
+    <!-- Настройка v-tabs с дополнительными пропсами для улучшенной адаптивности -->
+    <v-tabs
+        v-model="activeTab"
+        background-color="primary"
+        dark
+        fixed-tabs
+        grow
+        mobile-breakpoint="md"
+        direction="horizontal"
+        align-tabs="center"
+        hide-slider
+    >
+      <v-tab>На одну мышцу</v-tab>
       <v-tab>По уровню сложности</v-tab>
-      <v-tab>По мышечным группам</v-tab>
     </v-tabs>
 
-    <v-tabs-items v-model="activeTab">
-      <v-tab-item>
-        <TrainingByLevel />
-      </v-tab-item>
-      <v-tab-item>
+    <!-- Контейнер для содержимого вкладок -->
+    <v-tabs-window v-model="activeTab">
+      <v-tabs-window-item>
         <TrainingByMuscles />
-      </v-tab-item>
-    </v-tabs-items>
+      </v-tabs-window-item>
+      <v-tabs-window-item >
+        <TrainingByLevel />
+      </v-tabs-window-item>
+    </v-tabs-window>
   </v-container>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import TrainingByLevel from '~/components/TrainingByLevel.vue'
 import TrainingByMuscles from '~/components/TrainingByMuscles.vue'
 
-const activeTab = ref(0)
+// Инициализация активной вкладки с типизацией
+const activeTab = ref<number>(0)
 </script>
 
 <style scoped>
 /* Стили для страницы тренировок */
+/* Можно добавить дополнительные стили для улучшения внешнего вида */
+.v-container {
+  padding: 16px;
+}
+
+.v-tab-panels {
+  width: 100%;
+}
+
 </style>
