@@ -2,13 +2,17 @@
 <template>
   <v-form ref="form" @submit.prevent="calculateKbzhu" class="pt-4">
     <v-row>
+      <p>Все вводимые в калькулятор данные не сохраняются и не используются.</p>
       <v-col cols="12" sm="6">
-        <v-text-field
-            v-model="formData.age"
-            label="Возраст"
-            type="number"
+        <v-select
+            v-model="formData.gender"
+            :items="genders"
+            item-title="text"
+            item-value="value"
+            label="Пол"
             required
-        ></v-text-field>
+            variant="solo-filled"
+        ></v-select>
       </v-col>
       <v-col cols="12" sm="6">
         <v-text-field
@@ -16,31 +20,8 @@
             label="Вес (кг)"
             type="number"
             required
+            variant="solo-filled"
         ></v-text-field>
-      </v-col>
-      <v-col cols="12" sm="6">
-        <v-text-field
-            v-model="formData.height"
-            label="Рост (см)"
-            type="number"
-            required
-        ></v-text-field>
-      </v-col>
-      <v-col cols="12" sm="6">
-        <v-select
-            v-model="formData.activityLevel"
-            :items="activityLevels"
-            label="Уровень активности"
-            required
-        ></v-select>
-      </v-col>
-      <v-col cols="12" sm="6">
-        <v-select
-            v-model="formData.goal"
-            :items="goals"
-            label="Цель"
-            required
-        ></v-select>
       </v-col>
       <v-col cols="12" sm="6">
         <v-btn type="submit" color="primary" class="mt-4">Рассчитать</v-btn>
@@ -53,45 +34,87 @@
       type="info"
       class="mt-4"
   >
-    <div>Калории: <strong>{{ kbzhuResult.calories }}</strong></div>
+    <div>Калории: <strong>{{ kbzhuResult.calories }}</strong> ккал</div>
     <div>Белки: <strong>{{ kbzhuResult.proteins }} г</strong></div>
     <div>Жиры: <strong>{{ kbzhuResult.fats }} г</strong></div>
     <div>Углеводы: <strong>{{ kbzhuResult.carbs }} г</strong></div>
   </v-alert>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
-import axios from 'axios'
 
-const formData = ref({
-  age: '',
+interface FormData {
+  gender: 'male' | 'female' | ''
+  weight: number | ''
+}
+
+interface Option {
+  text: string
+  value: string
+}
+
+interface KbzhuResult {
+  calories: number
+  proteins: number
+  fats: number
+  carbs: number
+}
+
+const formData = ref<FormData>({
+  gender: '',
   weight: '',
-  height: '',
-  activityLevel: '',
-  goal: '',
 })
 
-const activityLevels = [
-  { text: 'Низкая', value: 'low' },
-  { text: 'Средняя', value: 'medium' },
-  { text: 'Высокая', value: 'high' },
+const genders: Option[] = [
+  { text: 'Мужчина', value: 'male' },
+  { text: 'Женщина', value: 'female' },
 ]
 
-const goals = [
-  { text: 'Похудение', value: 'lose_weight' },
-  { text: 'Поддержание', value: 'maintain' },
-  { text: 'Набор массы', value: 'gain_weight' },
-]
+const kbzhuResult = ref<KbzhuResult | null>(null)
 
-const kbzhuResult = ref(null)
+const calculateKbzhu = () => {
+  const gender = formData.value.gender
+  const weight =
+      typeof formData.value.weight === 'number'
+          ? formData.value.weight
+          : parseFloat(formData.value.weight)
 
-const calculateKbzhu = async () => {
-  try {
-    const response = await axios.post('http://localhost:3001/api/nutrition/kbzhu', formData.value)
-    kbzhuResult.value = response.data
-  } catch (error) {
-    console.error(error)
+  let proteinsPerKg = 0
+  let fatsPerKg = 0
+  let caloriesPerKg = 0
+
+  if (gender === 'male') {
+    proteinsPerKg = 1.8
+    fatsPerKg = 1.5
+    caloriesPerKg = 30
+  } else if (gender === 'female') {
+    proteinsPerKg = 1.5
+    fatsPerKg = 1.2
+    caloriesPerKg = 25
+  } else {
+    // Если пол не выбран, выходим из функции
+    return
+  }
+
+  const proteins = proteinsPerKg * weight // в граммах
+  const fats = fatsPerKg * weight // в граммах
+  const calories = caloriesPerKg * weight // в ккал
+
+  // Калории из белков и жиров
+  const proteinCalories = proteins * 4
+  const fatCalories = fats * 9
+
+  // Остаток калорий на углеводы
+  const carbCalories = calories - (proteinCalories + fatCalories)
+  const carbs = carbCalories / 4 // в граммах
+
+  // Округление результатов
+  kbzhuResult.value = {
+    calories: Math.round(calories),
+    proteins: Math.round(proteins),
+    fats: Math.round(fats),
+    carbs: Math.round(carbs),
   }
 }
 </script>

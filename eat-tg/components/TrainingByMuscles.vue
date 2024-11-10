@@ -1,43 +1,113 @@
 <template>
-  <v-container>
-    <v-form @submit.prevent="generateWorkout">
+  <v-container class="py-1">
+    <v-form @submit.prevent="generateWorkout" elevation="2">
+
       <!-- Выбор пола -->
-      <v-select v-model="gender" :items="genders" label="Пол" required></v-select>
+      <v-card class="mb-1" outlined dark >
+        <v-card-text>
+          <v-slide-group v-model="gender" mandatory>
+            <v-slide-group-item
+                v-for="option in genders"
+                :key="option"
+                :value="option"
+                class="ml-4"
+            >
+              <v-btn
+                  class="pa-1 mx-auto"
+                  outlined
+                  :color="gender === option ? 'primary' : 'grey lighten-1'"
+                  variant="text"
+                  @click="selectGender(option)"
+
+              >
+                {{ option }}
+              </v-btn>
+            </v-slide-group-item>
+          </v-slide-group>
+        </v-card-text>
+      </v-card>
 
       <!-- Выбор мышечной группы -->
-      <v-select
-          v-model="muscleGroup"
-          :items="muscleGroups"
-          label="Мышечная группа"
-          required
-      ></v-select>
+      <v-card class="mb-1" outlined dark>
+        <v-card-text>
+          <v-slide-group v-model="muscleGroup" mandatory show-arrows>
+            <v-slide-group-item
+                v-for="option in muscleGroups"
+                :key="option"
+                :value="option"
+            >
+              <v-btn
+                  class="group-button pa-0"
+                  outlined
+                  :color="muscleGroup === option ? 'primary' : 'grey lighten-1'"
+                  variant="text"
+                  @click="selectMuscleGroup(option)"
+              >
+                {{ option }}
+              </v-btn>
+            </v-slide-group-item>
+          </v-slide-group>
+        </v-card-text>
+      </v-card>
 
       <!-- Выбор мышечной подгруппы -->
-      <v-select
-          v-model="muscleSubgroup"
-          :items="muscleSubgroups"
-          label="Мышечная подгруппа"
-          required
-          :disabled="!muscleGroup"
-      ></v-select>
+      <v-card class="mb-1" outlined dark>
+        <v-card-text>
+          <v-slide-group v-model="muscleSubgroup" mandatory show-arrows>
+            <v-slide-group-item
+                v-for="option in muscleSubgroups"
+                :key="option"
+                :value="option"
+            >
+              <v-btn
+                  class="subgroup-button mx-1 pa-1"
+                  outlined
+                  :color="muscleSubgroup === option ? 'primary' : 'grey lighten-1'"
+                  variant="text"
+                  @click="selectMuscleSubgroup(option)"
+              >
+                {{ option }}
+              </v-btn>
+            </v-slide-group-item>
+          </v-slide-group>
+        </v-card-text>
+      </v-card>
 
-      <!-- Отображение результатов тренировки -->
-      <div v-if="workoutResults.length">
-        <h2>Результаты тренировки:</h2>
-        <div v-for="(exercise, index) in workoutResults" :key="index">
-          {{ exercise.name }} — {{ exercise.sets }}×{{ exercise.reps }}
-        </div>
-        <!-- Кнопка для отправки тренировки -->
-        <v-btn @click="sendWorkout" :disabled="!workoutResults.length || !telegramUserId">
-          Отправить сообщением
+      <!-- Кнопка для генерации тренировки -->
+      <div class="text-center mb-6">
+        <v-btn color="success" large type="submit" class="generate-btn">
+          <v-icon left>mdi-dumbbell</v-icon>
+           Сгенерировать
         </v-btn>
       </div>
 
-      <!-- Кнопка для генерации тренировки -->
-      <v-btn type="submit">Сгенерировать тренировку</v-btn>
+      <!-- Отображение результатов тренировки -->
+        <v-card v-if="workoutResults.length" class="mb-6" outlined dark>
+          <v-card-text>
+            <v-list style="border-radius: 10px">
+              <v-list-item v-for="(exercise, index) in workoutResults" :key="index">
+                <v-list-item-content>
+                  <v-list-item-title class="exercise-title">{{ exercise.name }}</v-list-item-title>
+                  <v-list-item-subtitle class="exercise-subtitle">{{ exercise.sets }} сета × {{ exercise.reps }} повторений</v-list-item-subtitle>
+                </v-list-item-content>
+              </v-list-item>
+            </v-list>
+          </v-card-text>
+          <div class="text-center mt-4">
+            <v-btn color="primary" @click="sendWorkout" :disabled="!telegramUserId" class="send-btn">
+              <v-icon left>mdi-send</v-icon>
+              Отправить себе
+            </v-btn>
+          </div>
+
+        </v-card>
+
     </v-form>
   </v-container>
 </template>
+
+
+
 
 <script lang="ts">
 import { defineComponent, ref, onMounted, watch } from 'vue';
@@ -127,7 +197,7 @@ export default defineComponent({
     const muscleSubgroup = ref<string | null>(null);
     const complexNumber = ref<string | null>(null);
 
-    const genders = ['мужчина', 'женщина'];
+    const genders = ['Мужчина', 'Женщина'];
     const muscleGroups = ref<string[]>([]);
     const muscleSubgroups = ref<string[]>([]);
     const complexes = ref<string[]>([]);
@@ -136,7 +206,7 @@ export default defineComponent({
     const exercises = ref<Exercise[]>([]);
     const patterns = ref<Pattern[]>([]);
 
-    // Методы
+    // Методы загрузки данных
     const loadExercises = async () => {
       try {
         const response = await axios.get<Exercise[]>('http://localhost:3002/api/exercises');
@@ -197,12 +267,6 @@ export default defineComponent({
               p.complexNumber.trim().toLowerCase() === selectedMuscleSubgroupLower
       );
 
-      // Отладочный вывод паттернов
-      availableComplexes.forEach((pattern) => {
-        console.log('Паттерн:', pattern);
-        console.log('complexNumber у паттерна:', pattern.complexNumber);
-      });
-
       // Присваиваем complexNumber
       complexes.value = availableComplexes.map((p) => p.complexNumber);
       console.log('Доступные комплексы после фильтрации:', complexes.value);
@@ -234,7 +298,7 @@ export default defineComponent({
         console.warn(`Неизвестный уровень нагрузки: ${loadLevel}`);
         return null;
       }
-      const repsKey = `${gender === 'мужчина' ? 'male' : 'female'}Reps${capitalize(mappedLevel)}` as keyof RepetitionLevels;
+      const repsKey = `${gender === 'Мужчина' ? 'male' : 'female'}Reps${capitalize(mappedLevel)}` as keyof RepetitionLevels;
       return exercise[repsKey] || null;
     };
 
@@ -354,7 +418,30 @@ export default defineComponent({
       }
     };
 
-    // Наблюдатели
+    // Методы выбора опций
+    const selectGender = (option: string) => {
+      gender.value = option;
+      muscleGroup.value = null;
+      muscleSubgroup.value = null;
+      populateMuscleGroups();
+      populateMuscleSubgroups();
+      populateComplexes();
+    };
+
+    const selectMuscleGroup = (option: string) => {
+      muscleGroup.value = option;
+      muscleSubgroup.value = null;
+      populateMuscleSubgroups();
+      populateComplexes();
+    };
+
+    const selectMuscleSubgroup = (option: string) => {
+      muscleSubgroup.value = option;
+      populateComplexes();
+    };
+
+    // Наблюдатели (необходимы только если используем select methods)
+    /*
     watch(muscleGroup, () => {
       muscleSubgroup.value = null;
       complexNumber.value = null;
@@ -370,12 +457,26 @@ export default defineComponent({
       complexNumber.value = null;
       populateComplexes();
     });
+    */
 
     // При монтировании компонента
     onMounted(async () => {
       await loadExercises();
       await loadPatterns();
       populateMuscleGroups();
+      populateMuscleSubgroups();
+      populateComplexes();
+
+      // Установка значений по умолчанию, если они еще не установлены
+      if (genders.length > 0 && !gender.value) {
+        gender.value = genders[0];
+      }
+      if (muscleGroups.value.length > 0 && !muscleGroup.value) {
+        muscleGroup.value = muscleGroups.value[0];
+      }
+      if (muscleSubgroups.value.length > 0 && !muscleSubgroup.value) {
+        muscleSubgroup.value = muscleSubgroups.value[0];
+      }
     });
 
     return {
@@ -392,14 +493,113 @@ export default defineComponent({
       initData,
       generateWorkout,
       sendWorkout,
+      selectGender,
+      selectMuscleGroup,
+      selectMuscleSubgroup,
     };
   },
 });
 </script>
 
+
 <style scoped>
 .v-container {
-  max-width: 600px;
+  max-width: 800px;
   margin: 0 auto;
+  background-color: #121212; /* Тёмный фон контейнера */
+  padding: 5px;
+  border-radius: 10px;
 }
+
+.v-form {
+  background-color: #1e1e1e; /* Тёмный фон формы */
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.headline {
+  font-weight: bold;
+  font-size: 20px;
+  color: #ffffff; /* Светлый текст заголовков */
+}
+
+.slide-group-item {
+  min-width: 120px;
+  text-transform: none;
+  color: #ffffff; /* Светлый текст */
+  background-color: rgba(255, 255, 255, 0.1); /* Фон элементов */
+  border-radius: 10px;
+  padding: 10px 20px;
+  margin: 0 4px;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.3s;
+}
+
+.slide-group-item.active {
+  background-color: #43A047FF; /* Цвет активного элемента */
+  transform: scale(1.05);
+}
+
+.slide-group-item:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.v-card {
+  background-color: #1e1e1e; /* Тёмный фон карточек */
+  border-color: rgba(255, 255, 255, 0.1); /* Светлая граница карточек */
+}
+
+.generate-btn {
+  background-color: #43a047; /* Цвет кнопки генерации */
+  color: #ffffff;
+  margin: 10px;
+}
+
+.generate-btn:hover {
+  background-color: #388e3c;
+}
+
+.send-btn {
+  background-color: #2196f3; /* Цвет кнопки отправки */
+  color: #ffffff;
+}
+
+.send-btn:hover {
+  background-color: #1976d2;
+}
+
+.v-btn {
+  transition: background-color 0.3s, color 0.3s;
+}
+
+.v-list {
+  border-color: #ffffff;
+  border-width: 1px;
+}
+
+.v-list-item-title {
+  color: #ffffff; /* Светлый текст названий упражнений */
+}
+
+.v-list-item-subtitle {
+  color: #b0bec5; /* Светло-серый текст описаний */
+}
+
+.v-slide-group {
+  background-color: #333333; /* Тёмный фон для слайд-группы */
+  border-radius: 8px;
+  padding: 8px;
+}
+
+@media (max-width: 800px) {
+  .slide-group-item {
+    min-width: 60px;
+    padding: 6px 12px;
+  }
+
+  .headline {
+    font-size: 18px;
+  }
+}
+
 </style>
