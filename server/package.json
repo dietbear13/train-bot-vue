@@ -13,6 +13,7 @@
     "cors": "^2.8.5",
     "datetime": "^0.0.3",
     "express": "latest",
+    "mongoose": "^8.8.1",
     "node-telegram-bot-api": "^0.66.0",
     "xlsx": "^0.18.5"
   },

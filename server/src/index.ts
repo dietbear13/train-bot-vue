@@ -1,10 +1,18 @@
+// server.ts
+
 import express, { Request, Response } from 'express'
 import cors from 'cors'
 import mongoose from 'mongoose'
-import Exercise from '../models/Exercise'
-import Pattern from '../models/Pattern'
 import dotenv from 'dotenv'
 import TelegramBot from 'node-telegram-bot-api'
+
+// Импортируем модели
+import Exercise from '../src/models/Exercise'
+import Pattern from '../src/models/Pattern'
+import { MacrosCoefficient } from '../src/models/MacrosCoefficient'
+import { GoalCoefficient } from '../src/models/GoalCoefficient'
+import { HeightWeightCoefficient } from '../src/models/HeightWeightCoefficient'
+
 dotenv.config()
 
 const botToken = process.env.TELEGRAM_BOT_TOKEN
@@ -88,6 +96,38 @@ app.get('/api/patterns', async (req: Request, res: Response) => {
     try {
         const patterns = await Pattern.find()
         res.json(patterns)
+    } catch (error: any) {
+        res.status(500).json({ message: error.message })
+    }
+})
+
+// **Новые маршруты для получения коэффициентов**
+
+/** Маршрут для получения всех коэффициентов БЖУ */
+app.get('/api/macros-coefficients', async (req: Request, res: Response) => {
+    try {
+        const macrosCoefficients = await MacrosCoefficient.find()
+        res.json(macrosCoefficients)
+    } catch (error: any) {
+        res.status(500).json({ message: error.message })
+    }
+})
+
+/** Маршрут для получения всех коэффициентов целей питания */
+app.get('/api/goal-coefficients', async (req: Request, res: Response) => {
+    try {
+        const goalCoefficients = await GoalCoefficient.find()
+        res.json(goalCoefficients)
+    } catch (error: any) {
+        res.status(500).json({ message: error.message })
+    }
+})
+
+/** Маршрут для получения всех коэффициентов по росту и весу */
+app.get('/api/height-weight-coefficients', async (req: Request, res: Response) => {
+    try {
+        const heightWeightCoefficients = await HeightWeightCoefficient.find()
+        res.json(heightWeightCoefficients)
     } catch (error: any) {
         res.status(500).json({ message: error.message })
     }
