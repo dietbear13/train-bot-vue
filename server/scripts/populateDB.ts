@@ -15,7 +15,7 @@ mongoose.connect('mongodb://localhost:27017/fitness-app', {
 const exerciseSchema = new mongoose.Schema({
     category: String,
     subcategory: String,
-    mainMuscles: String,
+    mainMuscle: String,
     additionalMuscles: String,
     difficultyLevel: String,
     name: String,
@@ -53,7 +53,7 @@ const populateDB = async () => {
             const exerciseData = {
                 category: row[0],
                 subcategory: row[1],
-                mainMuscles: row[2],
+                mainMuscle: row[2],
                 additionalMuscles: row[3],
                 difficultyLevel: row[4],
                 name: row[5],

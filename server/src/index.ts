@@ -81,6 +81,43 @@ app.post('/api/send-workout', async (req: Request, res: Response) => {
     }
 })
 
+// Function to send the KbzhuResult to the user
+const sendKbzhuResultToUser = (chatId: number, kbzhuResult: { calories: number; proteins: number; fats: number; carbs: number }) => {
+    let message = 'Ваши результаты расчёта КБЖУ:\n\n'
+    message += `Калории: ${kbzhuResult.calories} ккал\n`
+    message += `Белки: ${kbzhuResult.proteins} г\n`
+    message += `Жиры: ${kbzhuResult.fats} г\n`
+    message += `Углеводы: ${kbzhuResult.carbs} г\n`
+    console.log(`1 KbzhuResult sent to user ${chatId}`)
+
+    bot
+        .sendMessage(chatId, message)
+        .then(() => {
+            console.log(`2 KbzhuResult sent to user ${chatId}`)
+        })
+        .catch((error) => {
+            console.error('Error sending KbzhuResult to user:', error.message)
+        })
+}
+
+// Route to send the KbzhuResult
+app.post('/api/send-kbzhu', async (req: Request, res: Response) => {
+    const { userId, kbzhuResult } = req.body
+
+    if (!userId || !kbzhuResult) {
+        return res.status(400).json({ message: 'Необходимо указать userId и kbzhuResult' })
+    }
+
+    try {
+        sendKbzhuResultToUser(userId, kbzhuResult)
+        res.json({ message: 'Результаты отправлены в Telegram' })
+    } catch (error: any) {
+        console.error('Ошибка при отправке сообщения в Telegram:', error.message)
+        res.status(500).json({ message: 'Ошибка при отправке сообщения в Telegram' })
+    }
+})
+
+
 // Маршрут для получения всех упражнений
 app.get('/api/exercises', async (req: Request, res: Response) => {
     try {

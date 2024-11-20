@@ -1,0 +1,195 @@
+/* global.css */
+
+/* Общие стили */
+body {
+    margin: 0;
+    font-family: 'Roboto', sans-serif;
+    background-color: #121212; /* Тёмный фон для всего приложения */
+    color: #ffffff; /* Белый текст на тёмном фоне */
+    box-shadow: none;
+    touch-action: manipulation;
+}
+
+/* Контейнер */
+.v-container {
+    padding: 8px; /* Унифицированный внутренний отступ */
+    touch-action: manipulation;
+}
+
+/* Тёмный фон для карточек */
+.dark-background {
+    background-color: #1e1e1e !important;
+    border-radius: 14px !important;
+}
+
+/* Отступы для карточек */
+.v-card.mb-1 {
+    margin-bottom: 12px !important; /* Минимальный нижний отступ */
+}
+
+/* Унифицированные стили для кнопок внутри групп */
+.group-button {
+    min-width: 50px;
+    min-height: 36px;
+    margin: 2px;
+    color: #ffffff !important;
+    border-color: #424242 !important;
+}
+
+
+/* Стиль для выбранной кнопки */
+.selected-button {
+    background-color: #1976d2 !important; /* Основной цвет темы */
+    color: #ffffff !important;
+    border-color: #1976d2 !important;
+}
+
+/* Стили для кнопок "Сгенерировать" и "Отправить себе" */
+.generate-btn,
+.send-btn {
+    width: 100%;
+    max-width: 300px;
+    margin: 16px auto;
+    color: #ffffff !important;
+}
+
+.generate-btn {
+    background-color: #388e3c !important; /* Зеленый цвет для кнопки "Сгенерировать" */
+}
+
+.send-btn {
+    background-color: #1976d2 !important; /* Синий цвет для кнопки "Отправить себе" */
+}
+
+/* Стили для текстовых полей */
+.v-text-field {
+    margin-bottom: 8px !important;
+}
+
+.v-text-field .v-label {
+    color: #b0b0b0 !important; /* Цвет метки */
+}
+
+.v-text-field input {
+    color: #ffffff !important;
+}
+
+.v-text-field .v-input__control {
+    background-color: #1e1e1e !important; /* Фон поля ввода */
+}
+
+/* Стили для предупреждений */
+.v-alert {
+    border-radius: 16px;
+}
+
+.v-alert.type--error {
+    background-color: #d32f2f !important;
+    color: #ffffff !important;
+}
+
+.v-alert.type--info {
+    background-color: #1976d2 !important;
+    color: #ffffff !important;
+}
+
+/* Стили для списка упражнений */
+.exercise-title {
+    font-weight: bold;
+    color: #ffffff;
+}
+
+.exercise-subtitle {
+    color: #b0b0b0;
+}
+
+/* Стили для расширяемых панелей */
+.advice-title {
+    color: #ffffff;
+    font-weight: bold;
+}
+
+.advice-content {
+    color: #b0b0b0;
+}
+
+/* Убираем отступы у списка */
+.v-list {
+    padding: 0;
+}
+
+/* Стили для иконок в кнопках */
+.v-btn .v-icon {
+    margin-right: 8px;
+}
+
+/* Медиазапросы для адаптивности */
+@media (max-width: 600px) {
+    .group-button {
+        min-width: 60px;
+        font-size: 14px;
+    }
+
+    .generate-btn,
+    .send-btn {
+        width: 100%;
+        margin: 8px auto;
+    }
+}
+
+
+
+/* Настройка v-tabs */
+.custom-tabs {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* Лёгкая граница снизу */
+}
+
+/* Стилизация отдельных вкладок */
+.custom-tab {
+    color: #b0bec5; /* Светло-серый цвет текста */
+    font-weight: 500;
+    font-size: 14px;
+    padding: 4px 6px;
+    margin: 0 1px; /* Минимальные горизонтальные отступы */
+    transition: background-color 0.3s, color 0.3s;
+    border-radius: 16px;
+}
+
+.disable-dbl-tap-zoom {
+    touch-action: manipulation;
+}
+
+/* Стилизация содержимого вкладок */
+.v-tabs-window {
+    margin-top: 16px;
+}
+
+.v-tabs-window-item {
+    background-color: #1e1e1e; /* Тёмный фон содержимого вкладок */
+    border-radius: 16px;
+    padding: 16px;
+}
+
+.v-card-title {
+    font-size: 14px;
+
+}
+
+* {
+    scrollbar-width: none;
+}
+
+
+
+/* Адаптивность для мобильных устройств */
+@media (max-width: 800px) {
+    .custom-tab {
+        font-size: 14px;
+        padding: 3px 5px;
+        margin: 0 0.5px;
+    }
+
+    .active-tab {
+        font-size: 14px;
+    }
+}

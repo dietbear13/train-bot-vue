@@ -1,182 +1,197 @@
 <template>
-  <v-container class="ma-0 pa-0">
-    <!-- Содержимое вкладок -->
-        <!-- Список советов по выбранной теме -->
-        <v-expansion-panels
-            v-for="(topic, index) in topics"
+    <div class="nutrition-advice">
+      <!-- Первая строка с 2 карточками -->
+      <v-row>
+        <v-col
+            cols="6"
+            sm="6"
+            v-for="(item, index) in firstRowItems"
             :key="index"
-            class="ma-0 pa-0"
         >
-          <v-expansion-panel
-              v-for="(advice, i) in topic.advices"
-              :key="i"
-              class="advice-item"
-          >
-            <v-expansion-panel-title class="advice-title">
-              {{ advice.title }}
-            </v-expansion-panel-title>
-            <v-expansion-panel-text class="advice-content">
-              <div v-html="advice.content"></div>
-            </v-expansion-panel-text>
-          </v-expansion-panel>
-        </v-expansion-panels>
-  </v-container>
+        <v-card @click="openBottomSheet(item)" class="advice-card">
+          <v-img :src="item.image" aspect-ratio="16/9"></v-img>
+          <v-card-title>{{ item.title }}</v-card-title>
+        </v-card>
+        </v-col>
+      </v-row>
+
+      <!-- Вторая строка с 3 карточками -->
+      <v-row>
+        <v-col
+            cols="6"
+            sm="4"
+            v-for="(item, index) in secondRowItems"
+            :key="index"
+        >
+        <v-card @click="openBottomSheet(item)" class="advice-card">
+          <v-img :src="item.image" aspect-ratio="16/9"></v-img>
+          <v-card-title>{{ item.title }}</v-card-title>
+        </v-card>
+        </v-col>
+      </v-row>
+
+      <!-- Примеры рационов по полу -->
+      <v-row class="gender-selection">
+        <v-col
+            cols="6"
+            sm="6"
+        >
+        <v-btn
+            class="gender-button male-button"
+            @click="openBottomSheet(genderItems[0])"
+            block
+        >
+          <v-icon left>mdi-gender-male</v-icon>
+          Мужчинам
+        </v-btn>
+        </v-col>
+        <v-col
+            cols="6"
+            sm="6"
+        >
+        <v-btn
+            class="gender-button female-button"
+            @click="openBottomSheet(genderItems[1])"
+            block
+        >
+          <v-icon left>mdi-gender-female</v-icon>
+          Женщинам
+        </v-btn>
+        </v-col>
+      </v-row>
+
+      <!-- Диалоговое окно для отображения контента -->
+      <v-bottom-sheet v-model="bottomSheet" max-width="500">
+        <v-card>
+          <v-card-title>{{ selectedItem?.title }}</v-card-title>
+          <v-card-text v-html="selectedItem?.content"></v-card-text>
+          <v-card-actions>
+            <v-btn text @click="bottomSheet = false">Закрыть</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-bottom-sheet>
+    </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 
-const activeTab = ref(0)
+// Импорт изображений
+import maintenanceImage from '@/assets/maintenance.png'
+import massgainImage from '@/assets/massgain.jpeg'
+import weightlossImage from '@/assets/weightloss.jpeg'
 
-const topics = [
+// Интерфейс для элементов совета
+interface AdviceItem {
+  title: string
+  image?: string
+  content: string
+}
+
+// Состояния для диалога
+const dialog = ref(false)
+const selectedItem = ref<AdviceItem | null>(null)
+
+// Функция для открытия диалога
+const openDialog = (item: AdviceItem) => {
+  selectedItem.value = item
+  dialog.value = true
+}
+
+const bottomSheet = ref(false)
+
+// Обновите функцию открытия
+const openBottomSheet = (item: AdviceItem) => {
+  selectedItem.value = item
+  bottomSheet.value = true
+}
+
+
+// Данные для первой строки карточек
+const firstRowItems: AdviceItem[] = [
   {
     title: 'Азы питания',
-    advices: [
-      {
-        title: 'Азы питания',
-        content: `
-          <p style="margin-bottom: 5px; padding: 5px;">Ешьте побольше белковой пищи (яйца, курица, говядина, рыба и любые морепродукты, творог).</p>
-          <p style="margin-bottom: 5px; padding: 5px;">Уберите из рациона пищевой мусор (сахар в чае, хлеб к основному блюду, выпечку, майонез, газировки и т.д.).</p>
-          <p style="margin-bottom: 5px; padding: 5px;">Не забывайте пить воду (около литра в день будет вполне достаточно).</p>
-          <p style="margin-bottom: 5px; padding: 5px;">Кушайте 3 раза в день основательно (завтрак, обед, ужин), допускается 1-2 перекуса (желательно тем же белком). Основные приёмы пищи должны содержать любую крупу + белок.</p>
-          <p style="padding: 5px;">Ешьте зелёные овощи (огурцы, помидоры, перец и т.д.).</p>
-        `,
-      },
-    ],
+    image: '/assets/basics.jpg', // Убедитесь, что путь корректен
+    content: 'Рыбный текст для раздела "Азы питания".',
   },
   {
-    title: 'Питание перед тренировкой',
-    advices: [
-      {
-        title: 'Питание перед тренировкой',
-        content: `
-          <p>Перед тренировкой нужно обязательно покушать любую крупу с белком за 1,5–2 часа до тренировки.</p>
-          <p style="margin-bottom: 5px; padding: 5px;">Не рекомендуется есть жирное.</p>
-          <p style="margin-bottom: 5px; padding: 5px;">Если вы не успели покушать — съешьте что-нибудь углеводное (фрукты, йогурты с вкусами; при работе на массу можно выпечку и сладкое).</p>
-          <p style="padding: 5px;">Если чувствуете себя уставшим, выпейте чашку кофе за полчаса до тренировки.</p>
-        `,
-      },
-    ],
+    title: 'Питание и тренировки',
+    image: '/assets/prepostworkout.jpg', // Убедитесь, что путь корректен
+    content: 'Рыбный текст для раздела "Питание перед и после тренировки".',
+  },
+]
+
+// Данные для второй строки карточек
+const secondRowItems: AdviceItem[] = [
+  {
+    title: 'Похудение',
+    image: weightlossImage,
+    content: 'Рыбный текст для раздела "Питание на похудение".',
   },
   {
-    title: 'На массу',
-    advices: [
-      {
-        title: 'Питание на массу',
-        content: `
-          <p>Питаться на набор массы гораздо легче, чем на похудение.</p>
-          <p style="margin-bottom: 5px; padding: 5px;">Основа рациона — 3-разовое питание; в перекусы добавляем фрукты, любые орехи (около 30 г за одну порцию).</p>
-          <p style="margin-bottom: 5px; padding: 5px;">Для роста мышц необходимо определённое количество белка: мужчинам около 2 г на 1 кг своего веса, женщинам около 1,5 г на 1 кг своего веса.</p>
-          <p style="margin-bottom: 5px; padding: 5px;"><strong>Плотное телосложение:</strong> Будьте осторожнее с излишками сладкого; старайтесь наполнить рацион крупами и белковой пищей.</p>
-          <p style="margin: 5px 0; padding: 5px;"><strong>Худощавое телосложение:</strong> Если жир не откладывается, можете добавлять сладкое и мучное (для добора углеводов), орехи (для калорийности).</p>
-          <p>Помните, что набор мышечной массы зависит от рабочих весов в базовых упражнениях и общего объёма тренировки. Если сделали только 2 рабочих подхода в жиме лёжа — не ждите роста. Если не можете сделать 3-й подход — возможно, торопитесь увеличивать вес.</p>
-        `,
-      },
-    ],
+    title: 'Удержание',
+    image: maintenanceImage,
+    content: 'Рыбный текст для раздела "Питание для удержания веса".',
   },
   {
-    title: 'На похудение',
-    advices: [
-      {
-        title: 'Питание на похудение',
-        content: `
-          <p style="margin: 5px 0; padding: 5px;">За основу питания берём 3-разовое питание (завтрак, обед, ужин). Все пункты из раздела "Азы" должны соблюдаться на 100%.</p>
-          <p style="margin: 5px 0; padding: 5px;">Завтрак: крупа + белок<br>
-          Обед: крупа + белок<br>
-          Перекус: белок<br>
-          Ужин: крупа + белок<br>
-          Возможен ещё один перекус белком.</p>
-          <p style="margin: 5px 0; padding: 5px;">"Крупа + белок" — на тарелке гарнир и мясо/рыба должны выглядеть 50/50, не бойтесь переесть гарнира.</p>
-        `,
-      },
-    ],
+    title: 'Набор массы',
+    image: massgainImage,
+    content: 'Рыбный текст для раздела "Питание на массу".',
   },
-  // Добавьте дополнительные советы (5–8), если они есть
+]
+
+// Данные для выбора по полу
+const genderItems: AdviceItem[] = [
+  {
+    title: 'Мужчинам',
+    content: 'Рыбный текст для раздела "Мужчинам".',
+  },
+  {
+    title: 'Женщинам',
+    content: 'Рыбный текст для раздела "Женщинам".',
+  },
 ]
 </script>
 
 <style scoped>
-/* Ваши стили остаются прежними */
-.nutrition-container {
-  max-width: 800px;
-  margin: 0 auto;
-  background-color: #121212; /* Тёмный фон контейнера */
-  padding: 16px;
-  border-radius: 12px;
+.nutrition-advice {
+  padding: 2px;
 }
 
-.custom-tabs {
-  margin-bottom: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+.advice-card {
+  cursor: pointer;
+  margin-bottom: 4px;
 }
 
-.custom-tab {
-  color: #ffffff;
-  text-transform: none;
-  font-size: 16px;
-  padding: 8px 12px;
-  margin: 0 1px; /* Минимальные горизонтальные отступы */
-  transition: background-color 0.3s, color 0.3s;
-  border-radius: 4px;
+.gender-selection {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
 }
 
-.custom-tab:hover {
-  background-color: rgba(255, 255, 255, 0.1);
+.gender-button {
+  height: 50px;
+  font-size: 14px;
+  color: white;
 }
 
-.v-tab--active .custom-tab {
-  background-color: #43a047; /* Цвет активной вкладки */
-  color: #ffffff;
+.male-button {
+  background-color: #42a5f5;
 }
 
-.advice-item {
-  margin-bottom: 8px;
-  background-color: #FFFFFF33;
-  border-color: rgb(51, 51, 51);
+.female-button {
+  background-color: #ec407a;
 }
 
-.advice-title {
-  color: #ffffff;
-}
+/* Адаптивные стили для мобильных устройств */
+@media (max-width: 600px) {
+  .advice-card {
+    margin-bottom: 4px;
+  }
 
-.advice-content {
-  background-color: #333333;
-  color: #b0bec5;
-}
-
-.headline {
-  font-weight: bold;
-  font-size: 20px;
-  color: #ffffff;
-}
-
-.v-card {
-  background-color: #1e1e1e; /* Тёмный фон карточек */
-  color: #ffffff;
-}
-
-.v-btn {
-  color: #43a047;
-}
-
-@media (max-width: 800px) {
-  .custom-tab {
+  .gender-button {
+    height: 50px;
     font-size: 14px;
-    padding: 6px 8px;
-    margin: 0 0.5px;
-  }
-
-  .advice-title {
-    font-size: 16px;
-  }
-
-  .advice-content {
-    font-size: 16px;
-  }
-
-  .headline {
-    font-size: 20px;
   }
 }
-
 </style>

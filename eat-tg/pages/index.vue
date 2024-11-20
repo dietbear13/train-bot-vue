@@ -1,6 +1,7 @@
 <!-- pages/index.vue -->
 <template>
   <v-container class="home-container" fluid>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no" >
     <transition-group name="fade" tag="div" class="v-row">
       <!-- Карточка "Nutrition" -->
       <v-col
@@ -84,7 +85,7 @@ const cards = ref<Card[]>([
 
 .clickable-card {
   background-color: #1e1e1e; /* Тёмный фон карточек */
-  border-radius: 10px;
+  border-radius: 16px;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -144,6 +145,6 @@ const cards = ref<Card[]>([
 
 .v-card {
   border: #FFFFFF19 1px;
-  border-radius: 10px;
+  border-radius: 16px;
 }
 </style>
