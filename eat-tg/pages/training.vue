@@ -14,15 +14,22 @@
         hide-slider
         class="custom-tabs"
     >
-    <v-tab
+      <v-tab
+          class="custom-tab px-1"
+          :class="{ 'active-tab': activeTab === 0 }"
+      >
+        Вики
+      </v-tab>
+
+      <v-tab
         class="custom-tab px-1"
-        :class="{ 'active-tab': activeTab === 0 }"
+        :class="{ 'active-tab': activeTab === 1 }"
     >
       На одну мышцу
     </v-tab>
     <v-tab
         class="custom-tab px-1"
-        :class="{ 'active-tab': activeTab === 1 }"
+        :class="{ 'active-tab': activeTab === 2 }"
     >
       Сплиты на неделю
     </v-tab>
@@ -30,6 +37,9 @@
 
 
     <v-tabs-window v-model="activeTab">
+      <v-tabs-window-item>
+        <ExerciseSearch />
+      </v-tabs-window-item>
       <v-tabs-window-item>
           <TrainingByMuscles />
       </v-tabs-window-item>
@@ -44,6 +54,7 @@
 import { ref } from 'vue'
 import TrainingByLevel from '~/components/TrainingByLevel.vue'
 import TrainingByMuscles from '~/components/TrainingByMuscles.vue'
+import ExerciseSearch from "~/components/ExerciseSearch.vue";
 
 // Инициализация активной вкладки с типизацией
 const activeTab = ref<number>(0)
