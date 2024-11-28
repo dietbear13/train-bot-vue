@@ -27,7 +27,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch, computed } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 
 const router = useRouter();
@@ -42,18 +42,31 @@ const menuItems = [
 
 const currentTab = ref('home');
 const previousOrder = ref(1);
+const previousPath = ref('/');
 
 const navigate = (path) => {
   router.push(path);
 };
 
 const transitionName = computed(() => {
-  const currentItem = menuItems.find((item) => item.name === currentTab.value);
-  if (currentItem.order > previousOrder.value) {
+  const currentItem = menuItems.find((item) => item.path === route.path);
+  const previousItem = menuItems.find((item) => item.path === previousPath.value);
+
+  // Если переходим с главной страницы на другую — всегда "slide-left"
+  if (previousPath.value === '/' && route.path !== '/') {
     return 'slide-left';
-  } else {
-    return 'slide-right';
   }
+
+  if (currentItem && previousItem) {
+    if (currentItem.order > previousItem.order) {
+      return 'slide-left';
+    } else {
+      return 'slide-right';
+    }
+  }
+
+  // По умолчанию
+  return 'slide-left';
 });
 
 watch(
@@ -64,17 +77,18 @@ watch(
 
       if (currentItem) {
         currentTab.value = currentItem.name;
+      }
 
-        if (previousItem) {
-          previousOrder.value = previousItem.order;
-        } else {
-          previousOrder.value = currentItem.order;
-        }
+      if (previousItem) {
+        previousOrder.value = previousItem.order;
+        previousPath.value = previousItem.path;
+      } else {
+        previousOrder.value = 0;
+        previousPath.value = '/';
       }
     },
     { immediate: true }
 );
-
 </script>
 
 <style scoped>

@@ -3,36 +3,54 @@
 <template>
   <div>
     <!-- Поисковая строка -->
-      <v-text-field
-          v-model="searchQuery"
-          label="Вводи упражнение"
-          @input="onSearchInput"
-          clearable
-          class="my-0 dark-background pa-1"
-          variant="outlined"
-      ></v-text-field>
+    <v-text-field
+        v-model="searchQuery"
+        label="Вводи упражнение"
+        @input="onSearchInput"
+        clearable
+        class="my-0 dark-background pa-1"
+        variant="outlined"
+    ></v-text-field>
 
+    <!-- Кнопка добавления упражнения (только для администратора) -->
+    <div v-if="isAdmin" class="admin-actions">
+      <v-btn color="primary" @click="openAddExerciseDialog">
+        <v-icon left>mdi-plus</v-icon>
+        Добавить упражнение
+      </v-btn>
+    </div>
 
     <!-- Список упражнений -->
     <v-card class="ma-0 dark-background pa-2" variant="tonal">
-        <v-list-item
-            v-for="exercise in filteredExercises"
-            :key="exercise._id"
-            class="exercise-item"
-        >
-          <v-list-item-title>
-            <span v-html="highlightQuery(exercise.name)"></span>
-          </v-list-item-title>
-          <v-list-item-action>
-            <v-chip class="mr-2" small color="primary" text-color="white">
-              {{ exercise.category }}
-            </v-chip>
-            <v-btn variant="plain" icon @click="openExerciseInfo(exercise)">
-              <v-icon class="ml-2">mdi-information-outline</v-icon>
+      <v-list-item
+          v-for="exercise in filteredExercises"
+          :key="exercise._id"
+          class="exercise-item"
+      >
+        <v-list-item-title>
+          <span v-html="highlightQuery(exercise.name)"></span>
+        </v-list-item-title>
+        <v-list-item-action>
+          <v-chip class="mr-2" small color="primary" text-color="white">
+            {{ exercise.category }}
+          </v-chip>
+
+          <!-- Кнопки для администратора -->
+          <div v-if="isAdmin" class="admin-buttons">
+            <v-btn icon @click="editExercise(exercise)" variant="plain">
+              <v-icon>mdi-pencil</v-icon>
             </v-btn>
-          </v-list-item-action>
-        </v-list-item>
-        <v-divider></v-divider>
+            <v-btn icon @click="confirmDeleteExercise(exercise)" variant="plain">
+              <v-icon>mdi-delete</v-icon>
+            </v-btn>
+          </div>
+
+          <v-btn variant="plain" icon @click="openExerciseInfo(exercise)">
+            <v-icon class="ml-2">mdi-information-outline</v-icon>
+          </v-btn>
+        </v-list-item-action>
+      </v-list-item>
+      <v-divider></v-divider>
     </v-card>
 
     <!-- v-bottom-sheet с информацией об упражнении -->
@@ -82,12 +100,47 @@
         </v-card-actions>
       </v-card>
     </v-bottom-sheet>
+
+    <!-- Диалог добавления упражнения (только визуальная часть) -->
+    <v-dialog v-model="showAddExerciseDialog" max-width="600px">
+      <v-card>
+        <v-card-title>
+          <span class="headline">Добавить упражнение</span>
+        </v-card-title>
+        <v-card-text>
+          <!-- Поля формы для добавления упражнения -->
+          <v-text-field label="Название упражнения" v-model="newExercise.name"></v-text-field>
+          <!-- Добавьте другие поля по необходимости -->
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn text @click="closeAddExerciseDialog">Отмена</v-btn>
+          <v-btn color="primary" @click="addExercise">Добавить</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Диалог подтверждения удаления -->
+    <v-dialog v-model="showDeleteConfirmDialog" max-width="500px">
+      <v-card>
+        <v-card-title class="headline">Подтверждение удаления</v-card-title>
+        <v-card-text>
+          Вы уверены, что хотите удалить упражнение "{{ exerciseToDelete?.name }}"?
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn text @click="cancelDelete">Отмена</v-btn>
+          <v-btn color="red" @click="deleteExercise">Удалить</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted } from 'vue';
 import axios, { AxiosRequestConfig, Method } from 'axios';
+import { useUserStore } from '~/stores/userStore'; // Подключение хранилища пользователя
 
 // Определение базовых URL-адресов
 const primaryBaseURL = 'https://fit-server-bot.ru.tuna.am/api/';
@@ -150,11 +203,20 @@ export default defineComponent({
   name: 'ExerciseSearch',
   setup() {
     const exercises = ref<Exercise[]>([]);
-
     const searchQuery = ref('');
 
     const showExerciseInfo = ref(false);
     const selectedExercise = ref<Exercise | null>(null);
+
+    // Подключение хранилища пользователя
+    const userStore = useUserStore();
+    const isAdmin = computed(() => userStore.role === 'admin');
+
+    // Переменные для админских действий
+    const showAddExerciseDialog = ref(false);
+    const newExercise = ref<Partial<Exercise>>({});
+    const showDeleteConfirmDialog = ref(false);
+    const exerciseToDelete = ref<Exercise | null>(null);
 
     const loadExercises = async () => {
       try {
@@ -165,11 +227,13 @@ export default defineComponent({
       }
     };
 
-    // Функция для нормализации строк (убирает знаки препинания и заменяет ё на е, ъ на ь)
+    // Функция для нормализации строк
     const normalizeString = (str: string): string => {
       return str
           .toLowerCase()
           .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '')
+          .replace(/ё/g, 'е')
+          .replace(/ъ/g, 'ь');
     };
 
     // Функция для вычисления процента опечаток
@@ -259,6 +323,46 @@ export default defineComponent({
       showExerciseInfo.value = true;
     };
 
+    // Админские действия
+    const openAddExerciseDialog = () => {
+      newExercise.value = {};
+      showAddExerciseDialog.value = true;
+    };
+
+    const closeAddExerciseDialog = () => {
+      showAddExerciseDialog.value = false;
+    };
+
+    const addExercise = () => {
+      // Реализуйте добавление упражнения через API позже
+      console.log('Добавить упражнение:', newExercise.value);
+      closeAddExerciseDialog();
+    };
+
+    const editExercise = (exercise: Exercise) => {
+      // Реализуйте редактирование упражнения через API позже
+      console.log('Редактировать упражнение:', exercise);
+    };
+
+    const confirmDeleteExercise = (exercise: Exercise) => {
+      exerciseToDelete.value = exercise;
+      showDeleteConfirmDialog.value = true;
+    };
+
+    const cancelDelete = () => {
+      exerciseToDelete.value = null;
+      showDeleteConfirmDialog.value = false;
+    };
+
+    const deleteExercise = () => {
+      if (exerciseToDelete.value) {
+        // Реализуйте удаление упражнения через API позже
+        console.log('Удалить упражнение:', exerciseToDelete.value);
+        showDeleteConfirmDialog.value = false;
+        exerciseToDelete.value = null;
+      }
+    };
+
     onMounted(() => {
       loadExercises();
     });
@@ -272,6 +376,19 @@ export default defineComponent({
       showExerciseInfo,
       selectedExercise,
       openExerciseInfo,
+      // Админские переменные и методы
+      isAdmin,
+      showAddExerciseDialog,
+      openAddExerciseDialog,
+      closeAddExerciseDialog,
+      newExercise,
+      addExercise,
+      editExercise,
+      confirmDeleteExercise,
+      showDeleteConfirmDialog,
+      exerciseToDelete,
+      cancelDelete,
+      deleteExercise,
     };
   },
 });
@@ -325,7 +442,20 @@ mark {
   margin: 0;
 }
 
-/* Дополнительные стили для визуального оформления */
+/* Стили для админских кнопок */
+.admin-buttons {
+  display: flex;
+  align-items: center;
+}
+
+.admin-buttons .v-btn {
+  margin-right: 4px;
+}
+
+/* Стили для верхней панели с кнопкой добавления */
+.admin-actions {
+  margin: 16px 0;
+}
 
 /* Стили для v-card-text в v-bottom-sheet */
 .label-col {

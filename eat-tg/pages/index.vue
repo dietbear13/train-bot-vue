@@ -1,9 +1,12 @@
 <!-- pages/index.vue -->
 <template>
   <v-container class="home-container" fluid>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no" >
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    >
     <transition-group name="fade" tag="div" class="v-row">
-      <!-- Карточка "Nutrition" -->
+      <!-- Карточки -->
       <v-col
           v-for="card in cards"
           :key="card.title"
@@ -11,12 +14,12 @@
           sm="6"
           md="4"
           lg="3"
-          class="pa-0.5"
+          class="px-4 pb-0"
           variant="tonal"
       >
         <NuxtLink :to="card.link" class="nuxt-link">
           <v-card
-              class="home-card clickable-card rounded-lg"
+              class="dark-background clickable-card rounded-lg"
               outlined
               dark
               tile
@@ -26,7 +29,19 @@
               {{ card.title }}
             </v-card-title>
             <v-card-text class="card-description">
-              {{ card.description }}
+              <!-- Вложенные карточки для описания -->
+              <v-card
+                  v-for="(item, index) in card.descriptions"
+                  :key="index"
+                  class="sub-card rounded-lg"
+                  outlined
+                  flat
+                  tile
+              >
+                <v-card-text class="sub-description pa-2">
+                  {{ item }}
+                </v-card-text>
+              </v-card>
             </v-card-text>
           </v-card>
         </NuxtLink>
@@ -36,47 +51,57 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref } from 'vue';
 
 interface Card {
-  title: string
-  description: string
-  link: string
-  icon: string
+  title: string;
+  descriptions: string[]; // Список строк описания
+  link: string;
+  icon: string;
 }
 
 const cards = ref<Card[]>([
   {
     title: 'Программы питания',
-    description: 'Основы гибкого питания и совмещение с силовыми тренировками. ',
+    descriptions: [
+      'Калькулятор КБЖУ для занимающихся в тренажёрном зале.',
+      'Основы питания для силовых тренировок.',
+      'Примеры рационов питания для мужчин и женщин.'
+    ],
     link: '/nutrition',
     icon: 'mdi-food-apple'
   },
   {
     title: 'Генератор тренировок',
-    description: 'Генерируй бесконечное число вариантов тренировок на конкретную мышцу или сразу целыми сплитами.',
+    descriptions: [
+      'Генерация бесконечного числа разнообразных тренировок на конкретную мышцу.',
+      'Генерация разных сплитов на неделю и подбор упражнений по ним.',
+      'База с 1100+ упражнений для дома, йоги, воркаута, TRX, МФР, кроссфита.'
+    ],
     link: '/training',
     icon: 'mdi-dumbbell'
   },
   {
     title: 'TODO',
-    description: 'Подумать можно ли тут сделать ссылку на таб. Если нет, сделать некликабельный блок с онбордингом.',
+    descriptions: [
+      'Подумать можно ли тут сделать ссылку на таб.',
+      'Если нет, сделать некликабельный блок с онбордингом.'
+    ],
     link: '/profile',
     icon: 'mdi-alert-circle'
   }
-  // Добавьте дополнительные карточки по необходимости
-])
+]);
 </script>
 
 <style scoped>
 .home-container {
-  padding: 16px;
-  background-color: #121212; /* Тёмный фон страницы */
-  min-height: calc(100vh - 56px); /* Учёт высоты нижней навигации */
+  padding: 8px;
+  background-color: #121212;
+  min-height: calc(100vh - 56px);
 }
 
 .v-row {
-  margin: -1px; /* Для компенсации внутренних отступов колонок */
+  margin: -1px;
 }
 
 .v-col {
@@ -84,14 +109,14 @@ const cards = ref<Card[]>([
 }
 
 .clickable-card {
-  background-color: #1e1e1e; /* Тёмный фон карточек */
+  background-color: #FFFFFF19;
   border-radius: 16px;
   height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: center;
   transition: transform 0.2s, box-shadow 0.2s;
-  cursor: pointer; /* Индикатор кликабельности */
+  cursor: pointer;
 }
 
 .clickable-card:active {
@@ -100,7 +125,7 @@ const cards = ref<Card[]>([
 }
 
 .headline {
-  color: #ffffff; /* Светлый текст заголовка */
+  color: #ffffff;
   display: flex;
   align-items: center;
 }
@@ -110,31 +135,45 @@ const cards = ref<Card[]>([
 }
 
 .card-description {
-  color: #b0bec5; /* Светло-серый текст описания */
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sub-card {
+  background-color: #FFFFFF19;
+  border: none;
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.sub-description {
+  color: #b0bec5;
   font-size: 14px;
-  margin-top: 8px;
 }
 
 .nuxt-link {
   text-decoration: none;
 }
 
-/* Плавные переходы при загрузке карточек */
-.fade-enter-active, .fade-leave-active {
+.fade-enter-active,
+.fade-leave-active {
   transition: opacity 0.5s;
 }
-.fade-enter-from, .fade-leave-to {
+
+.fade-enter-from,
+.fade-leave-to {
   opacity: 0;
 }
 
-/* Адаптивность для мобильных устройств */
 @media (max-width: 800px) {
   .headline {
     font-size: 20px;
   }
 
-  .card-description {
+  .sub-description {
     font-size: 16px;
+    border-radius: 16px;
   }
 
   .v-icon {
@@ -144,7 +183,6 @@ const cards = ref<Card[]>([
 }
 
 .v-card {
-  border: #FFFFFF19 1px;
-  border-radius: 16px;
+  border: none;
 }
 </style>

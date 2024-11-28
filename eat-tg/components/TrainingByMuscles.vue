@@ -37,7 +37,12 @@
     <v-card class="my-2 dark-background pa-3" variant="tonal">
       <v-card-text class="pa-1">
         <v-row>
-          <v-col cols="6" class="px-2 py-0" v-for="(option, index) in muscleGroups" :key="option">
+          <v-col
+              cols="6"
+              class="px-2 py-0"
+              v-for="(option, index) in muscleGroups"
+              :key="option"
+          >
             <v-btn
                 :value="option"
                 class="group-button mx-auto my-1 px-2"
@@ -58,7 +63,12 @@
     <v-card class="my-2 dark-background pa-3" variant="tonal">
       <v-card-text class="pa-1">
         <v-row>
-          <v-col cols="6" class="px-2 py-0" v-for="(option, index) in muscleSubgroups" :key="option">
+          <v-col
+              cols="6"
+              class="px-2 py-0"
+              v-for="(option, index) in muscleSubgroups"
+              :key="option"
+          >
             <v-btn
                 :value="option"
                 class="group-button mx-auto my-1 py-1 px-2"
@@ -87,18 +97,6 @@
       <v-icon left>mdi-dumbbell</v-icon>
       {{ timer > 0 ? `Повторная генерация через ${timer} с` : 'Сгенерировать' }}
     </v-btn>
-    <!-- Сообщение об ошибке -->
-    <v-alert
-        v-if="errorMessages.length > 0"
-        type="error"
-        class="mt-2"
-        dismissible
-        @input="errorMessages = []"
-    >
-      <ul>
-        <li v-for="(msg, index) in errorMessages" :key="index">{{ msg }}</li>
-      </ul>
-    </v-alert>
 
     <!-- v-bottom-sheet с таблицей упражнений -->
     <v-bottom-sheet
@@ -114,10 +112,9 @@
           <v-data-table
               :items="workoutResults"
               class="rounded-bottom-sheet"
-
               hide-default-header
               hide-default-footer
-              >
+          >
             <!-- Оборачиваем tbody в draggable -->
             <draggable
                 tag="tbody"
@@ -130,17 +127,24 @@
               <template #item="{ element, index }">
                 <tr>
                   <td style="cursor: move; padding: 0 4px;">
-
-                    <div class="drag-handle" style="display: flex; align-items: center;">
-                      <v-icon class="mr-1">mdi-shuffle-variant
-                      </v-icon>
+                    <div
+                        class="drag-handle"
+                        style="display: flex; align-items: center;"
+                    >
+                      <v-icon class="mr-1">mdi-shuffle-variant</v-icon>
                     </div>
                   </td>
-                  <td class="drag-handle" style="padding: 0 4px;">{{ element.name }}</td>
-                  <td class="fixed-width sets-reps-column" style="padding: 0 4px;">
+                  <td class="drag-handle" style="padding: 0 4px;">
+                    {{ element.name }}
+                  </td>
+                  <td
+                      class="fixed-width sets-reps-column"
+                      style="padding: 0 4px;"
+                  >
                     <div class="sets-reps-container ">
                       <v-btn
-                          icon small
+                          icon
+                          small
                           @click="decreaseReps(index)"
                           variant="plain"
                           class="mx-1"
@@ -149,7 +153,8 @@
                       </v-btn>
                       <span>{{ element.sets }} × {{ element.reps }}</span>
                       <v-btn
-                          icon small
+                          icon
+                          small
                           @click="increaseReps(index)"
                           variant="plain"
                           class="mx-1"
@@ -158,9 +163,16 @@
                       </v-btn>
                     </div>
                   </td>
-                  <td class="fixed-width action-column" style="padding: 0 4px;">
-                    <v-btn icon @click="regenerateExercise(index)" variant="plain">
-                      <v-icon >mdi-refresh</v-icon>
+                  <td
+                      class="fixed-width action-column"
+                      style="padding: 0 4px;"
+                  >
+                    <v-btn
+                        icon
+                        @click="regenerateExercise(index)"
+                        variant="plain"
+                    >
+                      <v-icon>mdi-refresh</v-icon>
                     </v-btn>
                     <v-btn icon @click="removeExercise(index)" variant="plain">
                       <v-icon>mdi-delete</v-icon>
@@ -171,7 +183,6 @@
             </draggable>
           </v-data-table>
 
-          <!-- Остальной код остаётся без изменений -->
           <div class="text-center mt-2">
             <v-btn
                 color="primary"
@@ -192,17 +203,35 @@
               <v-icon left>mdi-send</v-icon>
               Отправить себе
             </v-btn>
-            <v-btn
-                @click="showBottomSheet = false"
-                rounded="lg"
-                variant="plain"
-            >
+            <v-btn @click="showBottomSheet = false" rounded="lg" variant="plain">
               Закрыть
             </v-btn>
           </div>
         </v-card-text>
       </v-card>
     </v-bottom-sheet>
+
+    <!-- Snackbar для уведомлений -->
+    <v-snackbar
+        v-model="snackbar.show"
+        :color="snackbar.color"
+        :timeout="snackbar.timeout"
+        top
+        right
+        multi-line
+    >
+      {{ snackbar.message }}
+      <template #action="{ attrs }">
+        <v-btn
+            color="white"
+            text
+            v-bind="attrs"
+            @click="snackbar.show = false"
+        >
+          Закрыть
+        </v-btn>
+      </template>
+    </v-snackbar>
   </v-form>
 </template>
 
@@ -325,6 +354,8 @@ export default defineComponent({
     const muscleGroup = ref<string>('');
     const muscleSubgroup = ref<string>('');
 
+    const date = ref<string>(new Date().toLocaleDateString('ru-RU')); // Добавлено
+
     const genders = ['Мужчина', 'Женщина'];
     const muscleGroups = ref<string[]>([]);
     const muscleSubgroups = ref<string[]>([]);
@@ -345,11 +376,26 @@ export default defineComponent({
     const selectedPattern = ref<Pattern | null>(null);
     const usedExerciseIds = ref<Set<string>>(new Set());
 
-    const onDragStart = (event) => {
+    // Переменные для Snackbar
+    const snackbar = ref({
+      show: false,
+      message: '',
+      color: 'info', // Цвет уведомления: 'success', 'error', 'info', 'warning'
+      timeout: 3000, // Время отображения в миллисекундах
+    });
+
+    // Функция для отображения Snackbar
+    const showSnackbar = (message: string, color: string = 'info') => {
+      snackbar.value.message = message;
+      snackbar.value.color = color;
+      snackbar.value.show = true;
+    };
+
+    const onDragStart = (event: any) => {
       console.log('Drag started', event);
     };
 
-    const onDragEnd = (event) => {
+    const onDragEnd = (event: any) => {
       console.log('Drag ended', event);
     };
 
@@ -361,7 +407,7 @@ export default defineComponent({
         console.log('Упражнения загружены:', exercises.value);
       } catch (error: any) {
         console.error('Ошибка при загрузке упражнений:', error.message);
-        errorMessages.value.push('Не удалось загрузить упражнения. Попробуйте позже.');
+        showSnackbar('Не удалось загрузить упражнения. Попробуйте позже.', 'error');
       }
     };
 
@@ -372,7 +418,7 @@ export default defineComponent({
         console.log('Загруженные паттерны:', patterns.value);
       } catch (error: any) {
         console.error('Ошибка при загрузке паттернов:', error.message);
-        errorMessages.value.push('Не удалось загрузить паттерны. Попробуйте позже.');
+        showSnackbar('Не удалось загрузить паттерны. Попробуйте позже.', 'error');
       }
     };
 
@@ -489,9 +535,9 @@ export default defineComponent({
         console.warn(`Неизвестный уровень нагрузки: ${loadLevel}`);
         return null;
       }
-      const repsKey = `${gender === 'Мужчина' ? 'male' : 'female'}Reps${capitalize(
-          mappedLevel
-      )}` as keyof RepetitionLevels;
+      const repsKey = `${
+          gender === 'Мужчина' ? 'male' : 'female'
+      }Reps${capitalize(mappedLevel)}` as keyof RepetitionLevels;
       return exercise[repsKey] || null;
     };
 
@@ -509,7 +555,7 @@ export default defineComponent({
       }
 
       if (!gender.value || !muscleGroup.value || !muscleSubgroup.value) {
-        errorMessages.value.push('Пожалуйста, заполните все поля.');
+        showSnackbar('Пожалуйста, заполните все поля.', 'error');
         return;
       }
 
@@ -525,7 +571,7 @@ export default defineComponent({
       );
 
       if (filteredPatterns.length === 0) {
-        errorMessages.value.push('Подходящий паттерн не найден.');
+        showSnackbar('Подходящий паттерн не найден.', 'error');
         isGenerating.value = false;
         return;
       }
@@ -540,19 +586,13 @@ export default defineComponent({
 
       for (const patternExercise of pattern.exercises) {
         if (!patternExercise.muscleGroup || !patternExercise.mainMuscle) {
-          console.warn(
-              'Pattern exercise is missing muscleGroup or mainMuscle'
-          );
+          console.warn('Pattern exercise is missing muscleGroup or mainMuscle');
           continue;
         }
 
         const matchingExercises = exercises.value.filter((e) => {
           if (!e.category || !e.mainMuscle) {
-            console.log('e.category', e.category)
-            console.log('e.mainMuscle', e.mainMuscle)
-            console.warn(
-                `Exercise ${e._id} is missing category or mainMuscle`
-            );
+            console.warn(`Exercise ${e._id} is missing category or mainMuscle`);
             return false;
           }
 
@@ -614,8 +654,9 @@ export default defineComponent({
       }
 
       if (workout.length === 0) {
-        errorMessages.value.push(
-            'Тренировка не сгенерирована. Попробуйте другие параметры.'
+        showSnackbar(
+            'Тренировка не сгенерирована. Попробуйте другие параметры.',
+            'error'
         );
       }
 
@@ -660,9 +701,7 @@ export default defineComponent({
 
       const matchingExercises = exercises.value.filter((e) => {
         if (!e.category || !e.mainMuscle) {
-          console.warn(
-              `Exercise ${e._id} is missing category or `
-          );
+          console.warn(`Exercise ${e._id} is missing category or mainMuscle`);
           return false;
         }
 
@@ -701,8 +740,9 @@ export default defineComponent({
     // Метод для отправки тренировки через Telegram
     const sendWorkout = async () => {
       if (!telegramUserId.value || !workoutResults.value.length) {
-        errorMessages.value.push(
-            'Не указан Telegram ID или отсутствуют результаты тренировки.'
+        showSnackbar(
+            'Не указан Telegram ID или отсутствуют результаты тренировки.',
+            'error'
         );
         return;
       }
@@ -715,16 +755,19 @@ export default defineComponent({
 
         console.log('Данные для отправки:', workoutData);
 
-        const data = await apiRequest('post', 'send-workout', {
+        await apiRequest('post', 'send-workout', {
           userId: telegramUserId.value,
+          muscleGroup: muscleSubgroup.value, // Передаём мышечную подгруппу
+          date: date.value,
           workout: workoutData,
         });
-        console.log('Ответ сервера:', data);
-        alert('Тренировка успешно отправлена!');
+
+        showSnackbar('Тренировка успешно отправлена!', 'success');
       } catch (error) {
         console.error('Ошибка при отправке тренировки:', error);
-        errorMessages.value.push(
-            'Не удалось отправить тренировку. Попробуйте позже.'
+        showSnackbar(
+            'Не удалось отправить тренировку. Попробуйте позже.',
+            'error'
         );
       }
     };
@@ -774,8 +817,9 @@ export default defineComponent({
           console.error(
               'Не удалось получить данные пользователя. Убедитесь, что приложение запущено внутри Telegram.'
           );
-          errorMessages.value.push(
-              'Не удалось получить данные пользователя. Убедитесь, что приложение запущено внутри Telegram.'
+          showSnackbar(
+              'Не удалось получить данные пользователя. Убедитесь, что приложение запущено внутри Telegram.',
+              'error'
           );
         }
       }
@@ -807,6 +851,9 @@ export default defineComponent({
       removeExercise,
       onDragStart,
       onDragEnd,
+      date, // Добавлено в возвращаемые переменные
+      snackbar, // Добавлено для доступа в шаблон
+      showSnackbar, // Добавлено для доступа в шаблон
     };
   },
 });
@@ -821,12 +868,6 @@ export default defineComponent({
 .selected-button {
   background-color: var(--v-primary-base);
   color: white;
-}
-
-/* Стили для сообщений об ошибках */
-.v-alert {
-  max-width: 600px;
-  margin: 0 auto;
 }
 
 /* Стили для заголовков упражнений */
@@ -900,7 +941,7 @@ export default defineComponent({
   text-align: center;
 }
 
-/* Добавьте эти стили в ваш блок стилей */
+/* Стили для кнопок действий */
 .action-column .v-btn {
   min-width: 36px;
   width: 36px;
@@ -908,4 +949,9 @@ export default defineComponent({
   margin: 0 2px;
 }
 
+/* Стили для Snackbar */
+.v-snackbar {
+  max-width: 600px;
+  margin: 0 auto;
+}
 </style>
