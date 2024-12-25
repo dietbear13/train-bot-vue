@@ -294,19 +294,19 @@ interface RepetitionLevels {
 
 interface Exercise extends RepetitionLevels {
   _id: string
-  category: string
-  subcategory: string
-  mainMuscle: string
-  additionalMuscles: string
+  category: string           // например: "ноги"
+  subcategory: string        // например: "ягодицы" (но теперь мы не используем это при поиске)
+  mainMuscle: string         // "ягодицы"
+  additionalMuscles: string  // "бицепс бедра, квадрицепс" и т.д.
   difficultyLevel: string
   name: string
   equipment: string
 }
 
 interface PatternExercise {
-  muscleGroup: string
-  subcategory?: string
-  mainMuscle: string
+  muscleGroup: string         // например: "ноги"
+  subcategory?: string        // "ягодицы" (учитываем ТОЛЬКО при выборе паттерна)
+  mainMuscle: string          // "ягодицы"
   repetitionLevel: string
   additionalColumn: string
   _id?: string
@@ -314,7 +314,7 @@ interface PatternExercise {
 
 interface Pattern {
   _id: string
-  gender: string
+  gender: string          // "мужчина,женщина" или "мужчина" и т.д.
   complexNumber: string
   exerciseLevel?: string
   exercises: PatternExercise[]
@@ -348,7 +348,7 @@ export default defineComponent({
     draggable
   },
   setup() {
-    // ---------------- Основные ссылки из предыдущего ответа ----------------
+    // ---------------- Основные ссылки ----------------
     const userData = ref<TelegramUserData | null>(null)
     const telegramUserId = ref<number | null>(null)
     const initData = ref<any>(null)
@@ -396,16 +396,17 @@ export default defineComponent({
     const capitalize = (str: string): string =>
         str ? str.charAt(0).toUpperCase() + str.slice(1) : ''
 
-    // Уровни нагрузки -> английские ключи
+    // Карта «лёгкая-средняя-тяжёлая» -> "Light"/"Medium"/"Heavy"
     const levelMapping: { [key: string]: string } = {
       'лёгкая': 'Light',
       'средняя': 'Medium',
       'тяжёлая': 'Heavy'
     }
 
+    // Возможные значения повторений (для increase/decreaseReps)
     const standardRepsValues = [5, 6, 8, 10, 12, 15, 20]
 
-    // Генерация случайного уровня (25% лёгкая, 50% средняя, 25% тяжёлая)
+    // Случайный уровень нагрузки (25% лёгкая, 50% средняя, 25% тяжёлая)
     const getRandomLoadLevel = (): string => {
       const r = Math.random()
       if (r < 0.5) return 'средняя'
@@ -413,7 +414,6 @@ export default defineComponent({
       else return 'тяжёлая'
     }
 
-    // Количество подходов
     const getSets = (reps: number): number => {
       if (reps === 5) return 5
       if (reps === 6 || reps === 8) return 4
@@ -421,7 +421,10 @@ export default defineComponent({
       return 3
     }
 
-    // Возвращаем строку вида "5,8,10" или null
+    /**
+     * Если repsKey = "maleRepsLight", получаем значение из exercise[maleRepsLight].
+     * Если там "—" или пусто, возвращаем null, иначе строку "5,8,10".
+     */
     const getRepsOptions = (
         exercise: Exercise,
         repetitionLevel: string,
@@ -459,6 +462,7 @@ export default defineComponent({
         showSnackbar('Не удалось загрузить упражнения. Попробуйте позже.', 'error')
       }
     }
+
     const loadPatterns = async () => {
       try {
         const data = await apiRequest<Pattern[]>('get', 'patterns')
@@ -470,10 +474,13 @@ export default defineComponent({
       }
     }
 
-    // ---------------- Заполнение списков ----------------
+    // ---------------- Методы заполнения списков ----------------
     const populateMuscleGroups = () => {
+      const excludedCategories = ['йога', 'растяжка']
       const groups = new Set(
-          exercises.value.map((e) => e.category.trim().toLowerCase())
+          exercises.value
+              .map((e) => e.category.trim().toLowerCase())
+              .filter((category) => !excludedCategories.includes(category))
       )
       muscleGroups.value = Array.from(groups).map((group) => capitalize(group))
     }
@@ -484,12 +491,35 @@ export default defineComponent({
         return
       }
       const mg = muscleGroup.value.trim().toLowerCase()
-      const subgroups = new Set(
+
+      // 1. Собираем все дополнительные мышцы для выбранной категории
+      const additionalMusclesSet = new Set<string>()
+      exercises.value
+          .filter((e) => e.category.trim().toLowerCase() === mg)
+          .forEach((e) => {
+            e.additionalMuscles.split(',').forEach((muscle) => {
+              const trimmedMuscle = muscle.trim().toLowerCase()
+              if (trimmedMuscle && trimmedMuscle !== '—') {
+                additionalMusclesSet.add(capitalize(trimmedMuscle))
+              }
+            })
+          })
+
+      // 2. Собираем все подкатегории для выбранной категории, исключая "—"
+      const subcategoriesSet = new Set(
           exercises.value
               .filter((e) => e.category.trim().toLowerCase() === mg)
-              .map((e) => e.subcategory.trim().toLowerCase())
+              .map((e) => e.subcategory.trim())
+              .filter((subcat) => subcat !== '—')
       )
-      muscleSubgroups.value = Array.from(subgroups).map((sub) => capitalize(sub))
+
+      // 3. Пересекаем подкатегории и дополнительные мышцы
+      const validSubcategories = Array.from(subcategoriesSet).filter((subcat) =>
+          additionalMusclesSet.has(capitalize(subcat.toLowerCase()))
+      )
+
+      // 4. Убираем дубликаты и капитализируем
+      muscleSubgroups.value = Array.from(new Set(validSubcategories.map(capitalize)))
     }
 
     const populateComplexes = () => {
@@ -518,19 +548,7 @@ export default defineComponent({
       populateComplexes()
     }
 
-    // ---------------- Генерация ----------------
-
-    /**
-     * Пытаемся найти (до N попыток) подходящее упражнение + уровень нагрузки,
-     * чтобы getRepsOptions не вернул null.
-     *
-     * @param matchingExercises   Упражнения, соответствующие muscleGroup/mainMuscle/subcategory
-     * @param repetitionLevel     patternExercise.repetitionLevel
-     * @param genderStr           текущий gender
-     * @param usedIds             Set уже использованных _id
-     * @param maxTries            сколько раз пробуем
-     * @returns                   Объект { exercise, reps, sets } или null, если не получилось
-     */
+    // ---------------- Логика «до 5 попыток» ----------------
     const tryFindExercise = (
         matchingExercises: Exercise[],
         repetitionLevel: string,
@@ -546,10 +564,10 @@ export default defineComponent({
         const selectedExercise =
             matchingExercises[Math.floor(Math.random() * matchingExercises.length)]
 
-        // случайный уровень нагрузки (additionalColumn)
+        // случайный уровень нагрузки
         const randomLoad = getRandomLoadLevel()
 
-        // получаем возможные повторы
+        // получаем строку "8,10" или null
         const repsOptions = getRepsOptions(
             selectedExercise,
             repetitionLevel,
@@ -557,36 +575,34 @@ export default defineComponent({
             randomLoad
         )
         if (!repsOptions) {
-          // console.log('Попытка', attempt, 'не подходит', selectedExercise.name, randomLoad)
-          continue // пробуем заново
+          // не подходит
+          continue
         }
 
-        // парсим строку "5,8,10"
+        // парсим "5,8,10"
         const repsArray = repsOptions
             .split(',')
-            .map((n) => parseInt(n, 10))
-            .filter((x) => !isNaN(x))
+            .map((x) => parseInt(x, 10))
+            .filter((n) => !isNaN(n))
 
         if (repsArray.length === 0) {
           continue
         }
-        // выбираем случайный reps
+
+        // случайный reps
         const reps = repsArray[Math.floor(Math.random() * repsArray.length)]
         const sets = getSets(reps)
 
-        // всё успешно, возвращаем результат
         return {
           exercise: selectedExercise,
           reps,
           sets
         }
       }
-      return null // если не нашли за maxTries
+      return null
     }
 
-    /**
-     * Генерация тренировки
-     */
+    // ---------------- Генерация тренировки ----------------
     const generateWorkout = () => {
       if (isGenerating.value || timer.value > 0) return
       if (!gender.value || !muscleGroup.value || !muscleSubgroup.value) {
@@ -598,11 +614,13 @@ export default defineComponent({
       errorMessages.value = []
       workoutResults.value = []
 
-      // Фильтруем паттерны
+      // 1) Выбираем паттерны (учитываем subcategory здесь!)
       const filteredPatterns = patterns.value.filter((p) => {
+        // p.gender.includes(...)
         const gMatch = p.gender.toLowerCase().includes(gender.value.toLowerCase())
         if (!gMatch) return false
-        // проверяем, есть ли хоть одно упражнение, совпадающее по muscleGroup/subcategory
+
+        // Проверка subcategory: чтобы в p.exercises нашлось muscleGroup + subcategory
         const hasNeeded = p.exercises.some(
             (ex) =>
                 ex.muscleGroup.toLowerCase() === muscleGroup.value.toLowerCase() &&
@@ -617,7 +635,7 @@ export default defineComponent({
         return
       }
 
-      // случайно выбираем паттерн
+      // Выбираем случайно паттерн
       const pattern =
           filteredPatterns[Math.floor(Math.random() * filteredPatterns.length)]
       selectedPattern.value = pattern
@@ -625,43 +643,54 @@ export default defineComponent({
 
       const workout: WorkoutResult[] = []
 
+      // 2) Проходимся по exercises внутри паттерна
       for (const patternExercise of pattern.exercises) {
         const mg = patternExercise.muscleGroup.toLowerCase()
-        const subcat = (patternExercise.subcategory || '').toLowerCase()
+        // (!) subcategory НЕ учитываем при поиске конкретного упражнения
+        // const subcat = (patternExercise.subcategory || '').toLowerCase()
         const mm = patternExercise.mainMuscle.toLowerCase()
 
-        // Подбираем список упражнений
+        // 3) Подбираем список упражнений:
+        //    - Совпадает по category = mg
+        //    - Для mainMuscle: либо e.mainMuscle === mm, либо e.additionalMuscles содержит mm
+        //    - Учитываем usedExerciseIds, чтобы не дублировать
         const matchingExercises = exercises.value.filter((e) => {
           if (!e.category || !e.mainMuscle) return false
+
           const catMatch = e.category.toLowerCase() === mg
-          const subMatch = e.subcategory.toLowerCase() === subcat
-          const mmMatch = e.mainMuscle.toLowerCase() === mm
+
+          // Либо точное совпадение mainMuscle...
+          // Либо e.additionalMuscles (строка) содержит patternExercise.mainMuscle
+          const mmToFind = mm
+          const mmMatch =
+              e.mainMuscle.toLowerCase() === mmToFind ||
+              e.additionalMuscles.toLowerCase().includes(mmToFind)
+
           const notUsed = !usedExerciseIds.value.has(e._id)
-          return catMatch && subMatch && mmMatch && notUsed
+          return catMatch && mmMatch && notUsed
         })
 
         if (matchingExercises.length === 0) {
-          console.warn('Нет доступных упражнений для:', patternExercise)
+          console.warn('Нет подходящих упражнений для:', patternExercise)
           continue
         }
 
-        // Пытаемся найти подходящее упражнение + loadLevel
+        // 4) Пытаемся найти подходящее с учётом уровня нагрузки (до 5 попыток)
         const found = tryFindExercise(
             matchingExercises,
             patternExercise.repetitionLevel,
             gender.value,
             usedExerciseIds.value,
-            5 // 5 попыток, можно увеличить
+            5
         )
 
         if (!found) {
-          // Не нашли подходящее за 5 попыток
           console.warn('Не удалось подобрать упражнение для:', patternExercise)
           continue
         }
 
-        // Добавляем в results
         usedExerciseIds.value.add(found.exercise._id)
+
         workout.push({
           _id: found.exercise._id,
           name: found.exercise.name,
@@ -670,7 +699,7 @@ export default defineComponent({
         })
       }
 
-      // Проверка, есть ли хоть одно упражнение
+      // Если ничего не набралось
       if (workout.length === 0) {
         showSnackbar('Тренировка не сгенерирована. Попробуйте другие параметры.', 'error')
       }
@@ -678,7 +707,7 @@ export default defineComponent({
       workoutResults.value = workout
       console.log('Результаты тренировки:', workoutResults.value)
 
-      // Запускаем 3-секундный таймер
+      // Запускаем 3-секундный таймер, чтобы нельзя было спамить
       timer.value = 3
       intervalId = window.setInterval(() => {
         timer.value--
@@ -701,41 +730,40 @@ export default defineComponent({
       workoutResults.value.splice(index, 1)
     }
 
-    /**
-     * Перегенерация одного упражнения (аналогично, но уже с retry).
-     * Здесь мы не перебираем patternExercise, а берём selectedPattern.value.exercises[index].
-     */
+    // Перегенерация одного упражнения
     const regenerateExercise = (index: number) => {
       if (!selectedPattern.value) {
         console.warn('Паттерн не выбран.')
         return
       }
       const patternExercise = selectedPattern.value.exercises[index]
-      const old = workoutResults.value[index]
-      if (old && old._id) {
-        usedExerciseIds.value.delete(old._id)
+      const oldEx = workoutResults.value[index]
+      if (oldEx && oldEx._id) {
+        usedExerciseIds.value.delete(oldEx._id)
       }
 
-      // Составляем список подходящих
+      // subcategory НЕ учитываем
       const mg = patternExercise.muscleGroup.toLowerCase()
-      const subcat = (patternExercise.subcategory || '').toLowerCase()
       const mm = patternExercise.mainMuscle.toLowerCase()
 
       const matchingExercises = exercises.value.filter((e) => {
         if (!e.category || !e.mainMuscle) return false
+
         const catMatch = e.category.toLowerCase() === mg
-        const subMatch = e.subcategory.toLowerCase() === subcat
-        const mmMatch = e.mainMuscle.toLowerCase() === mm
+        const mmToFind = mm
+        const mmMatch =
+            e.mainMuscle.toLowerCase() === mmToFind ||
+            e.additionalMuscles.toLowerCase().includes(mmToFind)
+
         const notUsed = !usedExerciseIds.value.has(e._id)
-        return catMatch && subMatch && mmMatch && notUsed
+        return catMatch && mmMatch && notUsed
       })
 
       if (matchingExercises.length === 0) {
-        console.warn('Нет доступных упражнений для:', patternExercise)
+        console.warn('Нет подходящих упражнений для перегенерации:', patternExercise)
         return
       }
 
-      // Пытаемся найти подходящее
       const found = tryFindExercise(
           matchingExercises,
           patternExercise.repetitionLevel,
@@ -743,14 +771,12 @@ export default defineComponent({
           usedExerciseIds.value,
           5
       )
-
       if (!found) {
-        console.warn('Не удалось подобрать новое упражнение')
+        console.warn('Не удалось подобрать новое упражнение:', patternExercise)
         return
       }
 
       usedExerciseIds.value.add(found.exercise._id)
-
       workoutResults.value[index] = {
         _id: found.exercise._id,
         name: found.exercise.name,
@@ -773,6 +799,7 @@ export default defineComponent({
       ex.reps = newReps
       ex.sets = getSets(ex.reps)
     }
+
     const decreaseReps = (index: number) => {
       const ex = workoutResults.value[index]
       const current = ex.reps
