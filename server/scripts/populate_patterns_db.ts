@@ -1,9 +1,11 @@
-import mongoose from 'mongoose';
+// updatePatterns.ts
+import mongoose, { Schema, Document, model } from 'mongoose';
 import xlsx from 'xlsx';
 import path from 'path';
 
 // Подключение к MongoDB
-mongoose.connect('mongodb://localhost:27017/fitness-app', {})
+mongoose
+    .connect('mongodb://localhost:27017/fitness-app', {})
     .then(() => {
         console.log('Connected to MongoDB');
     })
@@ -11,88 +13,121 @@ mongoose.connect('mongodb://localhost:27017/fitness-app', {})
         console.error('Error connecting to MongoDB:', error);
     });
 
-// Определение схемы для упражнений внутри паттернов
-const exerciseSchema = new mongoose.Schema({
-    muscleGroup: String,
-    mainMuscle: String,
-    repetitionLevel: String,
-    additionalColumn: String, // Добавлен дополнительный столбец
+/**
+ * Интерфейс для одного упражнения внутри паттерна
+ * (соответствует колонкам: muscleGroup, subcategory, mainMuscle, exercise)
+ */
+interface IPatternExercise {
+    muscleGroup: string;
+    subcategory: string;
+    mainMuscle: string;
+    exercise: string;
+}
+
+/**
+ * Интерфейс для документа паттерна
+ */
+interface IPattern extends Document {
+    gender: string;
+    complexNumber: number; // Изменили на number
+    exercises: IPatternExercise[];
+}
+
+// Схема для "одного упражнения" внутри паттерна
+const patternExerciseSchema = new Schema<IPatternExercise>({
+    muscleGroup: { type: String },
+    subcategory: { type: String },
+    mainMuscle: { type: String },
+    exercise: { type: String },
 });
 
-// Определение основной схемы для паттернов
-const patternSchema = new mongoose.Schema({
-    gender: String,
-    complexNumber: String,
-    exerciseLevel: String,
-    exercises: [exerciseSchema],
+// Схема для самого паттерна
+const patternSchema = new Schema<IPattern>({
+    gender: { type: String, required: true },
+    complexNumber: { type: Number, required: true },
+    exercises: [patternExerciseSchema],
 });
 
-const Pattern = mongoose.model('Pattern', patternSchema);
+const Pattern = model<IPattern>('Pattern', patternSchema);
 
-// Чтение данных из Excel файла
+// Путь к Excel-файлу (обновите, если нужно)
 const filePath = path.join(__dirname, 'Все упражнения (2).xlsx');
 const workbook = xlsx.readFile(filePath);
-const sheetName = 'Сплиты по группам';
+const sheetName = 'Сплиты по группам'; // Название листа
 const worksheet = workbook.Sheets[sheetName];
 
-// Преобразование данных Excel в JSON
-const jsonData: any[] = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
+// Преобразование данных Excel в массив массивов (header: 1)
+const rawData = xlsx.utils.sheet_to_json<string[]>(worksheet, { header: 1 });
 
-// Удаление заголовков (предполагается, что первые две строки — заголовки)
-const headers = jsonData[0];
-const dataRows = jsonData.slice(2);
+// Допустим, первая строка — заголовки, поэтому срезаем со второй
+// (или с третьей, если у вас там ещё какая-то строка)
+const dataRows = rawData.slice(1);
 
-// Функция для заполнения базы данных паттернов
-const populatePatternsDB = async () => {
+async function populatePatternsDB() {
     try {
-        // Очистка коллекции паттернов перед добавлением новых данных
+        // Очищаем коллекцию перед перезаписью
         await Pattern.deleteMany({});
-        console.log('Collection cleared.');
+        console.log('Patterns collection cleared.');
 
-        const patterns: { [key: string]: any } = {};
+        /**
+         * Временный объект, где ключ — (gender + '-' + complexNumber),
+         * значение — паттерн с массивом упражнений
+         */
+        const patternsMap: { [key: string]: IPattern } = {};
 
-        // Обработка каждой строки данных
+        // Обрабатываем каждую строку
         for (const row of dataRows) {
-            const [gender, muscleGroup, mainMuscle, complexNumber, ...exerciseData] = row;
+            /**
+             * Предполагаем, что порядок столбцов:
+             * 0: gender
+             * 1: muscleGroup
+             * 2: subcategory
+             * 3: mainMuscle
+             * 4: complexNumber
+             * 5: exercises (тип/название упражнения)
+             */
+            const gender = (row[0] || '').toString().trim();
+            const muscleGroup = (row[1] || '').toString().trim();
+            const subcategory = (row[2] || '').toString().trim();
+            const mainMuscle = (row[3] || '').toString().trim();
+            // Парсим complexNumber как число
+            const complexNumber = Number(row[4] || 0);
+            const exercise = (row[5] || '').toString().trim();
 
-            // Формирование упражнений и добавление последнего столбца в объект упражнения
-            for (let i = 0; i < exerciseData.length - 1; i += 2) {
-                const exerciseLevel = exerciseData[i];
-                const repetitionLevel = exerciseData[i + 1];
-                const additionalColumn = exerciseData[exerciseData.length - 1]; // Последний столбец
+            // Формируем ключ, чтобы сгруппировать упражнения в один паттерн
+            const patternKey = `${gender}-${complexNumber}`;
 
-                if (exerciseLevel && repetitionLevel) {
-                    const patternKey = `${complexNumber}-${exerciseLevel}`;
-                    if (!patterns[patternKey]) {
-                        patterns[patternKey] = {
-                            gender: gender.trim().toLowerCase(),
-                            complexNumber: complexNumber.trim(),
-                            exerciseLevel: exerciseLevel.trim(),
-                            exercises: [],
-                        };
-                    }
-
-                    patterns[patternKey].exercises.push({
-                        muscleGroup: muscleGroup.trim().toLowerCase(),
-                        mainMuscle: mainMuscle.trim().toLowerCase(),
-                        repetitionLevel: repetitionLevel.trim(),
-                        additionalColumn: additionalColumn.trim(),
-                    });
-                }
+            if (!patternsMap[patternKey]) {
+                // Создаём паттерн впервые
+                patternsMap[patternKey] = new Pattern({
+                    gender,
+                    complexNumber,
+                    exercises: [],
+                });
             }
+
+            // Добавляем упражнение в массив exercises
+            patternsMap[patternKey].exercises.push({
+                muscleGroup,
+                subcategory,
+                mainMuscle,
+                exercise,
+            });
         }
 
-        // Вставка всех сгруппированных паттернов в базу данных
-        const patternsToInsert = Object.values(patterns);
+        // Преобразуем объект в массив
+        const patternsToInsert = Object.values(patternsMap);
+
+        // Сохраняем паттерны в базу
         await Pattern.insertMany(patternsToInsert);
 
-        console.log('Database successfully populated with patterns');
-        mongoose.disconnect();
+        console.log('Database successfully populated with new patterns');
     } catch (error) {
-        console.error('Error while populating database:', error);
+        console.error('Error while populating patterns:', error);
+    } finally {
         mongoose.disconnect();
     }
-};
+}
 
-// Запуск функции для заполнения базы данных
+// Запуск
 populatePatternsDB();

@@ -13,9 +13,11 @@
         align-tabs="center"
         hide-slider
         class="custom-tabs"
+
     >
       <v-tab
           class="custom-tab px-1"
+          style="border-radius: 16px"
           :class="{ 'active-tab': activeTab === 0 }"
       >
         Вики
@@ -23,12 +25,16 @@
 
       <v-tab
         class="custom-tab px-1"
+        style="border-radius: 16px"
+
         :class="{ 'active-tab': activeTab === 1 }"
     >
       На одну мышцу
     </v-tab>
     <v-tab
         class="custom-tab px-1"
+        style="border-radius: 16px"
+
         :class="{ 'active-tab': activeTab === 2 }"
     >
       Сплиты на неделю
@@ -71,5 +77,12 @@ const activeTab = ref<number>(0)
   border-top: 16px;
 }
 
+.custom-tabs {
+  border-radius: 16px;
+  background-color: darkslategray;
+}
 
+.custom-tab {
+  border-radius: 16px;
+}
 </style>

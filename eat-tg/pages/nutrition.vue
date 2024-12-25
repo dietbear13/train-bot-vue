@@ -16,12 +16,15 @@
     >
       <v-tab
           class="custom-tab"
+          style="border-radius: 16px"
+
           :class="{ 'active-tab': activeTab === 0 }"
       >
         Советы
       </v-tab>
       <v-tab
           class="custom-tab"
+          style="border-radius: 16px"
           :class="{ 'active-tab': activeTab === 1 }"
       >
         Калькулятор КБЖУ
@@ -58,4 +61,12 @@ const activeTab = ref<number>(0)
   border-top: 16px;
 }
 
+.custom-tabs {
+  border-radius: 16px;
+  background-color: darkslategray;
+}
+
+.custom-tab {
+  border-radius: 16px;
+}
 </style>

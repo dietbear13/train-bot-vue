@@ -1,72 +1,118 @@
-import mongoose from 'mongoose';
+// ~/scripts/populateDB.ts
+
+import mongoose, { Schema, Document, model } from 'mongoose';
 import xlsx from 'xlsx';
 import fs from 'fs';
 import path from 'path';
 
+interface ExerciseData {
+    category: string;
+    subcategory: string;
+    mainMuscle: string;
+    additionalMuscles: string;
+    typeExercise: string;
+    difficultyLevel: string;
+    difficultyLevelOld?: string; // Если необходимо
+    name: string;
+    equipment: string;
+    isWarnGif: boolean;
+    technique: string;
+    gifImage: string; // Добавлено поле для пути к GIF
+    maleRepsLight: string;
+    maleRepsMedium: string;
+    maleRepsHeavy: string;
+    femaleRepsLight: string;
+    femaleRepsMedium: string;
+    femaleRepsHeavy: string;
+    spineRestrictions: boolean;
+    kneeRestrictions: boolean;
+    shoulderRestrictions: boolean;
+}
+
+interface ExerciseDocument extends ExerciseData, Document {}
+
 // Подключение к MongoDB
-mongoose.connect('mongodb://localhost:27017/fitness-app', {
-}).then(() => {
-    console.log('Connected to MongoDB');
-}).catch((error) => {
-    console.error('Error connecting to MongoDB:', error);
+mongoose.connect('mongodb://localhost:27017/fitness-app', {})
+    .then(() => {
+        console.log('Connected to MongoDB');
+    })
+    .catch((error) => {
+        console.error('Error connecting to MongoDB:', error);
+    });
+
+const exerciseSchema = new Schema({
+    category: { type: String, required: true },
+    subcategory: { type: String, required: true },
+    mainMuscle: { type: String, required: true },
+    additionalMuscles: { type: String },
+    typeExercise: { type: String },
+    difficultyLevel: { type: String, required: true },
+    difficultyLevelOld: { type: String },
+    name: { type: String, required: true },
+    equipment: { type: String, required: true },
+    isWarnGif: { type: Boolean },
+    technique: { type: String },
+    gifImage: { type: String }, // Добавлено поле в схему
+    maleRepsLight: { type: String },
+    maleRepsMedium: { type: String },
+    maleRepsHeavy: { type: String },
+    femaleRepsLight: { type: String },
+    femaleRepsMedium: { type: String },
+    femaleRepsHeavy: { type: String },
+    spineRestrictions: { type: Boolean },
+    kneeRestrictions: { type: Boolean },
+    shoulderRestrictions: { type: Boolean },
 });
 
-// Определение схемы для упражнений
-const exerciseSchema = new mongoose.Schema({
-    category: String,
-    subcategory: String,
-    mainMuscle: String,
-    additionalMuscles: String,
-    difficultyLevel: String,
-    name: String,
-    equipment: String,
-    maleRepsLight: String,
-    maleRepsMedium: String,
-    maleRepsHeavy: String,
-    femaleRepsLight: String,
-    femaleRepsMedium: String,
-    femaleRepsHeavy: String
-});
+const Exercise = model<ExerciseDocument>('Exercise', exerciseSchema);
 
-const Exercise = mongoose.model('Exercise', exerciseSchema);
-
-// Чтение данных из Excel файла
+// Путь к Excel-файлу
 const filePath = path.join(__dirname, 'упражнения.xlsx');
 const workbook = xlsx.readFile(filePath);
 const sheetName = workbook.SheetNames[0];
 const worksheet = workbook.Sheets[sheetName];
 
 // Преобразование данных Excel в JSON
-const jsonData: any[] = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
+// { header: 1 } — означает, что возвращается массив массивов
+const jsonData = xlsx.utils.sheet_to_json<string[]>(worksheet, { header: 1 });
 
-// Заголовки для колонок (взяты из первой строки Excel)
+// Первая строка - заголовки
 const headers = jsonData[0];
 
-// Данные для заполнения (вторая строка)
+// Данные со второй строки
 const dataRows = jsonData.slice(1);
 
-// Функция для заполнения базы данных
+function toBoolean(value: string | undefined): boolean {
+    return value?.toUpperCase() === 'TRUE';
+}
+
 const populateDB = async () => {
     try {
-        // Обработка каждой строки данных
         for (const row of dataRows) {
-            const exerciseData = {
-                category: row[0],
-                subcategory: row[1],
-                mainMuscle: row[2],
-                additionalMuscles: row[3],
-                difficultyLevel: row[4],
-                name: row[5],
-                equipment: row[6],
-                maleRepsLight: row[7],
-                maleRepsMedium: row[8],
-                maleRepsHeavy: row[9],
-                femaleRepsLight: row[10],
-                femaleRepsMedium: row[11],
-                femaleRepsHeavy: row[12],
+            const exerciseData: ExerciseData = {
+                category: row[0] || '',
+                subcategory: row[1] || '',
+                mainMuscle: row[2] || '',
+                additionalMuscles: row[3] || '',
+                typeExercise: row[4] || '',
+                difficultyLevel: row[5] || '',
+                difficultyLevelOld: row[6] || '', // Если нужно
+                name: row[7] || '',
+                equipment: row[8] || '',
+                isWarnGif: toBoolean(row[9]),
+                technique: row[10] || '',
+                gifImage: row[11] || '', // Добавлено поле для пути к GIF
+                maleRepsLight: row[12] || '',
+                maleRepsMedium: row[13] || '',
+                maleRepsHeavy: row[14] || '',
+                femaleRepsLight: row[15] || '',
+                femaleRepsMedium: row[16] || '',
+                femaleRepsHeavy: row[17] || '',
+                spineRestrictions: toBoolean(row[18]),
+                kneeRestrictions: toBoolean(row[19]),
+                shoulderRestrictions: toBoolean(row[20]),
             };
 
-            // Создаем новую запись в базе данных
             const exercise = new Exercise(exerciseData);
             await exercise.save();
             console.log(`Inserted: ${exercise.name}`);
@@ -80,5 +126,4 @@ const populateDB = async () => {
     }
 };
 
-// Запуск функции для заполнения базы данных
 populateDB();

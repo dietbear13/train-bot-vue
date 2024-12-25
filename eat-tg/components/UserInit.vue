@@ -9,18 +9,15 @@ import { onMounted } from 'vue';
 import { useUserStore } from '~/stores/userStore';
 import axios, { Method } from 'axios';
 
-// Получение базового URL из runtimeConfig
 const config = useRuntimeConfig();
 const apiBaseURL = config.public.apiBaseUrl;
 
-// Проверка, что URL заканчивается слешем
 const ensureTrailingSlash = (url: string) =>
     url.endsWith('/') ? url : `${url}/`;
 
 const primaryBaseURL = 'https://fit-server-bot.ru.tuna.am/api/';
 const fallbackBaseURL = 'http://localhost:3002/api/';
 
-// Функция apiRequest для выполнения запросов с приоритетом
 const apiRequest = async <T>(
     method: Method,
     endpoint: string,
@@ -53,19 +50,14 @@ const apiRequest = async <T>(
       baseURL: fallbackBaseURL,
       timeout: 5000,
     });
-    try {
-      const response = await fallbackInstance.request<T>({
-        method,
-        url: endpoint,
-        data,
-        params,
-      });
-      console.log('Ответ от резервного сервера:', response.data);
-      return response.data;
-    } catch (fallbackError) {
-      console.error(`Резервный сервер также недоступен: ${fallbackError}`);
-      throw fallbackError;
-    }
+    const response = await fallbackInstance.request<T>({
+      method,
+      url: endpoint,
+      data,
+      params,
+    });
+    console.log('Ответ от резервного сервера:', response.data);
+    return response.data;
   }
 };
 
@@ -80,9 +72,16 @@ interface TelegramUserData {
 const userStore = useUserStore();
 
 onMounted(async () => {
-  const tg = (window as any).Telegram.WebApp;
+  const tg = (window as any).Telegram?.WebApp;
+
+  // Расширяем веб-приложение
   tg.expand();
   tg.disableVerticalSwipes();
+
+  // Запрос на переход в полноэкранный режим (если доступно)
+  // if (typeof tg.requestFullscreen === 'function') {
+  //   tg.requestFullscreen();
+  // }
 
   if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
     const userData: TelegramUserData = tg.initDataUnsafe.user;
@@ -93,7 +92,6 @@ onMounted(async () => {
     if (telegramUserId) {
       userStore.setTelegramId(telegramUserId);
 
-      // Отправляем запрос на сервер для проверки пользователя
       try {
         const result = await apiRequest<{
           role?: string;
@@ -101,7 +99,6 @@ onMounted(async () => {
         }>('post', 'check-user', {
           telegramId: telegramUserId,
         });
-
 
         if (result.role) {
           userStore.setRole(result.role as 'admin' | 'freeUser' | 'paidUser');
@@ -118,7 +115,6 @@ onMounted(async () => {
             console.log('Результат проверки подписки:', subscriptionResult);
 
             if (subscriptionResult.isSubscribed) {
-              // Если подписан, обновляем роль на 'paidUser'
               if (userStore.role !== 'paidUser') {
                 userStore.setRole('paidUser');
                 console.log(
@@ -126,16 +122,13 @@ onMounted(async () => {
                 );
               }
             } else {
-              // Если не подписан
               console.log('Пользователь не подписан на канал.');
               if (userStore.role === 'paidUser') {
-                // Если роль была 'paidUser', меняем на 'freeUser'
                 userStore.setRole('freeUser');
                 console.log(
                     'Роль пользователя изменена на freeUser из-за отсутствия подписки.'
                 );
 
-                // Отправляем запрос на сервер для обновления роли
                 try {
                   await apiRequest('post', 'update-user-role', {
                     telegramId: telegramUserId,
