@@ -1,90 +1,83 @@
 <!-- components/AddExercise.vue -->
 <template>
-  <v-bottom-sheet
+  <BottomSheetWithClose
       v-model="sheet"
-      scrim
-      :persistent="false"
-      class="rounded-t-xl"
-      min-height="94%"
+      title="Добавить упражнение" <!-- Заголовок -->
+  :max-width="'600px'"
+  :persistent="false"
   >
-    <v-card>
-      <v-card-title class="ml-4 d-flex align-center">
-        <v-icon small class="mr-2">mdi-plus</v-icon>
-        Добавить упражнение
-      </v-card-title>
-      <v-card-text class="my-2">
-        <!-- Строка поиска -->
-        <v-text-field
-            v-model="searchQuery"
-            label="Начни вводить упражнение"
-            append-icon="mdi-magnify"
-            clearable
-            variant="outlined"
-            hide-details="auto"
-        ></v-text-field>
+  <v-card-text class="my-2">
+    <!-- Строка поиска -->
+    <v-text-field
+        v-model="searchQuery"
+        label="Начни вводить упражнение"
+        append-icon="mdi-magnify"
+        clearable
+        variant="outlined"
+        hide-details="auto"
+    ></v-text-field>
 
-        <!-- Список упражнений -->
-        <v-list>
-          <v-list-item
-              v-for="exercise in finalExercises"
-              :key="exercise._id"
-              class="exercise-item"
-          >
-            <v-list-item-content>
-              <v-list-item-title class="exercise-title">
-                {{ exercise.name }}
-              </v-list-item-title>
-            </v-list-item-content>
-            <v-list-item-action>
-              <!-- Кнопка информации об упражнении через ExerciseInfo.vue -->
-              <v-tooltip bottom>
-                <template #activator="slotProps">
-                  <v-btn
-                      variant="plain"
-                      icon
-                      @click="openExerciseInfoButton(exercise)"
-                      :title="'Информация о ' + exercise.name"
-                      aria-label="Информация об упражнении"
-                      v-bind="slotProps.attrs"
-                      v-on="slotProps.on"
-                  >
-                    <v-icon>mdi-information-outline</v-icon>
-                  </v-btn>
-                </template>
-                <span>Подробнее</span>
-              </v-tooltip>
-
-              <!-- Кнопка добавления упражнения -->
+    <!-- Список упражнений -->
+    <v-list>
+      <v-list-item
+          v-for="exercise in finalExercises"
+          :key="exercise._id"
+          class="exercise-item"
+      >
+        <v-list-item-content>
+          <v-list-item-title class="exercise-title">
+            {{ exercise.name }}
+          </v-list-item-title>
+        </v-list-item-content>
+        <v-list-item-action>
+          <!-- Кнопка информации об упражнении через ExerciseInfo.vue -->
+          <v-tooltip bottom>
+            <template #activator="slotProps">
               <v-btn
-                  :disabled="isAdding[exercise._id]"
-                  @click="addExercise(exercise)"
+                  variant="plain"
                   icon
-                  class="add-button pl-2"
-                  :color="isAdding[exercise._id] ? 'green' : 'primary'"
-                  :title="isAdding[exercise._id] ? 'Добавлено' : 'Добавить'"
-                  aria-label="Добавить упражнение"
+                  @click="openExerciseInfoButton(exercise)"
+                  :title="'Информация о ' + exercise.name"
+                  aria-label="Информация об упражнении"
+                  v-bind="slotProps.attrs"
+                  v-on="slotProps.on"
               >
-                <v-icon>
-                  <template v-if="isAdding[exercise._id]">
-                    mdi-check
-                  </template>
-                  <template v-else>
-                    mdi-plus
-                  </template>
-                </v-icon>
+                <v-icon>mdi-information-outline</v-icon>
               </v-btn>
-            </v-list-item-action>
-          </v-list-item>
-        </v-list>
-      </v-card-text>
-    </v-card>
-  </v-bottom-sheet>
+            </template>
+            <span>Подробнее</span>
+          </v-tooltip>
+
+          <!-- Кнопка добавления упражнения -->
+          <v-btn
+              :disabled="isAdding[exercise._id]"
+              @click="addExercise(exercise)"
+              icon
+              class="add-button pl-2"
+              :color="isAdding[exercise._id] ? 'green' : 'primary'"
+              :title="isAdding[exercise._id] ? 'Добавлено' : 'Добавить'"
+              aria-label="Добавить упражнение"
+          >
+            <v-icon>
+              <template v-if="isAdding[exercise._id]">
+                mdi-check
+              </template>
+              <template v-else>
+                mdi-plus
+              </template>
+            </v-icon>
+          </v-btn>
+        </v-list-item-action>
+      </v-list-item>
+    </v-list>
+  </v-card-text>
 
   <!-- Использование компонента ExerciseInfo -->
   <ExerciseInfo
       :exercise="selectedExercise"
       v-model="showExerciseInfo"
   />
+  </BottomSheetWithClose>
 </template>
 
 <script lang="ts">
@@ -92,11 +85,13 @@ import { defineComponent, ref, computed } from 'vue';
 import { useExerciseFilter } from '~/composables/useExerciseFilter';
 import type { Exercise, WorkoutResult, RepetitionLevels } from '~/composables/types';
 import ExerciseInfo from '~/components/ExerciseInfo.vue'; // Импортируем компонент
+import BottomSheetWithClose from '~/components/BottomSheetWithClose.vue'; // Импортируем универсальный компонент
 
 export default defineComponent({
   name: 'AddExercise',
   components: {
-    ExerciseInfo
+    ExerciseInfo,
+    BottomSheetWithClose // Регистрируем универсальный компонент
   },
   props: {
     modelValue: {
@@ -143,7 +138,7 @@ export default defineComponent({
     // Используем хук useExerciseFilter, передавая Ref<Exercise[]> и Ref<string>
     const { filteredExercises, displayedExercises } = useExerciseFilter(exercisesRef, searchQuery);
 
-    // Дополнительная фильтрация по сложности и полу
+    // Дополнительная фильтрация по сложности и полу с ограничением до 30 результатов
     const finalExercises = computed(() => {
       const gender = props.gender;
       let repsKeys: (keyof RepetitionLevels)[] = [];
@@ -154,13 +149,15 @@ export default defineComponent({
         repsKeys = ['femaleRepsLight', 'femaleRepsMedium', 'femaleRepsHeavy'];
       } else {
         // Если есть другие гендеры, добавьте соответствующие ключи
-        return displayedExercises.value;
+        return displayedExercises.value.slice(0, 30); // Ограничение до 30
       }
 
-      return displayedExercises.value.filter(exercise => {
+      const filtered = displayedExercises.value.filter(exercise => {
         // Проверяем, что хотя бы одно поле повторений для текущего пола не равно '—'
         return repsKeys.some(key => exercise[key] && exercise[key] !== '—');
       });
+
+      return filtered.slice(0, 30); // Ограничение до 30
     });
 
     // Метод добавления упражнения
@@ -264,13 +261,32 @@ export default defineComponent({
   border-top-right-radius: 16px;
 }
 .exercise-title {
-  white-space: nowrap; /* Оставить название в одной строке */
+  white-space: normal; /* Разрешаем перенос текста */
   overflow: hidden;
   text-overflow: ellipsis; /* Добавить многоточие при переполнении */
+  word-break: break-word; /* Перенос слов при необходимости */
+  overflow-wrap: break-word; /* Перенос длинных слов */
 }
 .add-button {
   width: 30px;
   height: 30px;
   min-width: 30px; /* Для иконок в Vuetify */
+}
+
+/* Заголовок внутри тела листа */
+.headline {
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-align: center;
+}
+
+.headline.mb-4 {
+  margin-bottom: 16px; /* Добавляем нижний отступ */
+}
+
+/* Фиксированная высота для AddExercise */
+.fixed-height {
+  height: 500px; /* Установите желаемую фиксированную высоту */
+  overflow-y: auto; /* Добавляем вертикальную прокрутку при необходимости */
 }
 </style>

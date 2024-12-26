@@ -59,123 +59,44 @@
               </v-btn>
             </div>
 
-            <v-btn variant="plain" icon @click="openExerciseInfo(exercise)">
-              <v-icon class="ml-2">mdi-information-outline</v-icon>
-            </v-btn>
+            <!-- Кнопка информации об упражнении через ExerciseInfo.vue -->
+            <v-tooltip bottom>
+              <template #activator="slotProps">
+                <v-btn
+                    variant="plain"
+                    icon
+                    @click="openExerciseInfo(exercise)"
+                    :title="'Информация о ' + exercise.name"
+                    aria-label="Информация об упражнении"
+                    v-bind="slotProps.attrs"
+                    v-on="slotProps.on"
+                >
+                  <v-icon>mdi-information-outline</v-icon>
+                </v-btn>
+              </template>
+              <span>Подробнее</span>
+            </v-tooltip>
           </v-list-item-action>
         </v-list-item>
         <v-divider></v-divider>
       </template>
     </v-card>
 
-    <!-- v-bottom-sheet с информацией об упражнении и GIF -->
-    <v-bottom-sheet v-model="showExerciseInfo" max-width="600px">
-      <v-card v-if="selectedExercise">
-        <v-card-title class="headline">{{ selectedExercise.name }}</v-card-title>
-        <v-card-text>
-          <v-row dense>
-            <v-col cols="6" class="label-col">
-              Подгруппа:
-            </v-col>
-            <v-col cols="6" class="value-col">
-              {{ selectedExercise.subcategory }}
-            </v-col>
-
-            <v-col cols="6" class="label-col">
-              Основная мышца:
-            </v-col>
-            <v-col cols="6" class="value-col">
-              {{ selectedExercise.mainMuscle }}
-            </v-col>
-
-            <v-col cols="6" class="label-col">
-              Дополнительные мышцы:
-            </v-col>
-            <v-col cols="6" class="value-col">
-              {{ selectedExercise.additionalMuscles || '—' }}
-            </v-col>
-
-            <v-col cols="6" class="label-col">
-              Тип упражнения:
-            </v-col>
-            <v-col cols="6" class="value-col">
-              {{ selectedExercise.typeExercise || '—' }}
-            </v-col>
-
-            <v-col cols="6" class="label-col">
-              Оборудование:
-            </v-col>
-            <v-col cols="6" class="value-col">
-              {{ selectedExercise.equipment || '—' }}
-            </v-col>
-
-            <v-col cols="6" class="label-col">
-              Предупреждение по GIF:
-            </v-col>
-            <v-col cols="6" class="value-col">
-              <span v-if="selectedExercise.isWarnGif">Да</span>
-              <span v-else>Нет</span>
-            </v-col>
-
-            <v-col cols="12" class="label-col" style="margin-top:10px; font-weight:bold;">
-              Техника выполнения:
-            </v-col>
-            <v-col cols="12" class="value-col">
-              <p style="white-space: pre-wrap; margin:0;">
-                {{ selectedExercise.technique || '—' }}
-              </p>
-            </v-col>
-
-            <v-col cols="6" class="label-col">
-              При проблемах со спиной:
-            </v-col>
-            <v-col cols="6" class="value-col">
-              <span v-if="selectedExercise.spineRestrictions">Не рекомендуется</span>
-              <span v-else>Можно</span>
-            </v-col>
-
-            <v-col cols="6" class="label-col">
-              При проблемах с коленями:
-            </v-col>
-            <v-col cols="6" class="value-col">
-              <span v-if="selectedExercise.kneeRestrictions">Не рекомендуется</span>
-              <span v-else>Можно</span>
-            </v-col>
-
-            <v-col cols="6" class="label-col">
-              При проблемах с плечами:
-            </v-col>
-            <v-col cols="6" class="value-col">
-              <span v-if="selectedExercise.shoulderRestrictions">Не рекомендуется</span>
-              <span v-else>Можно</span>
-            </v-col>
-          </v-row>
-
-          <!-- Отображение GIF-картинки, загружается только при открытии -->
-          <pre>{{ selectedExercise.gifImage }}</pre>
-          <div v-if="selectedExercise.gifImage" class="gif-container">
-            <div class="overlay-box"></div>
-            <!-- Показываем <img> лишь когда showExerciseGif === true -->
-            <img
-                v-if="showExerciseGif"
-                :src="getGifUrl(selectedExercise.gifImage)"
-                alt="GIF упражнения"
-                class="exercise-gif"
-            />
-          </div>
-        </v-card-text>
-        <v-card-actions>
-          <!-- Меняем закрытие на метод closeExerciseInfo -->
-          <v-btn text @click="closeExerciseInfo">Закрыть</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-bottom-sheet>
+    <!-- Использование компонента ExerciseInfo -->
+    <ExerciseInfo
+        :exercise="selectedExercise"
+        v-model="showExerciseInfo"
+    />
 
     <!-- Диалог добавления упражнения -->
     <v-dialog v-model="showAddExerciseDialog" max-width="600px">
       <v-card>
-        <v-card-title>
+        <!-- Обновлённый заголовок с кнопкой закрытия -->
+        <v-card-title class="d-flex justify-between align-center">
           <span class="headline">Добавить упражнение</span>
+          <v-btn icon @click="closeAddExerciseDialog" aria-label="Закрыть">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
         </v-card-title>
         <v-card-text>
           <v-text-field
@@ -256,8 +177,12 @@
     <!-- Диалог редактирования упражнения -->
     <v-dialog v-model="showEditExerciseDialog" max-width="600px">
       <v-card>
-        <v-card-title>
+        <!-- Обновлённый заголовок с кнопкой закрытия -->
+        <v-card-title class="d-flex justify-between align-center">
           <span class="headline">Редактировать упражнение</span>
+          <v-btn icon @click="closeEditExerciseDialog" aria-label="Закрыть">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
         </v-card-title>
         <v-card-text>
           <!-- Скрытое поле для _id -->
@@ -342,7 +267,13 @@
     <!-- Диалог подтверждения удаления -->
     <v-dialog v-model="showDeleteConfirmDialog" max-width="500px">
       <v-card>
-        <v-card-title class="headline">Подтверждение удаления</v-card-title>
+        <!-- Обновлённый заголовок с кнопкой закрытия -->
+        <v-card-title class="d-flex justify-between align-center">
+          <span class="headline">Подтверждение удаления</span>
+          <v-btn icon @click="closeDeleteConfirmDialog" aria-label="Закрыть">
+            <v-icon>mdi-close</v-icon>
+          </v-btn>
+        </v-card-title>
         <v-card-text>
           Вы уверены, что хотите удалить упражнение "{{ exerciseToDelete?.name }}"?
         </v-card-text>
@@ -353,8 +284,18 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- v-bottom-sheet с информацией об упражнении и GIF -->
+    <!-- Поскольку вы уже используете компонент ExerciseInfo.vue для отображения информации, можно удалить этот нижний лист или оставить его для других целей -->
+    <!-- Если он используется для другого функционала, добавьте кнопку закрытия аналогично -->
+    <!--
+    <v-bottom-sheet v-model="showExerciseInfo" max-width="600px">
+      ...
+    </v-bottom-sheet>
+    -->
   </div>
 </template>
+
 
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted } from 'vue';
@@ -363,9 +304,13 @@ import type { AxiosRequestConfig, Method } from 'axios';
 import { useUserStore } from '~/stores/userStore';
 import { useExerciseFilter } from '~/composables/useExerciseFilter';
 import type { Exercise } from '~/composables/types'; // Импорт типа отдельно
+import ExerciseInfo from '~/components/ExerciseInfo.vue'; // Импортируем компонент
 
 export default defineComponent({
   name: 'ExerciseSearch',
+  components: {
+    ExerciseInfo
+  },
   setup() {
     const primaryBaseURL = 'https://fit-server-bot.ru.tuna.am/api/';
     const fallbackBaseURL = 'http://localhost:3002/api/';
@@ -392,7 +337,7 @@ export default defineComponent({
         return response.data;
       } catch (primaryError) {
         console.warn(
-            `1 Основной сервер не доступен: ${primaryError}. Переключение на резервный сервер.`
+            `Основной сервер не доступен: ${primaryError}. Переключение на резервный сервер.`
         );
         const fallbackConfig: AxiosRequestConfig = {
           method,
@@ -543,7 +488,7 @@ export default defineComponent({
      * Открытие диалога редактирования упражнения
      */
     const editExercise = (exercise: Exercise) => {
-      console.log('Editing exercise:', exercise);
+      console.log('Редактирование упражнения:', exercise);
       editExerciseData.value = { ...exercise };
       showEditExerciseDialog.value = true;
     };
@@ -576,7 +521,7 @@ export default defineComponent({
           throw new Error('Идентификатор упражнения отсутствует.');
         }
 
-        console.log('Saving exercise:', editExerciseData.value);
+        console.log('Сохранение упражнения:', editExerciseData.value);
 
         // Обновляем упражнение через API
         const updatedExercise = await apiRequest<Exercise>(
@@ -585,7 +530,7 @@ export default defineComponent({
             editExerciseData.value
         );
 
-        console.log('Exercise updated on server:', updatedExercise);
+        console.log('Упражнение обновлено на сервере:', updatedExercise);
 
         // Обновляем упражнение в локальном списке
         const index = exercises.value.findIndex(
@@ -593,7 +538,7 @@ export default defineComponent({
         );
         if (index !== -1) {
           exercises.value[index] = { ...(exercises.value[index]), ...updatedExercise };
-          console.log('Exercise updated locally:', exercises.value[index]);
+          console.log('Упражнение обновлено локально:', exercises.value[index]);
         }
 
         closeEditExerciseDialog();
@@ -642,6 +587,14 @@ export default defineComponent({
     };
 
     /**
+     * Закрытие диалога подтверждения удаления
+     */
+    const closeDeleteConfirmDialog = () => {
+      showDeleteConfirmDialog.value = false;
+      exerciseToDelete.value = null;
+    };
+
+    /**
      * Загрузка упражнений при монтировании
      */
     onMounted(() => {
@@ -653,26 +606,30 @@ export default defineComponent({
       onSearchInput,
       showExerciseInfo,
       selectedExercise,
-      // Два метода: открытие и закрытие информации об упражнении
+      // Методы для открытия и закрытия информации об упражнении
       openExerciseInfo,
       closeExerciseInfo,
       // Флаг для отображения GIF
       showExerciseGif,
       isAdmin,
+      // Методы и переменные для добавления упражнения
       showAddExerciseDialog,
       openAddExerciseDialog,
       closeAddExerciseDialog,
       newExercise,
       addExercise,
+      // Методы и переменные для редактирования упражнения
       showEditExerciseDialog,
       editExerciseData,
       closeEditExerciseDialog,
       saveExercise,
+      // Методы и переменные для удаления упражнения
       confirmDeleteExercise,
       showDeleteConfirmDialog,
       exerciseToDelete,
       cancelDelete,
       deleteExercise,
+      // Переменные состояния
       isLoading,
       displayedExercises,
       editExercise,
@@ -681,6 +638,7 @@ export default defineComponent({
   },
 });
 </script>
+
 
 <style scoped>
 .exercise-title {

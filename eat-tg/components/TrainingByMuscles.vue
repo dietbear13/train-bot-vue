@@ -112,122 +112,115 @@
       </ul>
     </v-alert>
 
-    <!-- Нижний лист с таблицей упражнений -->
-    <v-bottom-sheet
+    <!-- Нижний лист с таблицей упражнений, используя BottomSheetWithClose -->
+    <BottomSheetWithClose
         v-model="showBottomSheet"
-        scrim
-        :persistent="false"
-        content-class="rounded-bottom-sheet"
+        icon="mdi-dumbbell"
     >
-      <v-card>
-        <v-card-title class="ml-4">Ваша тренировка</v-card-title>
-        <v-card-text class="my-2">
-          <!-- Таблица упражнений -->
-          <v-data-table
-              :items="workoutResults"
-              class="rounded-bottom-sheet"
-              hide-default-header
-              hide-default-footer
+      <v-card-text class="ma-0">
+        <!-- Заголовок тренировки внутри тела листа -->
+
+        <!-- Таблица упражнений -->
+        <v-data-table
+            :items="workoutResults"
+            class="rounded-bottom-sheet"
+            hide-default-header
+            hide-default-footer
+        >
+          <!-- Перетаскиваемые строки таблицы -->
+          <draggable
+              tag="tbody"
+              v-model="workoutResults"
+              handle=".drag-handle"
+              animation="200"
+              item-key="_id"
           >
-            <!-- Перетаскиваемые строки таблицы -->
-            <draggable
-                tag="tbody"
-                v-model="workoutResults"
-                handle=".drag-handle"
-                animation="200"
-                item-key="_id"
-            >
-              <template #item="{ element, index }">
-                <tr>
-                  <td style="cursor: move; padding: 0 4px;">
-                    <div
-                        class="drag-handle"
-                        style="display: flex; align-items: center;"
+            <template #item="{ element, index }">
+              <tr>
+                <td style="cursor: move; padding: 0 4px;">
+                  <div
+                      class="drag-handle"
+                      style="display: flex; align-items: center;"
+                  >
+                    <v-icon class="mr-1">mdi-shuffle-variant</v-icon>
+                  </div>
+                </td>
+                <td class="drag-handle" style="padding: 0 4px;">
+                  {{ element.name }}
+                </td>
+                <td class="fixed-width sets-reps-column" style="padding: 0 4px;">
+                  <div class="sets-reps-container">
+                    <v-btn
+                        icon
+                        small
+                        @click="decreaseReps(index)"
+                        variant="plain"
+                        class="mx-1"
                     >
-                      <v-icon class="mr-1">mdi-shuffle-variant</v-icon>
-                    </div>
-                  </td>
-                  <td class="drag-handle" style="padding: 0 4px;">
-                    {{ element.name }}
-                  </td>
-                  <td class="fixed-width sets-reps-column" style="padding: 0 4px;">
-                    <div class="sets-reps-container">
-                      <v-btn
-                          icon
-                          small
-                          @click="decreaseReps(index)"
-                          variant="plain"
-                          class="mx-1"
-                      >
-                        <v-icon small class="ml-2">mdi-minus</v-icon>
-                      </v-btn>
-                      <span>{{ element.sets }} × {{ element.reps }}</span>
-                      <v-btn
-                          icon
-                          max-width="30px"
-                          max-height="30px"
-                          ma
-                          @click="increaseReps(index)"
-                          variant="plain"
-                          class="ml-2"
-                      >
-                        <v-icon small>mdi-plus</v-icon>
-                      </v-btn>
-                    </div>
-                  </td>
-                  <td class="fixed-width action-column" style="padding: 0 4px;">
-                    <v-btn icon @click="regenerateExercise(index)" variant="plain">
-                      <v-icon>mdi-refresh</v-icon>
+                      <v-icon small class="ml-2">mdi-minus</v-icon>
                     </v-btn>
-                    <v-btn icon @click="removeExercise(index)" variant="plain">
-                      <v-icon>mdi-delete</v-icon>
+                    <span>{{ element.sets }} × {{ element.reps }}</span>
+                    <v-btn
+                        icon
+                        max-width="30px"
+                        max-height="30px"
+                        ma
+                        @click="increaseReps(index)"
+                        variant="plain"
+                        class="ml-2"
+                    >
+                      <v-icon small>mdi-plus</v-icon>
                     </v-btn>
-                  </td>
-                </tr>
-              </template>
-            </draggable>
-          </v-data-table>
+                  </div>
+                </td>
+                <td class="fixed-width action-column" style="padding: 0 4px;">
+                  <v-btn icon @click="regenerateExercise(index)" variant="plain">
+                    <v-icon>mdi-refresh</v-icon>
+                  </v-btn>
+                  <v-btn icon @click="removeExercise(index)" variant="plain">
+                    <v-icon>mdi-delete</v-icon>
+                  </v-btn>
+                </td>
+              </tr>
+            </template>
+          </draggable>
+        </v-data-table>
 
-          <!-- Кнопка для добавления упражнения -->
-          <div class="text-center mt-1">
-            <v-btn
-                color="secondary"
-                @click="openAddExerciseSheet"
-                rounded="lg"
+        <!-- Кнопка для добавления упражнения -->
+        <div class="text-center mt-1">
+          <v-btn
+              color="secondary"
+              @click="openAddExerciseSheet"
+              rounded="lg"
+              icon
+          >
+            <v-icon>mdi-plus</v-icon>
+          </v-btn>
+        </div>
 
-                icon
-            >
-              <v-icon>mdi-plus</v-icon>
-            </v-btn>
-          </div>
-
-          <!-- Кнопки действий -->
-          <div class="text-center mt-2">
-            <v-btn
-                color="primary"
-                @click="generateWorkout"
-                :disabled="isGenerating || timer > 0"
-                rounded="lg"
-                class="mb-1"
-            >
-              <v-icon left>mdi-refresh</v-icon>
-              Сгенерировать заново
-            </v-btn>
-            <v-btn
-                color="primary"
-                @click="sendWorkout"
-                :disabled="!telegramUserId"
-                rounded="lg"
-            >
-              <v-icon left>mdi-send</v-icon>
-              Отправить себе
-            </v-btn>
-            <v-btn @click="showBottomSheet = false" rounded="lg" variant="plain">
-              Закрыть
-            </v-btn>
-          </div>
-        </v-card-text>
-      </v-card>
+        <!-- Кнопки действий -->
+        <div class="text-center mt-2">
+          <v-btn
+              color="primary"
+              @click="generateWorkout"
+              :disabled="isGenerating || timer > 0"
+              rounded="lg"
+              class="mb-1"
+          >
+            <v-icon left>mdi-refresh</v-icon>
+            {{ timer > 0 ? `Повторная генерация через ${timer} с` : 'Сгенерировать заново' }}
+          </v-btn>
+          <v-btn
+              color="primary"
+              @click="sendWorkout"
+              :disabled="!telegramUserId"
+              rounded="lg"
+          >
+            <v-icon left>mdi-send</v-icon>
+            Отправить себе
+          </v-btn>
+        </div>
+      </v-card-text>
 
       <!-- Компонент AddExercise -->
       <AddExercise
@@ -239,7 +232,7 @@
           :usedExerciseIds="usedExerciseIds"
           @add-exercise="handleAddExercise"
       />
-    </v-bottom-sheet>
+    </BottomSheetWithClose>
 
     <!-- Snackbar для уведомлений -->
     <v-snackbar
@@ -266,6 +259,7 @@ import axios, { type AxiosRequestConfig, type Method } from 'axios'
 import draggable from 'vuedraggable'
 import { retrieveLaunchParams } from '@telegram-apps/sdk'
 import AddExercise from './AddExercise.vue' // Импортируем новый компонент
+import BottomSheetWithClose from '~/components/BottomSheetWithClose.vue'
 
 const primaryBaseURL = 'https://fit-server-bot.ru.tuna.am/api/'
 const fallbackBaseURL = 'http://localhost:3002/api/'
@@ -373,7 +367,9 @@ export default defineComponent({
   name: 'TrainingByMuscles',
   components: {
     draggable,
-    AddExercise // Регистрируем новый компонент
+    AddExercise,
+    BottomSheetWithClose,
+
   },
   setup() {
     // ---------------- Основные ссылки ----------------
@@ -953,6 +949,17 @@ export default defineComponent({
 </script>
 
 <style scoped>
+.headline {
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-align: center;
+}
+
+.headline.mb-4 {
+  margin-bottom: 16px; /* Добавляем нижний отступ */
+}
+
+/* Остальные стили остаются без изменений */
 .group-button {
   min-width: 100px;
 }
@@ -961,7 +968,7 @@ export default defineComponent({
   color: white;
 }
 
-/* Нижний лист (v-bottom-sheet) */
+/* Нижний лист (BottomSheetWithClose.vue) */
 .rounded-bottom-sheet {
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
@@ -999,7 +1006,7 @@ export default defineComponent({
   margin: 0 4px;
 }
 
-v-btn {
+.v-btn {
   border-radius: 14px;
 }
 
@@ -1007,5 +1014,17 @@ v-btn {
   font-weight: bold;
   min-width: 60px;
   text-align: center;
+}
+
+/* Обеспечиваем, что кнопка закрытия всегда видна и не перекрывается */
+.v-card-title {
+  position: relative;
+}
+
+.v-btn[aria-label="Закрыть"] {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
 }
 </style>
