@@ -8,7 +8,7 @@ import type { Exercise } from './types'; // Импортируем интерф�
 function normalizeString(str: string): string {
     return str
         .toLowerCase()
-        .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '')
+        .replace(/[.,\/#!$%\\^&\\*;:{}=\-_`~()]/g, '')
         .replace(/ё/g, 'е')
         .replace(/ъ/g, 'ь');
 }
@@ -53,10 +53,13 @@ export function useExerciseFilter(exercises: Ref<Exercise[]>, searchQuery: Ref<s
         equipment: 1
     };
 
+    console.log("useExerciseFilter", searchQuery.value, )
+
     // Вычисляем отфильтрованный и отсортированный список с приоритетами
     const filteredExercises = computed(() => {
         const query = normalizeString(searchQuery.value);
-        if (!query) return exercises.value;
+        console.log("query", searchQuery.value,query, !query )
+        if (!query) return exercises.value
 
         return exercises.value
             .map(exercise => {

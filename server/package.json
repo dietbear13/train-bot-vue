@@ -27,6 +27,7 @@
     "@types/node": "latest",
     "@types/node-cron": "^3.0.11",
     "@types/node-telegram-bot-api": "^0.64.7",
+    "concurrently": "^9.1.0",
     "ts-node": "latest",
     "typescript": "latest"
   }

@@ -7,8 +7,8 @@
       class="rounded-t-xl"
   >
     <v-card class="relative-position">
-      <!-- Иконка в левом верхнем углу -->
-      <v-icon class="header-icon">{{ icon }}</v-icon>
+      <!-- Заголовок вместо иконки -->
+      <div class="header-title">{{ title }}</div>
 
       <!-- Кнопка закрытия в правом верхнем углу -->
       <v-btn
@@ -39,10 +39,11 @@ export default defineComponent({
       type: Boolean,
       required: true
     },
-    icon: {
-      type: String,
-      default: '' // Иконка теперь опциональна
-    },
+    // Удаляем проп icon, так как он больше не используется
+    // icon: {
+    //   type: String,
+    //   default: '' // Иконка теперь опциональна
+    // },
     title: {
       type: String,
       default: '' // Новый проп для заголовка
@@ -83,14 +84,18 @@ export default defineComponent({
 
 .relative-position {
   position: relative;
-  padding-top: 16px; /* Добавляем отступ сверху для иконки */
+  padding-top: 16px; /* Добавляем отступ сверху для заголовка */
 }
 
-.header-icon {
+.header-title {
   position: absolute;
   top: 16px;
   left: 16px;
-  font-size: 24px;
+  right: 48px; /* Оставляем место для кнопки закрытия */
+  font-size: 20px;
+  font-weight: bold;
+  white-space: normal; /* Разрешаем перенос текста */
+  word-break: break-word; /* Перенос слов при необходимости */
 }
 
 .close-button {
@@ -101,14 +106,6 @@ export default defineComponent({
 }
 
 .v-card-text {
-  padding-top: 40px; /* Увеличиваем верхний отступ, чтобы иконка и кнопка закрытия не перекрывали содержимое */
-}
-
-.exercise-title {
-  white-space: normal; /* Разрешаем перенос текста */
-  overflow: hidden;
-  text-overflow: ellipsis; /* Добавить многоточие при переполнении */
-  word-break: break-word; /* Перенос слов при необходимости */
-  overflow-wrap: break-word; /* Перенос длинных слов */
+  padding-top: 40px; /* Увеличиваем верхний отступ, чтобы заголовок и кнопка закрытия не перекрывали содержимое */
 }
 </style>

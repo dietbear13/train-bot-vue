@@ -5,6 +5,7 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import TelegramBot from 'node-telegram-bot-api';
+import './bot';
 
 // Импортируем модели
 import Exercise from '../src/models/Exercise';

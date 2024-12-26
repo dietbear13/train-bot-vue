@@ -651,6 +651,7 @@ export default defineComponent({
                 ex.muscleGroup.toLowerCase() === muscleGroup.value.toLowerCase() &&
                 (ex.subcategory || '').toLowerCase() === muscleSubgroup.value.toLowerCase()
         )
+        console.log("! hasNeeded", hasNeeded)
         return hasNeeded
       })
 
