@@ -2,24 +2,7 @@
 
 import { computed } from 'vue';
 import type { Ref } from 'vue';
-
-export interface Exercise {
-    _id: string;
-    category: string;
-    subcategory: string;
-    mainMuscle: string;
-    additionalMuscles?: string;
-    difficultyLevel: string;
-    name: string;
-    equipment: string;
-    typeExercise?: string;
-    isWarnGif?: boolean;
-    technique?: string;
-    spineRestrictions?: boolean;
-    kneeRestrictions?: boolean;
-    shoulderRestrictions?: boolean;
-    gifImage?: string
-}
+import type { Exercise } from './types'; // Импортируем интерфейс
 
 // Функция для нормализации строк (убираем спецсимволы, переводим в нижний регистр)
 function normalizeString(str: string): string {
@@ -62,7 +45,6 @@ function isSimilar(word1: string, word2: string): boolean {
 }
 
 export function useExerciseFilter(exercises: Ref<Exercise[]>, searchQuery: Ref<string>) {
-
     // Определяем веса для полей
     const fieldWeights: { [key: string]: number } = {
         name: 4,
@@ -114,7 +96,7 @@ export function useExerciseFilter(exercises: Ref<Exercise[]>, searchQuery: Ref<s
             .map(item => item.exercise);
     });
 
-    // Показываем только первые 50 результатов
+    // Показываем только первые 20 результатов (исправлено с 50)
     const displayedExercises = computed(() => {
         return filteredExercises.value.slice(0, 20);
     });

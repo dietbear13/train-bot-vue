@@ -1,11 +1,8 @@
 <!-- components/TrainingByMuscles.vue -->
 <template>
   <v-form @submit.prevent="generateWorkout">
-    <!-- Информационное сообщение -->
-    <p>Все вводимые в калькулятор данные не сохраняются и не используются.</p>
-
     <!-- Выбор пола пользователя -->
-    <v-card class="my-2 dark-background pa-1" variant="tonal">
+    <v-card class="mb-2 dark-background" variant="tonal">
       <v-card-text class="pa-1">
         <v-slide-group
             v-model="gender"
@@ -98,6 +95,9 @@
       <v-icon left>mdi-dumbbell</v-icon>
       {{ timer > 0 ? `Повторная генерация через ${timer} с` : 'Сгенерировать' }}
     </v-btn>
+    <!-- Информационное сообщение -->
+    <p class="mt-2 ml-2" style="color: #858585">Данные не хранятся и не используются.</p>
+
 
     <!-- Сообщение об ошибке -->
     <v-alert
@@ -164,12 +164,14 @@
                       <span>{{ element.sets }} × {{ element.reps }}</span>
                       <v-btn
                           icon
-                          small
+                          max-width="30px"
+                          max-height="30px"
+                          ma
                           @click="increaseReps(index)"
                           variant="plain"
-                          class="mx-1"
+                          class="ml-2"
                       >
-                        <v-icon small class="ml-2">mdi-plus</v-icon>
+                        <v-icon small>mdi-plus</v-icon>
                       </v-btn>
                     </div>
                   </td>
@@ -185,6 +187,19 @@
               </template>
             </draggable>
           </v-data-table>
+
+          <!-- Кнопка для добавления упражнения -->
+          <div class="text-center mt-1">
+            <v-btn
+                color="secondary"
+                @click="openAddExerciseSheet"
+                rounded="lg"
+
+                icon
+            >
+              <v-icon>mdi-plus</v-icon>
+            </v-btn>
+          </div>
 
           <!-- Кнопки действий -->
           <div class="text-center mt-2">
@@ -213,6 +228,17 @@
           </div>
         </v-card-text>
       </v-card>
+
+      <!-- Компонент AddExercise -->
+      <AddExercise
+          v-model="showAddExerciseSheet"
+          :gender="gender"
+          :muscleGroup="muscleGroup"
+          :muscleSubgroup="muscleSubgroup"
+          :exercises="exercises"
+          :usedExerciseIds="usedExerciseIds"
+          @add-exercise="handleAddExercise"
+      />
     </v-bottom-sheet>
 
     <!-- Snackbar для уведомлений -->
@@ -239,6 +265,7 @@ import { defineComponent, ref, onMounted } from 'vue'
 import axios, { type AxiosRequestConfig, type Method } from 'axios'
 import draggable from 'vuedraggable'
 import { retrieveLaunchParams } from '@telegram-apps/sdk'
+import AddExercise from './AddExercise.vue' // Импортируем новый компонент
 
 const primaryBaseURL = 'https://fit-server-bot.ru.tuna.am/api/'
 const fallbackBaseURL = 'http://localhost:3002/api/'
@@ -345,7 +372,8 @@ interface SnackbarState {
 export default defineComponent({
   name: 'TrainingByMuscles',
   components: {
-    draggable
+    draggable,
+    AddExercise // Регистрируем новый компонент
   },
   setup() {
     // ---------------- Основные ссылки ----------------
@@ -375,6 +403,7 @@ export default defineComponent({
     const errorMessages = ref<string[]>([])
 
     const showBottomSheet = ref(false)
+    const showAddExerciseSheet = ref(false) // Новая переменная для управления нижним листом добавления упражнения
     const selectedPattern = ref<Pattern | null>(null)
     const usedExerciseIds = ref<Set<string>>(new Set())
 
@@ -406,7 +435,7 @@ export default defineComponent({
     // Возможные значения повторений (для increase/decreaseReps)
     const standardRepsValues = [5, 6, 8, 10, 12, 15, 20]
 
-    // Случайный уровень нагрузки (25% лёгкая, 50% средняя, 25% тяжёлая)
+    // Случайный уровень нагрузки (50% средняя, 25% лёгкая, 25% тяжёлая)
     const getRandomLoadLevel = (): string => {
       const r = Math.random()
       if (r < 0.5) return 'средняя'
@@ -647,7 +676,6 @@ export default defineComponent({
       for (const patternExercise of pattern.exercises) {
         const mg = patternExercise.muscleGroup.toLowerCase()
         // (!) subcategory НЕ учитываем при поиске конкретного упражнения
-        // const subcat = (patternExercise.subcategory || '').toLowerCase()
         const mm = patternExercise.mainMuscle.toLowerCase()
 
         // 3) Подбираем список упражнений:
@@ -842,6 +870,14 @@ export default defineComponent({
       }
     }
 
+    // ---------------- Обработка добавления упражнения ----------------
+    const handleAddExercise = (newExercise: WorkoutResult) => {
+      // Добавляем упражнение в workoutResults
+      workoutResults.value.push(newExercise)
+      // Добавляем ID упражнения в usedExerciseIds
+      usedExerciseIds.value.add(newExercise._id)
+    }
+
     // ---------------- Жизненный цикл ----------------
     onMounted(async () => {
       await loadExercises()
@@ -867,7 +903,11 @@ export default defineComponent({
       }
     })
 
-    // ---------------- Возвращаем ----------------
+    // ---------------- Методы управления добавлением упражнения ----------------
+    const openAddExerciseSheet = () => {
+      showAddExerciseSheet.value = true
+    }
+
     return {
       gender,
       muscleGroup,
@@ -883,6 +923,7 @@ export default defineComponent({
       timer,
       errorMessages,
       showBottomSheet,
+      showAddExerciseSheet, // Добавленная переменная
       date,
       snackbar,
 
@@ -899,7 +940,13 @@ export default defineComponent({
       regenerateExercise,
       increaseReps,
       decreaseReps,
-      showSnackbar
+      showSnackbar,
+      openAddExerciseSheet,
+      handleAddExercise, // Метод для обработки добавления упражнения
+
+      // Добавленные свойства
+      exercises,
+      usedExerciseIds
     }
   }
 })
@@ -931,6 +978,9 @@ export default defineComponent({
   text-align: right;
 }
 
+.v-btn .v-icon {
+  margin-right: 0;
+}
 /* Эффект при перетаскивании */
 .dragging {
   opacity: 0.5;
@@ -948,6 +998,11 @@ export default defineComponent({
   height: 24px;
   margin: 0 4px;
 }
+
+v-btn {
+  border-radius: 14px;
+}
+
 .sets-reps-container span {
   font-weight: bold;
   min-width: 60px;

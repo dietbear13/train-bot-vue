@@ -362,7 +362,7 @@ import axios from 'axios';
 import type { AxiosRequestConfig, Method } from 'axios';
 import { useUserStore } from '~/stores/userStore';
 import { useExerciseFilter } from '~/composables/useExerciseFilter';
-import type { Exercise } from '~/composables/useExerciseFilter'; // Импорт типа отдельно
+import type { Exercise } from '~/composables/types'; // Импорт типа отдельно
 
 export default defineComponent({
   name: 'ExerciseSearch',
