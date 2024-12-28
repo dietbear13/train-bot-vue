@@ -10,6 +10,7 @@ import './bot';
 // Импортируем модели
 import Exercise from '../src/models/Exercise';
 import Pattern from '../src/models/Pattern';
+import SplitModel from '../src/models/Split'
 import { MacrosCoefficient } from '../src/models/MacrosCoefficient';
 import { GoalCoefficient } from '../src/models/GoalCoefficient';
 import { HeightWeightCoefficient } from '../src/models/HeightWeightCoefficient';
@@ -39,6 +40,19 @@ mongoose
     .catch((error: any) => {
         console.error('Error connecting to MongoDB:', error);
     });
+
+/**
+ * Маршрут для получения сплитов
+ */
+app.get('/api/splits', async (req: Request, res: Response) => {
+    try {
+        const splits = await SplitModel.find();
+        res.json(splits);
+    } catch (error: any) {
+        res.status(500).json({ message: error.message });
+    }
+});
+
 
 /**
  * Маршрут для проверки доступа бота к каналу

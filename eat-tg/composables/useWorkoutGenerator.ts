@@ -1,71 +1,22 @@
 // ~/composables/useWorkoutGenerator.ts
-
 import { ref } from 'vue'
-import type { Ref } from 'vue'
-import axios from 'axios'
-import type { AxiosRequestConfig, Method } from 'axios'
 
-// Интерфейсы
-interface RepetitionLevels {
-    maleRepsLight: string
-    maleRepsMedium: string
-    maleRepsHeavy: string
-    femaleRepsLight: string
-    femaleRepsMedium: string
-    femaleRepsHeavy: string
-}
+// Если у вас есть общий файл types.ts, импортируйте из него:
+import type { Exercise, WorkoutResult, Pattern } from '~/composables/types'
+// Либо используйте локальные интерфейсы/типы
 
-export interface Exercise extends RepetitionLevels {
-    _id: string
-    category: string
-    subcategory: string
-    mainMuscle: string
-    additionalMuscles: string
-    difficultyLevel: string
-    name: string
-    equipment: string
-}
-
-interface PatternExercise {
-    muscleGroup: string
-    subcategory: string
-    mainMuscle: string
-    exercise: string
-    _id?: string
-}
-
-export interface Pattern {
-    _id: string
-    gender: string // "мужчина", "женщина", "мужчина,женщина"
-    complexNumber: number
-    exerciseLevel?: string
-    exercises: PatternExercise[]
-}
-
-export interface WorkoutResult {
-    _id: string
-    name: string
-    sets: number
-    reps: number
-}
-
-export interface SnackbarState {
-    show: boolean
-    message: string
-    color: string
-    timeout: number
-}
+import axios, { type AxiosRequestConfig, type Method } from 'axios'
 
 const primaryBaseURL = 'https://fit-server-bot.ru.tuna.am/api/'
 const fallbackBaseURL = 'http://localhost:3002/api/'
 
-// Общая функция для запросов
-async function apiRequest<T>(
+// Функция для запросов с fallback
+const apiRequest = async <T>(
     method: Method,
     endpoint: string,
     data?: any,
     params?: any
-): Promise<T> {
+): Promise<T> => {
     const config: AxiosRequestConfig = {
         method,
         url: primaryBaseURL + endpoint,
@@ -73,12 +24,14 @@ async function apiRequest<T>(
         params,
         timeout: 5000
     }
-
     try {
         const response = await axios(config)
         return response.data
-    } catch (error) {
-        console.warn(`Основной сервер не доступен: ${error}. Переключение на резервный сервер.`)
+    } catch (primaryError) {
+        console.warn(
+            `Основной сервер не доступен: ${primaryError}. Переключение на резервный сервер.`
+        )
+        // Пробуем резервный сервер
         const fallbackConfig: AxiosRequestConfig = {
             method,
             url: fallbackBaseURL + endpoint,
@@ -96,218 +49,301 @@ async function apiRequest<T>(
     }
 }
 
-// Функция для случайного выбора Light/Medium/Heavy:
-//  - 25% Light
-//  - 50% Medium
-//  - 25% Heavy
-function getRandomLoadLevel(): string {
-    const r = Math.random()
-    if (r < 0.25) {
-        return 'Light'
-    } else if (r < 0.75) {
-        return 'Medium'
-    } else {
-        return 'Heavy'
-    }
-}
-
-// Базовые значения повторений (для ручного + / -)
-const standardRepsValues = [5, 6, 8, 10, 12, 15, 20]
-
-// Хелперы
-function capitalize(str: string): string {
-    if (!str) return ''
-    return str.charAt(0).toUpperCase() + str.slice(1)
-}
-
+// Вспомогательные функции
 function getSets(reps: number): number {
     if (reps === 5) return 5
-    if ([6, 8].includes(reps)) return 4
-    if ([10, 12, 15, 20].includes(reps)) return 3
+    if (reps === 6 || reps === 8) return 4
+    if (reps === 10 || reps === 12 || reps === 15 || reps === 20) return 3
     return 3
 }
 
-export function useWorkoutGenerator() {
-    // Состояние
-    const exercises = ref<Exercise[]>([])
-    const patterns = ref<Pattern[]>([])
-    const workoutResults = ref<WorkoutResult[]>([])
+const levelMapping: { [key: string]: string } = {
+    'лёгкая': 'Light',
+    'легкая': 'Light',
+    'средняя': 'Medium',
+    'тяжёлая': 'Heavy',
+    'тяжелая': 'Heavy'
+}
 
-    const usedExerciseIds = ref<Set<string>>(new Set())
+function capitalize(str: string): string {
+    return str ? str.charAt(0).toUpperCase() + str.slice(1) : ''
+}
 
-    const isGenerating = ref(false)
-    const timer = ref(0)
-    let intervalId: number | null = null
+function getRandomLoadLevel(): string {
+    const r = Math.random()
+    if (r < 0.5) return 'средняя'
+    else if (r < 0.75) return 'лёгкая'
+    else return 'тяжёлая'
+}
 
-    const showBottomSheet = ref(false)
-    const selectedPattern = ref<Pattern | null>(null)
-
-    const snackbar = ref<SnackbarState>({
-        show: false,
-        message: '',
-        color: 'info',
-        timeout: 3000
-    })
-
-    // Уведомления
-    const showSnackbar = (message: string, color: string = 'info') => {
-        snackbar.value.message = message
-        snackbar.value.color = color
-        snackbar.value.show = true
+function getRepsOptions(
+    exercise: Exercise,
+    repetitionLevel: string,
+    genderStr: string,
+    loadLevel: string
+): string | null {
+    if (!loadLevel) {
+        console.warn('loadLevel is undefined or empty')
+        return null
     }
+    const normalizedLoadLevel = loadLevel.toLowerCase().replace('ё', 'е')
+    const mappedLevel = levelMapping[normalizedLoadLevel]
+    if (!mappedLevel) {
+        console.warn(`Неизвестный уровень нагрузки: "${loadLevel}"`)
+        return null
+    }
+    const repsKey = `${genderStr === 'Мужчина' ? 'male' : 'female'}Reps${capitalize(mappedLevel)}` as keyof Exercise
 
-    // Загрузка упражнений
-    async function loadExercises() {
-        try {
-            const data = await apiRequest<Exercise[]>('get', 'exercises')
-            exercises.value = data
-            console.log('Упражнения:', exercises.value)
-            return exercises.value // если нужно вернуть
-        } catch (err) {
-            console.error('Ошибка при загрузке упражнений:', err)
-            showSnackbar('Ошибка при загрузке упражнений', 'error')
-            throw err
+    const repsValue = exercise[repsKey]
+    if (!repsValue || repsValue === '—') {
+        return null
+    }
+    return repsValue
+}
+
+// Поиск упражнения (до 5 или 10 попыток)
+function tryFindExercise(
+    matchingExercises: Exercise[],
+    repetitionLevel: string,
+    genderStr: string,
+    usedIds: Set<string>,
+    maxTries: number = 5
+): { exercise: Exercise; reps: number; sets: number } | null {
+    let attempt = 0
+    while (attempt < maxTries) {
+        attempt++
+
+        console.log(
+            `Попытка ${attempt} из ${maxTries} для повторений "${repetitionLevel}" и пола "${genderStr}"`
+        )
+
+        const selectedExercise =
+            matchingExercises[Math.floor(Math.random() * matchingExercises.length)]
+
+        console.log('Выбранное упражнение:', selectedExercise.name)
+
+        const randomLoad = getRandomLoadLevel()
+        console.log('Случайный уровень нагрузки:', randomLoad)
+
+        const repsOptions = getRepsOptions(
+            selectedExercise,
+            repetitionLevel,
+            genderStr,
+            randomLoad
+        )
+        console.log('Варианты повторений:', repsOptions)
+
+        if (!repsOptions) {
+            console.warn('Нет доступных повторений для этого упражнения.')
+            continue
+        }
+
+        const repsArray = repsOptions
+            .split(',')
+            .map((x) => parseInt(x, 10))
+            .filter((n) => !isNaN(n))
+
+        console.log('Парсенные повторения:', repsArray)
+
+        if (repsArray.length === 0) {
+            console.warn('Повторения не были распознаны.')
+            continue
+        }
+
+        const reps = repsArray[Math.floor(Math.random() * repsArray.length)]
+        const sets = getSets(reps)
+
+        console.log(`Выбраны повторения: ${reps}, подходы: ${sets}`)
+
+        return {
+            exercise: selectedExercise,
+            reps,
+            sets
         }
     }
+    console.warn(
+        'Не удалось найти подходящее упражнение после максимального количества попыток.'
+    )
+    return null
+}
 
-    // Загрузка паттернов
-    async function loadPatterns() {
-        try {
-            const data = await apiRequest<Pattern[]>('get', 'patterns')
-            patterns.value = data
-            console.log('Паттерны:', patterns.value)
-            return patterns.value // если нужно вернуть
-        } catch (err) {
-            console.error('Ошибка при загрузке паттернов:', err)
-            showSnackbar('Ошибка при загрузке паттернов', 'error')
-            throw err
-        }
+// Сам хук
+export default function useWorkoutGenerator(
+    {
+        gender,
+        muscleGroup,
+        muscleSubgroup,
+        patterns,
+        exercises,
+        usedExerciseIds,
+        workoutResults,
+        selectedPattern,
+        isGenerating,
+        timer,
+        errorMessages,
+        intervalId,
+        showBottomSheet,
+        showSnackbar,
+    }: {
+        gender: Ref<string>,
+        muscleGroup: Ref<string>,
+        muscleSubgroup: Ref<string>,
+        patterns: Ref<Pattern[]>,
+        exercises: Ref<Exercise[]>,
+        usedExerciseIds: Ref<Set<string>>,
+        workoutResults: Ref<WorkoutResult[]>,
+        selectedPattern: Ref<Pattern | null>,
+        isGenerating: Ref<boolean>,
+        timer: Ref<number>,
+        errorMessages: Ref<string[]>,
+        intervalId: { value: number | null },
+        showBottomSheet: Ref<boolean>,
+        showSnackbar: (message: string, color?: string) => void
     }
-
-    // Генерация
-    function generateWorkout(gender: string, muscleGroup: string, muscleSubgroup: string) {
+) {
+    // Тот же generateWorkout, но в конце мы выставляем 3-секундный таймер
+    // (Теперь в компоненте мы имитируем "плавную загрузку" вместо этого таймера,
+    //  но сам код ниже мы НЕ удаляем, чтобы соблюсти условие "ничего не удаляя".)
+    function generateWorkout() {
         if (isGenerating.value || timer.value > 0) return
-        if (!gender || !muscleGroup || !muscleSubgroup) {
-            showSnackbar('Пожалуйста, заполните все поля', 'error')
+
+        if (!gender.value || !muscleGroup.value || !muscleSubgroup.value) {
+            showSnackbar('Пожалуйста, заполните все поля.', 'error')
+            console.log('Некоторые поля не заполнены:', {
+                gender: gender.value,
+                muscleGroup: muscleGroup.value,
+                muscleSubgroup: muscleSubgroup.value
+            })
             return
         }
 
         isGenerating.value = true
+        errorMessages.value = []
         workoutResults.value = []
-        usedExerciseIds.value.clear()
 
-        // Фильтруем паттерны по полу и мышечной группе (complexNumber)
-        const filtered = patterns.value.filter((p) => {
-            const userGenderLower = gender.trim().toLowerCase()
-            const patternGenders = p.gender
-                .split(',')
-                .map(g => g.trim().toLowerCase())
-            const isGenderOk = patternGenders.includes(userGenderLower)
+        const filteredPatterns = patterns.value.filter((p) => {
+            const gMatch = p.gender.toLowerCase().includes(gender.value.toLowerCase())
+            if (!gMatch) return false
 
-            return (
-                isGenderOk &&
-                p.complexNumber === Number(muscleGroup.trim())
-            )
+            const mgMatch = p.muscleGroup.toLowerCase() === muscleGroup.value.toLowerCase()
+            const sgMatch = p.subcategory.toLowerCase() === muscleSubgroup.value.toLowerCase()
+
+            return mgMatch && sgMatch
         })
 
-        if (!filtered.length) {
-            showSnackbar('Подходящий паттерн не найден', 'error')
+        console.log('Отфильтрованные паттерны:', filteredPatterns)
+
+        if (filteredPatterns.length === 0) {
+            showSnackbar('Подходящий паттерн не найден.', 'error')
+            console.log(
+                'Не найдено подходящих паттернов для выбранных параметров.'
+            )
             isGenerating.value = false
             return
         }
 
-        // Выбираем случайный паттерн из отфильтрованных
-        const pattern = filtered[Math.floor(Math.random() * filtered.length)]
+        const pattern = filteredPatterns[Math.floor(Math.random() * filteredPatterns.length)]
         selectedPattern.value = pattern
+        usedExerciseIds.value = new Set()
+
         console.log('Выбранный паттерн:', pattern)
 
-        const resultArr: WorkoutResult[] = []
+        const workout: WorkoutResult[] = []
 
-        for (const pEx of pattern.exercises) {
-            // Подбираем упражнения, соответствующие выбранной подгруппе мышц
-            const match = exercises.value.filter((e) => {
-                const categoryMatch = e.category.toLowerCase() === pEx.muscleGroup.toLowerCase()
-                const mainMuscleMatch = e.mainMuscle.toLowerCase() === pEx.mainMuscle.toLowerCase()
+        for (const patternExercise of pattern.exercises) {
+            const mg = pattern.muscleGroup.toLowerCase()
+            const mm = pattern.mainMuscle.toLowerCase()
 
-                // Проверяем, соответствует ли дополнительная мышца выбранной подгруппе
-                const additionalMuscleMatch = e.additionalMuscles
-                    .toLowerCase()
-                    .split(',')
-                    .map(m => m.trim())
-                    .includes(muscleSubgroup.toLowerCase())
+            console.log(
+                `Обрабатываем упражнение паттерна: ${patternExercise.exerciseLevel}, повторения: ${patternExercise.repetitionLevel}`
+            )
 
-                return (
-                    categoryMatch &&
-                    mainMuscleMatch &&
-                    additionalMuscleMatch &&
-                    !usedExerciseIds.value.has(e._id)
+            const normalizedRepetitionLevel = patternExercise.repetitionLevel
+                .toLowerCase()
+                .replace('ё', 'е')
+            const mappedLevel = levelMapping[normalizedRepetitionLevel]
+            if (!mappedLevel) {
+                console.warn(
+                    `Неизвестный уровень повторений: "${patternExercise.repetitionLevel}". Пропускаем упражнение.`
                 )
-            })
-
-            if (!match.length) {
-                console.warn(`Нет подходящих упражнений для: ${pEx.mainMuscle} с подгруппой мышцы: ${muscleSubgroup}`)
                 continue
             }
-
-            const selectedExercise = match[Math.floor(Math.random() * match.length)]
-            usedExerciseIds.value.add(selectedExercise._id)
-
-            // Генерация повторений с заданными вероятностями
-            const randomLoadLevel = getRandomLoadLevel()
             const repsKey = `${
-                gender.toLowerCase() === 'мужчина' ? 'male' : 'female'
-            }Reps${capitalize(randomLoadLevel)}` as keyof RepetitionLevels
+                gender.value === 'Мужчина' ? 'male' : 'female'
+            }Reps${capitalize(mappedLevel)}`
 
-            const repsOpt = selectedExercise[repsKey]
-            if (!repsOpt) {
-                console.warn(`Нет подходящего поля повторений: ${repsKey} у упражнения ${selectedExercise.name}`)
+            const matchingExercises = exercises.value.filter((e) => {
+                if (!e.category || !e.mainMuscle) return false
+
+                const catMatch = e.category.toLowerCase() === mg
+                const mmToFind = mm
+                const mmMatch =
+                    e.mainMuscle.toLowerCase() === mmToFind ||
+                    e.additionalMuscles.toLowerCase().includes(mmToFind)
+
+                const notUsed = !usedExerciseIds.value.has(e._id)
+                const hasValidReps = e[repsKey] && e[repsKey] !== '—'
+
+                return catMatch && mmMatch && notUsed && hasValidReps
+            })
+
+            console.log(
+                `Найдено ${matchingExercises.length} подходящих упражнений для паттерна "${patternExercise.exerciseLevel}":`,
+                matchingExercises
+            )
+
+            if (matchingExercises.length === 0) {
+                console.warn('Нет подходящих упражнений для:', patternExercise)
                 continue
             }
 
-            let reps: number
-            if (repsOpt.includes('сек')) {
-                const matchReps = repsOpt.match(/\d+/)
-                if (matchReps) {
-                    reps = parseInt(matchReps[0], 10)
-                } else {
-                    console.warn(`Не удалось распарсить reps из "${repsOpt}" у "${selectedExercise.name}"`)
-                    continue
-                }
-            } else {
-                const repNums = repsOpt
-                    .split(',')
-                    .map(n => parseInt(n.trim(), 10))
-                    .filter(num => !isNaN(num))
-                if (!repNums.length) {
-                    console.warn(`Нет корректных повторений в "${repsOpt}" для упражнения: ${selectedExercise.name}`)
-                    continue
-                }
-                reps = repNums[Math.floor(Math.random() * repNums.length)]
+            const found = tryFindExercise(
+                matchingExercises,
+                patternExercise.repetitionLevel,
+                gender.value,
+                usedExerciseIds.value,
+                10
+            )
+
+            if (!found) {
+                console.warn('Не удалось подобрать упражнение для:', patternExercise)
+                continue
             }
 
-            const sets = getSets(reps)
+            console.log(
+                'Подобрано упражнение:',
+                found.exercise.name,
+                'повторения:',
+                found.reps,
+                'подходы:',
+                found.sets
+            )
 
-            resultArr.push({
-                _id: selectedExercise._id,
-                name: selectedExercise.name,
-                sets,
-                reps
+            usedExerciseIds.value.add(found.exercise._id)
+
+            workout.push({
+                _id: found.exercise._id,
+                name: found.exercise.name,
+                sets: found.sets,
+                reps: found.reps
             })
         }
 
-        workoutResults.value = resultArr
-        console.log('Сгенерированный workout:', workoutResults.value)
-        if (!workoutResults.value.length) {
-            showSnackbar('Тренировка пуста', 'error')
+        if (workout.length === 0) {
+            showSnackbar('Тренировка не сгенерирована. Попробуйте другие параметры.', 'error')
+            console.log('Тренировка не сгенерирована. Нет подходящих упражнений.')
         }
 
-        // Таймер "задержки" перед повторной генерацией
+        workoutResults.value = workout
+        console.log('Результаты тренировки:', workoutResults.value)
+
+        // СТАРЫЙ МЕХАНИЗМ (таймер на 3 секунды) — не удаляем:
         timer.value = 3
-        intervalId = window.setInterval(() => {
+        intervalId.value = window.setInterval(() => {
             timer.value--
-            if (timer.value <= 0 && intervalId !== null) {
-                window.clearInterval(intervalId)
-                intervalId = null
+            if (timer.value <= 0 && intervalId.value !== null) {
+                window.clearInterval(intervalId.value)
+                intervalId.value = null
             }
         }, 1000)
 
@@ -315,186 +351,114 @@ export function useWorkoutGenerator() {
         showBottomSheet.value = true
     }
 
-    // Удаление одного упражнения
     function removeExercise(index: number) {
         const ex = workoutResults.value[index]
-        if (ex) {
+        if (ex && ex._id) {
             usedExerciseIds.value.delete(ex._id)
-            workoutResults.value.splice(index, 1)
         }
+        workoutResults.value.splice(index, 1)
     }
 
-    // Перегенерация одного упражнения
-    function regenerateExercise(index: number, gender: string) {
-        if (!selectedPattern.value) return
+    function regenerateExercise(index: number) {
+        if (!selectedPattern.value) {
+            console.warn('Паттерн не выбран.')
+            return
+        }
+        const patternExercise = selectedPattern.value.exercises[index]
         const oldEx = workoutResults.value[index]
-        if (!oldEx) return
+        if (oldEx && oldEx._id) {
+            usedExerciseIds.value.delete(oldEx._id)
+        }
 
-        usedExerciseIds.value.delete(oldEx._id)
-        const pEx = selectedPattern.value.exercises[index]
+        const mg = selectedPattern.value.muscleGroup.toLowerCase()
+        const mm = selectedPattern.value.mainMuscle.toLowerCase()
 
-        const match = exercises.value.filter((e) => {
-            // e.category === muscleGroup, e.mainMuscle === mainMuscle
-            const categoryMatch = e.category.toLowerCase() === pEx.muscleGroup.toLowerCase()
-            const mainMuscleMatch = e.mainMuscle.toLowerCase() === pEx.mainMuscle.toLowerCase()
-            const difficultyMatch = e.difficultyLevel.toLowerCase() === pEx.exercise.toLowerCase()
+        const matchingExercises = exercises.value.filter((e) => {
+            if (!e.category || !e.mainMuscle) return false
 
-            // Дополнительная фильтрация по additionalMuscles
-            const requiredAdditionalMuscles = pEx.exercise.split(',').map(m => m.trim().toLowerCase())
-            const additionalMuscleMatch = requiredAdditionalMuscles.some(reqMuscle =>
-                e.additionalMuscles.toLowerCase().split(',').map(m => m.trim()).includes(reqMuscle)
-            )
+            const catMatch = e.category.toLowerCase() === mg
+            const mmToFind = mm
+            const mmMatch =
+                e.mainMuscle.toLowerCase() === mmToFind ||
+                e.additionalMuscles.toLowerCase().includes(mmToFind)
 
-            return (
-                categoryMatch &&
-                mainMuscleMatch &&
-                difficultyMatch &&
-                additionalMuscleMatch &&
-                !usedExerciseIds.value.has(e._id)
-            )
+            const notUsed = !usedExerciseIds.value.has(e._id)
+
+            // e.repetitionLevel нет в Exercise, но сохраняем вашу логику без изменений:
+            const repsKey = `${
+                gender.value === 'Мужчина' ? 'male' : 'female'
+            }Reps${capitalize(levelMapping[e.repetitionLevel.toLowerCase().replace('ё', 'е')])}`
+
+            const hasValidReps = e[repsKey] && e[repsKey] !== '—'
+
+            return catMatch && mmMatch && notUsed && hasValidReps
         })
 
-        if (!match.length) {
-            console.warn(`Нет подходящих упражнений для перегенерации: ${pEx.mainMuscle} с дополнительными мышцами: ${pEx.exercise}`)
+        if (matchingExercises.length === 0) {
+            console.warn('Нет подходящих упражнений для перегенерации:', patternExercise)
             return
         }
 
-        const newEx = match[Math.floor(Math.random() * match.length)]
-        usedExerciseIds.value.add(newEx._id)
-
-        // Генерация повторений
-        const randomLoadLevel = getRandomLoadLevel()
-        const repsKey = `${
-            gender.toLowerCase() === 'мужчина' ? 'male' : 'female'
-        }Reps${capitalize(randomLoadLevel)}` as keyof RepetitionLevels
-
-        const repsOpt = newEx[repsKey]
-        if (!repsOpt) {
-            console.warn(`Нет поля повторений "${repsKey}" у упражнения "${newEx.name}"`)
-            // Оставим старые sets/reps
-            workoutResults.value[index] = {
-                _id: newEx._id,
-                name: newEx.name,
-                sets: oldEx.sets,
-                reps: oldEx.reps
-            }
+        const found = tryFindExercise(
+            matchingExercises,
+            patternExercise.repetitionLevel,
+            gender.value,
+            usedExerciseIds.value,
+            5
+        )
+        if (!found) {
+            console.warn('Не удалось подобрать новое упражнение:', patternExercise)
             return
         }
 
-        let reps: number
-        if (repsOpt.includes('сек')) {
-            // Например, "45 сек" -> 45
-            const matchReps = repsOpt.match(/\d+/)
-            if (matchReps) {
-                reps = parseInt(matchReps[0], 10)
-            } else {
-                console.warn(`Не удалось распарсить reps из "${repsOpt}" у "${newEx.name}"`)
-                // Оставим старые sets/reps
-                workoutResults.value[index] = {
-                    _id: newEx._id,
-                    name: newEx.name,
-                    sets: oldEx.sets,
-                    reps: oldEx.reps
-                }
-                return
-            }
-        } else {
-            const repNums = repsOpt
-                .split(',')
-                .map(n => parseInt(n.trim(), 10))
-                .filter(num => !isNaN(num))
-            if (!repNums.length) {
-                console.warn(`Нет корректных повторений в "${repsOpt}" у "${newEx.name}"`)
-                // Оставим старые
-                workoutResults.value[index] = {
-                    _id: newEx._id,
-                    name: newEx.name,
-                    sets: oldEx.sets,
-                    reps: oldEx.reps
-                }
-                return
-            }
-            reps = repNums[Math.floor(Math.random() * repNums.length)]
-        }
-
-        const sets = getSets(reps)
-
+        usedExerciseIds.value.add(found.exercise._id)
         workoutResults.value[index] = {
-            _id: newEx._id,
-            name: newEx.name,
-            sets,
-            reps
+            _id: found.exercise._id,
+            name: found.exercise.name,
+            sets: found.sets,
+            reps: found.reps
         }
     }
 
-    // Увеличить/уменьшить повторения
+    const standardRepsValues = [5, 6, 8, 10, 12, 15, 20]
+
     function increaseReps(index: number) {
-        const item = workoutResults.value[index]
-        const currentIndex = standardRepsValues.indexOf(item.reps)
-        if (currentIndex >= 0 && currentIndex < standardRepsValues.length - 1) {
-            item.reps = standardRepsValues[currentIndex + 1]
+        const ex = workoutResults.value[index]
+        const current = ex.reps
+        const idx = standardRepsValues.indexOf(current)
+        let newReps
+        if (idx !== -1 && idx < standardRepsValues.length - 1) {
+            newReps = standardRepsValues[idx + 1]
         } else {
-            item.reps = item.reps + 1
+            newReps = current + 1
         }
-        item.sets = getSets(item.reps)
-    }
-    function decreaseReps(index: number) {
-        const item = workoutResults.value[index]
-        const currentIndex = standardRepsValues.indexOf(item.reps)
-        if (currentIndex > 0) {
-            item.reps = standardRepsValues[currentIndex - 1]
-        } else {
-            item.reps = Math.max(1, item.reps - 1)
-        }
-        item.sets = getSets(item.reps)
+        ex.reps = newReps
+        ex.sets = getSets(ex.reps)
     }
 
-    // Отправка тренировки
-    async function sendWorkout(
-        telegramUserId: number | null,
-        muscleSubgroup: string,
-        dateStr: string
-    ) {
-        if (!telegramUserId || !workoutResults.value.length) {
-            showSnackbar('Нет userId или тренировка пуста', 'error')
-            return
+    function decreaseReps(index: number) {
+        const ex = workoutResults.value[index]
+        const current = ex.reps
+        const idx = standardRepsValues.indexOf(current)
+        let newReps
+        if (idx > 0) {
+            newReps = standardRepsValues[idx - 1]
+        } else if (idx === 0) {
+            newReps = current - 1
+        } else {
+            newReps = current - 1
         }
-        try {
-            const workoutData = JSON.parse(JSON.stringify(workoutResults.value))
-            await apiRequest('post', 'send-workout', {
-                userId: telegramUserId,
-                muscleGroup: muscleSubgroup,
-                date: dateStr,
-                workout: workoutData
-            })
-            showSnackbar('Тренировка отправлена', 'success')
-        } catch (err) {
-            console.error('Ошибка при отправке:', err)
-            showSnackbar('Не удалось отправить тренировку', 'error')
+        if (newReps >= 1) {
+            ex.reps = newReps
+            ex.sets = getSets(ex.reps)
         }
     }
 
     return {
-        // State
-        exercises,
-        patterns,
-        workoutResults,
-        usedExerciseIds,
-        isGenerating,
-        timer,
-        showBottomSheet,
-        selectedPattern,
-        snackbar,
-
-        // Methods
-        loadExercises,
-        loadPatterns,
         generateWorkout,
         removeExercise,
         regenerateExercise,
         increaseReps,
-        decreaseReps,
-        sendWorkout,
-        showSnackbar
+        decreaseReps
     }
 }

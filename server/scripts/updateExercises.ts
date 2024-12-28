@@ -1,4 +1,4 @@
-// ~/scripts/populateDB.ts
+// ~/scripts/updateExercises.ts
 
 import mongoose, { Schema, Document, model } from 'mongoose';
 import xlsx from 'xlsx';
@@ -86,7 +86,7 @@ function toBoolean(value: string | undefined): boolean {
     return value?.toUpperCase() === 'TRUE';
 }
 
-const populateDB = async () => {
+const updateExercises = async () => {
     try {
         for (const row of dataRows) {
             const exerciseData: ExerciseData = {
@@ -126,4 +126,4 @@ const populateDB = async () => {
     }
 };
 
-populateDB();
+updateExercises();

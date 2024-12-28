@@ -3,49 +3,40 @@ import mongoose, { Schema, Document, model } from 'mongoose';
 import xlsx from 'xlsx';
 import path from 'path';
 
-// Подключение к MongoDB
-mongoose
-    .connect('mongodb://localhost:27017/fitness-app', {})
-    .then(() => {
-        console.log('Connected to MongoDB');
-    })
-    .catch((error) => {
-        console.error('Error connecting to MongoDB:', error);
-    });
-
 /**
  * Интерфейс для одного упражнения внутри паттерна
- * (соответствует колонкам: muscleGroup, subcategory, mainMuscle, exercise)
  */
 interface IPatternExercise {
-    muscleGroup: string;
-    subcategory: string;
-    mainMuscle: string;
-    exercise: string;
+    exerciseLevel: string;
+    repetitionLevel: string;
 }
 
 /**
  * Интерфейс для документа паттерна
  */
 interface IPattern extends Document {
-    gender: string;
-    complexNumber: number; // Изменили на number
+    gender: string;            // "мужчина", "женщина" или "мужчина,женщина"
+    muscleGroup: string;       // Грудь, Спина и т.д.
+    subcategory: string;       // Верхняя грудная, ширина спины и т.д.
+    mainMuscle: string;        // Верхняя грудная, широчайшая...
+    complexNumber: string;     // "29", "30" ...
     exercises: IPatternExercise[];
 }
 
 // Схема для "одного упражнения" внутри паттерна
 const patternExerciseSchema = new Schema<IPatternExercise>({
-    muscleGroup: { type: String },
-    subcategory: { type: String },
-    mainMuscle: { type: String },
-    exercise: { type: String },
+    exerciseLevel: { type: String, required: true },
+    repetitionLevel: { type: String, required: true },
 });
 
 // Схема для самого паттерна
 const patternSchema = new Schema<IPattern>({
     gender: { type: String, required: true },
-    complexNumber: { type: Number, required: true },
-    exercises: [patternExerciseSchema],
+    muscleGroup: { type: String, required: true },
+    subcategory: { type: String, required: true },
+    mainMuscle: { type: String, required: true },
+    complexNumber: { type: String, required: true },
+    exercises: { type: [patternExerciseSchema], required: true },
 });
 
 const Pattern = model<IPattern>('Pattern', patternSchema);
@@ -60,8 +51,15 @@ const worksheet = workbook.Sheets[sheetName];
 const rawData = xlsx.utils.sheet_to_json<string[]>(worksheet, { header: 1 });
 
 // Допустим, первая строка — заголовки, поэтому срезаем со второй
-// (или с третьей, если у вас там ещё какая-то строка)
 const dataRows = rawData.slice(1);
+
+/**
+ * Функция для генерации случайного уровня повторений
+ */
+function getRandomRepetitionLevel(): string {
+    const levels = ['легкая', 'средняя', 'тяжелая'];
+    return levels[Math.floor(Math.random() * levels.length)];
+}
 
 async function populatePatternsDB() {
     try {
@@ -70,7 +68,7 @@ async function populatePatternsDB() {
         console.log('Patterns collection cleared.');
 
         /**
-         * Временный объект, где ключ — (gender + '-' + complexNumber),
+         * Временный объект, где ключ — комбинация gender, complexNumber, muscleGroup, subcategory, mainMuscle,
          * значение — паттерн с массивом упражнений
          */
         const patternsMap: { [key: string]: IPattern } = {};
@@ -84,34 +82,38 @@ async function populatePatternsDB() {
              * 2: subcategory
              * 3: mainMuscle
              * 4: complexNumber
-             * 5: exercises (тип/название упражнения)
+             * 5: exerciseLevel (тип/название упражнения)
              */
             const gender = (row[0] || '').toString().trim();
             const muscleGroup = (row[1] || '').toString().trim();
             const subcategory = (row[2] || '').toString().trim();
             const mainMuscle = (row[3] || '').toString().trim();
-            // Парсим complexNumber как число
-            const complexNumber = Number(row[4] || 0);
-            const exercise = (row[5] || '').toString().trim();
+            // Парсим complexNumber как строку
+            const complexNumber = (row[4] || '').toString().trim();
+            const exerciseLevel = (row[5] || '').toString().trim();
+
+            // Генерируем случайный repetitionLevel
+            const repetitionLevel = getRandomRepetitionLevel();
 
             // Формируем ключ, чтобы сгруппировать упражнения в один паттерн
-            const patternKey = `${gender}-${complexNumber}`;
+            const patternKey = `${gender}-${complexNumber}-${muscleGroup}-${subcategory}-${mainMuscle}`;
 
             if (!patternsMap[patternKey]) {
                 // Создаём паттерн впервые
                 patternsMap[patternKey] = new Pattern({
                     gender,
                     complexNumber,
+                    muscleGroup,
+                    subcategory,
+                    mainMuscle,
                     exercises: [],
                 });
             }
 
             // Добавляем упражнение в массив exercises
             patternsMap[patternKey].exercises.push({
-                muscleGroup,
-                subcategory,
-                mainMuscle,
-                exercise,
+                exerciseLevel,
+                repetitionLevel,
             });
         }
 
@@ -129,5 +131,19 @@ async function populatePatternsDB() {
     }
 }
 
+async function main() {
+    try {
+        // Подключение к MongoDB
+        await mongoose.connect('mongodb://localhost:27017/fitness-app');
+        console.log('Connected to MongoDB');
+
+        // Запуск функции заполнения базы данных
+        await populatePatternsDB();
+    } catch (error) {
+        console.error('Error connecting to MongoDB:', error);
+        process.exit(1); // Завершить процесс с ошибкой
+    }
+}
+
 // Запуск
-populatePatternsDB();
+main();

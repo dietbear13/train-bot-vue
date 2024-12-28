@@ -80,7 +80,7 @@ const snackbar = ref({
   show: false,
   message: '',
   color: 'info', // Цвет уведомления: 'success', 'error', 'info', 'warning'
-  timeout: 3000, // Время отображения в миллисекундах
+  timeout: 1500, // Время отображения в миллисекундах
 });
 
 const showSnackbar = (message: string, color: string = 'info') => {

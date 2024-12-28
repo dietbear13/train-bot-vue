@@ -85,7 +85,7 @@
 
     <!-- Кнопка для генерации тренировки -->
     <v-btn
-        :disabled="isGenerating || timer > 0"
+        :disabled="isGenerating || /* timer > 0 */ false"
         @click="generateWorkout"
         color="success"
         class="mt-1"
@@ -93,11 +93,16 @@
         width="100%"
     >
       <v-icon left>mdi-dumbbell</v-icon>
-      {{ timer > 0 ? `Повторная генерация через ${timer} с` : 'Сгенерировать' }}
+      <!--
+        СТАРЫЙ ВАРИАНТ (не удаляем, лишь закомментировали):
+        {{ timer > 0 ? `Повторная генерация через ${timer} с` : 'Сгенерировать' }}
+      -->
+      <!-- НОВЫЙ ВАРИАНТ -->
+      <span v-if="isLoading">Генерируем...</span>
+      <span v-else>Сгенерировать</span>
     </v-btn>
     <!-- Информационное сообщение -->
     <p class="mt-2 ml-2" style="color: #858585">Данные не хранятся и не используются.</p>
-
 
     <!-- Сообщение об ошибке -->
     <v-alert
@@ -118,10 +123,22 @@
         icon="mdi-dumbbell"
     >
       <v-card-text class="ma-0">
-        <!-- Заголовок тренировки внутри тела листа -->
+        <!-- Если идёт загрузка - показываем рыбное содержимое -->
+        <div v-if="isLoading" class="mb-2" style="text-align:center;">
+          <p>Генерируем тренировку...</p>
+          <v-progress-linear
+              color="primary"
+              indeterminate
+              height="4"
+              class="mt-3"
+          ></v-progress-linear>
+          <!-- Можно показать любой "рыбный" контент -->
+          <p style="margin-top: 1rem;">[ Рыбное (плейсхолдер) содержимое ]</p>
+        </div>
 
-        <!-- Таблица упражнений -->
+        <!-- Если НЕ идёт загрузка - показываем реальный список упражнений -->
         <v-data-table
+            v-else
             :items="workoutResults"
             class="rounded-bottom-sheet"
             hide-default-header
@@ -155,19 +172,18 @@
                         small
                         @click="decreaseReps(index)"
                         variant="plain"
-                        class="mx-1"
+                        class="mx-0"
                     >
-                      <v-icon small class="ml-2">mdi-minus</v-icon>
+                      <v-icon small>mdi-minus</v-icon>
                     </v-btn>
                     <span>{{ element.sets }} × {{ element.reps }}</span>
                     <v-btn
                         icon
                         max-width="30px"
                         max-height="30px"
-                        ma
                         @click="increaseReps(index)"
                         variant="plain"
-                        class="ml-2"
+                        class="mx-0"
                     >
                       <v-icon small>mdi-plus</v-icon>
                     </v-btn>
@@ -203,12 +219,14 @@
           <v-btn
               color="primary"
               @click="generateWorkout"
-              :disabled="isGenerating || timer > 0"
+              :disabled="isGenerating || /* timer > 0 */ false"
               rounded="lg"
               class="mb-1"
           >
             <v-icon left>mdi-refresh</v-icon>
-            {{ timer > 0 ? `Повторная генерация через ${timer} с` : 'Сгенерировать заново' }}
+            <!-- СТАРЫЙ ВАРИАНТ (не удаляем): {{ timer > 0 ? `Повторная генерация через ${timer} с` : 'Сгенерировать заново' }} -->
+            <span v-if="isLoading">Генерируем заново...</span>
+            <span v-else>Сгенерировать заново</span>
           </v-btn>
           <v-btn
               color="primary"
@@ -258,13 +276,84 @@ import { defineComponent, ref, onMounted } from 'vue'
 import axios, { type AxiosRequestConfig, type Method } from 'axios'
 import draggable from 'vuedraggable'
 import { retrieveLaunchParams } from '@telegram-apps/sdk'
-import AddExercise from './AddExercise.vue' // Импортируем новый компонент
+import AddExercise from './AddExercise.vue'
 import BottomSheetWithClose from '~/components/BottomSheetWithClose.vue'
 
+// 1) Импортируем ваш хук:
+import useWorkoutGenerator from '~/composables/useWorkoutGenerator'
+
+// --- Интерфейсы ---
+interface RepetitionLevels {
+  maleRepsLight: string
+  maleRepsMedium: string
+  maleRepsHeavy: string
+  femaleRepsLight: string
+  femaleRepsMedium: string
+  femaleRepsHeavy: string
+}
+
+interface Exercise extends RepetitionLevels {
+  _id: string
+  category: string
+  subcategory: string
+  mainMuscle: string
+  additionalMuscles: string
+  typeExercise: string
+  difficultyLevel: string
+  difficultyLevelOld: string
+  name: string
+  equipment: string
+  isWarnGif: boolean
+  technique: string
+  gifImage: string
+  spineRestrictions: boolean
+  kneeRestrictions: boolean
+  shoulderRestrictions: boolean
+  __v: number
+}
+
+interface PatternExercise {
+  exerciseLevel: string
+  repetitionLevel: string
+}
+
+interface Pattern {
+  _id: string
+  gender: string
+  complexNumber: string
+  muscleGroup: string
+  subcategory: string
+  mainMuscle: string
+  exercises: PatternExercise[]
+  __v: number
+}
+
+interface WorkoutResult {
+  _id: string
+  name: string
+  sets: number
+  reps: number
+}
+
+interface TelegramUserData {
+  id: number
+  first_name?: string
+  last_name?: string
+  username?: string
+  language_code?: string
+}
+
+interface SnackbarState {
+  show: boolean
+  message: string
+  color: string
+  timeout?: number
+}
+
+// Функция для запросов с fallback
 const primaryBaseURL = 'https://fit-server-bot.ru.tuna.am/api/'
 const fallbackBaseURL = 'http://localhost:3002/api/'
 
-// Функция для запросов с fallback
 const apiRequest = async <T>(
     method: Method,
     endpoint: string,
@@ -303,73 +392,12 @@ const apiRequest = async <T>(
   }
 }
 
-// --- Интерфейсы ---
-interface RepetitionLevels {
-  maleRepsLight: string
-  maleRepsMedium: string
-  maleRepsHeavy: string
-  femaleRepsLight: string
-  femaleRepsMedium: string
-  femaleRepsHeavy: string
-}
-
-interface Exercise extends RepetitionLevels {
-  _id: string
-  category: string           // например: "ноги"
-  subcategory: string        // например: "ягодицы" (но теперь мы не используем это при поиске)
-  mainMuscle: string         // "ягодицы"
-  additionalMuscles: string  // "бицепс бедра, квадрицепс" и т.д.
-  difficultyLevel: string
-  name: string
-  equipment: string
-}
-
-interface PatternExercise {
-  muscleGroup: string         // например: "ноги"
-  subcategory?: string        // "ягодицы" (учитываем ТОЛЬКО при выборе паттерна)
-  mainMuscle: string          // "ягодицы"
-  repetitionLevel: string
-  additionalColumn: string
-  _id?: string
-}
-
-interface Pattern {
-  _id: string
-  gender: string          // "мужчина,женщина" или "мужчина" и т.д.
-  complexNumber: string
-  exerciseLevel?: string
-  exercises: PatternExercise[]
-}
-
-interface WorkoutResult {
-  _id: string
-  name: string
-  sets: number
-  reps: number
-}
-
-interface TelegramUserData {
-  id: number
-  first_name?: string
-  last_name?: string
-  username?: string
-  language_code?: string
-}
-
-interface SnackbarState {
-  show: boolean
-  message: string
-  color: string
-  timeout?: number
-}
-
 export default defineComponent({
   name: 'TrainingByMuscles',
   components: {
     draggable,
     AddExercise,
     BottomSheetWithClose,
-
   },
   setup() {
     // ---------------- Основные ссылки ----------------
@@ -388,118 +416,77 @@ export default defineComponent({
     const muscleSubgroups = ref<string[]>([])
     const complexes = ref<string[]>([])
 
+    // Результаты тренировки
     const workoutResults = ref<WorkoutResult[]>([])
 
+    // Данные
     const exercises = ref<Exercise[]>([])
     const patterns = ref<Pattern[]>([])
 
+    // Флаги и служебные переменные
     const isGenerating = ref(false)
     const timer = ref(0)
-    let intervalId: number | null = null
+    // Вместо let intervalId: number | null = null,
+    // можно обернуть в объект, чтобы передавать это в хук
+    const intervalId = { value: null as number | null }
+
     const errorMessages = ref<string[]>([])
 
+    // Управление нижними листами
     const showBottomSheet = ref(false)
-    const showAddExerciseSheet = ref(false) // Новая переменная для управления нижним листом добавления упражнения
+    const showAddExerciseSheet = ref(false)
     const selectedPattern = ref<Pattern | null>(null)
     const usedExerciseIds = ref<Set<string>>(new Set())
 
+    // Snackbar
     const snackbar = ref<SnackbarState>({
       show: false,
       message: '',
       color: 'info',
-      timeout: 3000
+      timeout: 1500
     })
-
-    // ---------------- Утилиты ----------------
-
     const showSnackbar = (message: string, color: string = 'info') => {
       snackbar.value.message = message
       snackbar.value.color = color
       snackbar.value.show = true
     }
 
+    // ----------------------------------------------------------
+    //   НОВЫЕ ПОЛЯ ДЛЯ «ПЛАВНОЙ ЗАГРУЗКИ» (2.5–3.5 СЕК)
+    // ----------------------------------------------------------
+    // Используем isLoading, чтобы понимать, показывать ли плейсхолдер.
+    const isLoading = ref(false)
+
+    // ----------------------------------------------------------
+    //   Подключаем наш хук (generateWorkout, etc.)
+    // ----------------------------------------------------------
+    const {
+      generateWorkout,
+      removeExercise,
+      regenerateExercise,
+      increaseReps,
+      decreaseReps
+    } = useWorkoutGenerator({
+      gender,
+      muscleGroup,
+      muscleSubgroup,
+      patterns,
+      exercises,
+      usedExerciseIds,
+      workoutResults,
+      selectedPattern,
+      isGenerating,
+      timer,
+      errorMessages,
+      intervalId,
+      showBottomSheet,
+      showSnackbar
+    })
+
+    // ---------------- Методы для выбора группы/подгруппы мышц ----------------
     const capitalize = (str: string): string =>
         str ? str.charAt(0).toUpperCase() + str.slice(1) : ''
 
-    // Карта «лёгкая-средняя-тяжёлая» -> "Light"/"Medium"/"Heavy"
-    const levelMapping: { [key: string]: string } = {
-      'лёгкая': 'Light',
-      'средняя': 'Medium',
-      'тяжёлая': 'Heavy'
-    }
-
-    // Возможные значения повторений (для increase/decreaseReps)
-    const standardRepsValues = [5, 6, 8, 10, 12, 15, 20]
-
-    // Случайный уровень нагрузки (50% средняя, 25% лёгкая, 25% тяжёлая)
-    const getRandomLoadLevel = (): string => {
-      const r = Math.random()
-      if (r < 0.5) return 'средняя'
-      else if (r < 0.75) return 'лёгкая'
-      else return 'тяжёлая'
-    }
-
-    const getSets = (reps: number): number => {
-      if (reps === 5) return 5
-      if (reps === 6 || reps === 8) return 4
-      if (reps === 10 || reps === 12 || reps === 15 || reps === 20) return 3
-      return 3
-    }
-
-    /**
-     * Если repsKey = "maleRepsLight", получаем значение из exercise[maleRepsLight].
-     * Если там "—" или пусто, возвращаем null, иначе строку "5,8,10".
-     */
-    const getRepsOptions = (
-        exercise: Exercise,
-        repetitionLevel: string,
-        genderStr: string,
-        loadLevel: string
-    ): string | null => {
-      if (!loadLevel) {
-        console.warn('loadLevel is undefined or empty')
-        return null
-      }
-      const mappedLevel = levelMapping[loadLevel.toLowerCase()]
-      if (!mappedLevel) {
-        console.warn(`Неизвестный уровень нагрузки: ${loadLevel}`)
-        return null
-      }
-      const repsKey = `${genderStr === 'Мужчина' ? 'male' : 'female'}Reps${capitalize(
-          mappedLevel
-      )}` as keyof RepetitionLevels
-
-      const repsValue = exercise[repsKey]
-      if (!repsValue || repsValue === '—') {
-        return null
-      }
-      return repsValue
-    }
-
-    // ---------------- Загрузка данных ----------------
-    const loadExercises = async () => {
-      try {
-        const data = await apiRequest<Exercise[]>('get', 'exercises')
-        exercises.value = data
-        console.log('Упражнения загружены:', exercises.value)
-      } catch (error: any) {
-        console.error('Ошибка при загрузке упражнений:', error.message)
-        showSnackbar('Не удалось загрузить упражнения. Попробуйте позже.', 'error')
-      }
-    }
-
-    const loadPatterns = async () => {
-      try {
-        const data = await apiRequest<Pattern[]>('get', 'patterns')
-        patterns.value = data
-        console.log('Загруженные паттерны:', patterns.value)
-      } catch (error: any) {
-        console.error('Ошибка при загрузке паттернов:', error.message)
-        showSnackbar('Не удалось загрузить паттерны. Попробуйте позже.', 'error')
-      }
-    }
-
-    // ---------------- Методы заполнения списков ----------------
     const populateMuscleGroups = () => {
       const excludedCategories = ['йога', 'растяжка']
       const groups = new Set(
@@ -511,47 +498,54 @@ export default defineComponent({
     }
 
     const populateMuscleSubgroups = () => {
-      if (!muscleGroup.value) {
+      if (!muscleGroup.value || !gender.value) {
         muscleSubgroups.value = []
+        console.log('Мышечная группа или пол не выбраны. Очищаем подгруппы.')
         return
       }
+
       const mg = muscleGroup.value.trim().toLowerCase()
+      const genderLower = gender.value.trim().toLowerCase()
+      console.log(
+          `Выбранная основная мышечная группа: "${mg}" и пол: "${genderLower}"`
+      )
 
-      // 1. Собираем все дополнительные мышцы для выбранной категории
-      const additionalMusclesSet = new Set<string>()
-      exercises.value
-          .filter((e) => e.category.trim().toLowerCase() === mg)
-          .forEach((e) => {
-            e.additionalMuscles.split(',').forEach((muscle) => {
-              const trimmedMuscle = muscle.trim().toLowerCase()
-              if (trimmedMuscle && trimmedMuscle !== '—') {
-                additionalMusclesSet.add(capitalize(trimmedMuscle))
-              }
-            })
-          })
+      // 1. Фильтруем паттерны
+      const relevantPatterns = patterns.value.filter((p) => {
+        const genderMatch = p.gender.toLowerCase().includes(genderLower)
+        const muscleGroupMatch = p.muscleGroup.toLowerCase() === mg
+        return genderMatch && muscleGroupMatch
+      })
 
-      // 2. Собираем все подкатегории для выбранной категории, исключая "—"
+      console.log('Соответствующие паттерны:', relevantPatterns)
+
+      // 2. Уникальные подкатегории
       const subcategoriesSet = new Set(
-          exercises.value
-              .filter((e) => e.category.trim().toLowerCase() === mg)
-              .map((e) => e.subcategory.trim())
-              .filter((subcat) => subcat !== '—')
+          relevantPatterns
+              .map((p) => p.subcategory.trim())
+              .filter((subcat) => subcat !== '—' && subcat !== '')
       )
 
-      // 3. Пересекаем подкатегории и дополнительные мышцы
-      const validSubcategories = Array.from(subcategoriesSet).filter((subcat) =>
-          additionalMusclesSet.has(capitalize(subcat.toLowerCase()))
+      console.log(
+          'Найденные субкатегории из паттернов:',
+          Array.from(subcategoriesSet)
       )
 
-      // 4. Убираем дубликаты и капитализируем
-      muscleSubgroups.value = Array.from(new Set(validSubcategories.map(capitalize)))
+      muscleSubgroups.value = Array.from(subcategoriesSet)
+          .map((subcat) => capitalize(subcat.toLowerCase()))
+          .filter((subcat) => subcat !== '—' && subcat !== '')
+          .sort()
+
+      console.log(
+          'Отфильтрованные и капитализированные подгруппы мышц:',
+          muscleSubgroups.value
+      )
     }
 
     const populateComplexes = () => {
       complexes.value = []
     }
 
-    // ---------------- Методы выбора ----------------
     const selectGender = (option: string) => {
       gender.value = option
       muscleGroup.value = ''
@@ -573,277 +567,36 @@ export default defineComponent({
       populateComplexes()
     }
 
-    // ---------------- Логика «до 5 попыток» ----------------
-    const tryFindExercise = (
-        matchingExercises: Exercise[],
-        repetitionLevel: string,
-        genderStr: string,
-        usedIds: Set<string>,
-        maxTries: number = 5
-    ): { exercise: Exercise; reps: number; sets: number } | null => {
-      let attempt = 0
-      while (attempt < maxTries) {
-        attempt++
-
-        // случайное упражнение
-        const selectedExercise =
-            matchingExercises[Math.floor(Math.random() * matchingExercises.length)]
-
-        // случайный уровень нагрузки
-        const randomLoad = getRandomLoadLevel()
-
-        // получаем строку "8,10" или null
-        const repsOptions = getRepsOptions(
-            selectedExercise,
-            repetitionLevel,
-            genderStr,
-            randomLoad
-        )
-        if (!repsOptions) {
-          // не подходит
-          continue
-        }
-
-        // парсим "5,8,10"
-        const repsArray = repsOptions
-            .split(',')
-            .map((x) => parseInt(x, 10))
-            .filter((n) => !isNaN(n))
-
-        if (repsArray.length === 0) {
-          continue
-        }
-
-        // случайный reps
-        const reps = repsArray[Math.floor(Math.random() * repsArray.length)]
-        const sets = getSets(reps)
-
-        return {
-          exercise: selectedExercise,
-          reps,
-          sets
-        }
-      }
-      return null
-    }
-
-    // ---------------- Генерация тренировки ----------------
-    const generateWorkout = () => {
-      if (isGenerating.value || timer.value > 0) return
-      if (!gender.value || !muscleGroup.value || !muscleSubgroup.value) {
-        showSnackbar('Пожалуйста, заполните все поля.', 'error')
-        return
-      }
-
-      isGenerating.value = true
-      errorMessages.value = []
-      workoutResults.value = []
-
-      // 1) Выбираем паттерны (учитываем subcategory здесь!)
-      const filteredPatterns = patterns.value.filter((p) => {
-        // p.gender.includes(...)
-        const gMatch = p.gender.toLowerCase().includes(gender.value.toLowerCase())
-        if (!gMatch) return false
-
-        // Проверка subcategory: чтобы в p.exercises нашлось muscleGroup + subcategory
-        const hasNeeded = p.exercises.some(
-            (ex) =>
-                ex.muscleGroup.toLowerCase() === muscleGroup.value.toLowerCase() &&
-                (ex.subcategory || '').toLowerCase() === muscleSubgroup.value.toLowerCase()
-        )
-        console.log("! hasNeeded", hasNeeded)
-        return hasNeeded
-      })
-
-      if (filteredPatterns.length === 0) {
-        showSnackbar('Подходящий паттерн не найден.', 'error')
-        isGenerating.value = false
-        return
-      }
-
-      // Выбираем случайно паттерн
-      const pattern =
-          filteredPatterns[Math.floor(Math.random() * filteredPatterns.length)]
-      selectedPattern.value = pattern
-      usedExerciseIds.value = new Set()
-
-      const workout: WorkoutResult[] = []
-
-      // 2) Проходимся по exercises внутри паттерна
-      for (const patternExercise of pattern.exercises) {
-        const mg = patternExercise.muscleGroup.toLowerCase()
-        // (!) subcategory НЕ учитываем при поиске конкретного упражнения
-        const mm = patternExercise.mainMuscle.toLowerCase()
-
-        // 3) Подбираем список упражнений:
-        //    - Совпадает по category = mg
-        //    - Для mainMuscle: либо e.mainMuscle === mm, либо e.additionalMuscles содержит mm
-        //    - Учитываем usedExerciseIds, чтобы не дублировать
-        const matchingExercises = exercises.value.filter((e) => {
-          if (!e.category || !e.mainMuscle) return false
-
-          const catMatch = e.category.toLowerCase() === mg
-
-          // Либо точное совпадение mainMuscle...
-          // Либо e.additionalMuscles (строка) содержит patternExercise.mainMuscle
-          const mmToFind = mm
-          const mmMatch =
-              e.mainMuscle.toLowerCase() === mmToFind ||
-              e.additionalMuscles.toLowerCase().includes(mmToFind)
-
-          const notUsed = !usedExerciseIds.value.has(e._id)
-          return catMatch && mmMatch && notUsed
-        })
-
-        if (matchingExercises.length === 0) {
-          console.warn('Нет подходящих упражнений для:', patternExercise)
-          continue
-        }
-
-        // 4) Пытаемся найти подходящее с учётом уровня нагрузки (до 5 попыток)
-        const found = tryFindExercise(
-            matchingExercises,
-            patternExercise.repetitionLevel,
-            gender.value,
-            usedExerciseIds.value,
-            5
-        )
-
-        if (!found) {
-          console.warn('Не удалось подобрать упражнение для:', patternExercise)
-          continue
-        }
-
-        usedExerciseIds.value.add(found.exercise._id)
-
-        workout.push({
-          _id: found.exercise._id,
-          name: found.exercise.name,
-          sets: found.sets,
-          reps: found.reps
-        })
-      }
-
-      // Если ничего не набралось
-      if (workout.length === 0) {
-        showSnackbar('Тренировка не сгенерирована. Попробуйте другие параметры.', 'error')
-      }
-
-      workoutResults.value = workout
-      console.log('Результаты тренировки:', workoutResults.value)
-
-      // Запускаем 3-секундный таймер, чтобы нельзя было спамить
-      timer.value = 3
-      intervalId = window.setInterval(() => {
-        timer.value--
-        if (timer.value <= 0 && intervalId !== null) {
-          window.clearInterval(intervalId)
-          intervalId = null
-        }
-      }, 1000)
-
-      isGenerating.value = false
-      showBottomSheet.value = true
-    }
-
-    // Удаление упражнения
-    const removeExercise = (index: number) => {
-      const ex = workoutResults.value[index]
-      if (ex && ex._id) {
-        usedExerciseIds.value.delete(ex._id)
-      }
-      workoutResults.value.splice(index, 1)
-    }
-
-    // Перегенерация одного упражнения
-    const regenerateExercise = (index: number) => {
-      if (!selectedPattern.value) {
-        console.warn('Паттерн не выбран.')
-        return
-      }
-      const patternExercise = selectedPattern.value.exercises[index]
-      const oldEx = workoutResults.value[index]
-      if (oldEx && oldEx._id) {
-        usedExerciseIds.value.delete(oldEx._id)
-      }
-
-      // subcategory НЕ учитываем
-      const mg = patternExercise.muscleGroup.toLowerCase()
-      const mm = patternExercise.mainMuscle.toLowerCase()
-
-      const matchingExercises = exercises.value.filter((e) => {
-        if (!e.category || !e.mainMuscle) return false
-
-        const catMatch = e.category.toLowerCase() === mg
-        const mmToFind = mm
-        const mmMatch =
-            e.mainMuscle.toLowerCase() === mmToFind ||
-            e.additionalMuscles.toLowerCase().includes(mmToFind)
-
-        const notUsed = !usedExerciseIds.value.has(e._id)
-        return catMatch && mmMatch && notUsed
-      })
-
-      if (matchingExercises.length === 0) {
-        console.warn('Нет подходящих упражнений для перегенерации:', patternExercise)
-        return
-      }
-
-      const found = tryFindExercise(
-          matchingExercises,
-          patternExercise.repetitionLevel,
-          gender.value,
-          usedExerciseIds.value,
-          5
-      )
-      if (!found) {
-        console.warn('Не удалось подобрать новое упражнение:', patternExercise)
-        return
-      }
-
-      usedExerciseIds.value.add(found.exercise._id)
-      workoutResults.value[index] = {
-        _id: found.exercise._id,
-        name: found.exercise.name,
-        sets: found.sets,
-        reps: found.reps
+    // ---------------- Загрузка данных ----------------
+    const loadExercises = async () => {
+      try {
+        const data = await apiRequest<Exercise[]>('get', 'exercises')
+        exercises.value = data.map((exercise) => ({
+          ...exercise,
+          _id: typeof exercise._id === 'string' ? exercise._id : exercise._id.$oid
+        }))
+        console.log('Упражнения загружены:', exercises.value)
+      } catch (error: any) {
+        console.error('Ошибка при загрузке упражнений:', error.message)
+        showSnackbar('Не удалось загрузить упражнения. Попробуйте позже.', 'error')
       }
     }
 
-    // Увеличение/уменьшение повторений
-    const increaseReps = (index: number) => {
-      const ex = workoutResults.value[index]
-      const current = ex.reps
-      const idx = standardRepsValues.indexOf(current)
-      let newReps
-      if (idx !== -1 && idx < standardRepsValues.length - 1) {
-        newReps = standardRepsValues[idx + 1]
-      } else {
-        newReps = current + 1
-      }
-      ex.reps = newReps
-      ex.sets = getSets(ex.reps)
-    }
-
-    const decreaseReps = (index: number) => {
-      const ex = workoutResults.value[index]
-      const current = ex.reps
-      const idx = standardRepsValues.indexOf(current)
-      let newReps
-      if (idx > 0) {
-        newReps = standardRepsValues[idx - 1]
-      } else if (idx === 0) {
-        newReps = current - 1
-      } else {
-        newReps = current - 1
-      }
-      if (newReps >= 1) {
-        ex.reps = newReps
-        ex.sets = getSets(ex.reps)
+    const loadPatterns = async () => {
+      try {
+        const data = await apiRequest<Pattern[]>('get', 'patterns')
+        patterns.value = data.map((pattern) => ({
+          ...pattern,
+          _id: typeof pattern._id === 'string' ? pattern._id : pattern._id.$oid
+        }))
+        console.log('Загруженные паттерны:', patterns.value)
+      } catch (error: any) {
+        console.error('Ошибка при загрузке паттернов:', error.message)
+        showSnackbar('Не удалось загрузить паттерны. Попробуйте позже.', 'error')
       }
     }
 
-    // Отправка в Telegram
+    // ---------------- Отправка в Telegram ----------------
     const sendWorkout = async () => {
       if (!telegramUserId.value || !workoutResults.value.length) {
         showSnackbar(
@@ -869,9 +622,7 @@ export default defineComponent({
 
     // ---------------- Обработка добавления упражнения ----------------
     const handleAddExercise = (newExercise: WorkoutResult) => {
-      // Добавляем упражнение в workoutResults
       workoutResults.value.push(newExercise)
-      // Добавляем ID упражнения в usedExerciseIds
       usedExerciseIds.value.add(newExercise._id)
     }
 
@@ -900,12 +651,55 @@ export default defineComponent({
       }
     })
 
-    // ---------------- Методы управления добавлением упражнения ----------------
     const openAddExerciseSheet = () => {
       showAddExerciseSheet.value = true
     }
 
+    // ----------------------------------------------------------
+    // Переопределяем generateWorkout, чтобы "обернуть" вызов
+    // из хука в нашу логику "имитации загрузки".
+    // Аналогично при "Сгенерировать заново".
+    // ----------------------------------------------------------
+    // Исходный generateWorkout взят из хука,
+    // мы создаём дополнительный метод-обёртку:
+    const realGenerateWorkout = generateWorkout
+
+    async function generateWorkoutWithLoading() {
+      // 1) Скрываем реальный список, показываем "рыбный" плейсхолдер
+      isLoading.value = true
+      // Очищаем текущие результаты, чтобы не мерцали
+      // (либо можно хранить, но скрывать)
+      workoutResults.value = []
+
+      // 2) Задаём время имитации 2.5-3.5 секунд
+      const loadTime = 2500 + Math.random() * 1000
+
+      // 3) Ждём loadTime
+      await new Promise((resolve) => setTimeout(resolve, loadTime))
+
+      // 4) Теперь вызываем "настоящую" логику генерации
+      //    (она заполнит workoutResults, set isGenerating.value, etc.)
+      realGenerateWorkout()
+
+      // 5) Как только realGenerateWorkout выполнится — скрываем "загрузку"
+      //    Но в хуке generateWorkout уже ставится isGenerating.value = false
+      //    Поэтому вручную можем просто:
+      isLoading.value = false
+    }
+
+    // Теперь в шаблоне вместо @click="generateWorkout"
+    // мы будем звать generateWorkoutWithLoading
+    // Но *ничего не удаляя* — пусть старая ссылка указывает
+    // всё же на generateWorkoutWithLoading.
+    //
+    // Так при "Сгенерировать заново" тоже вызовется
+    // generateWorkoutWithLoading().
+    //
+    // При перегенерации одного упражнения (кнопка @click="regenerateExercise")
+    // мы ничего не меняем, всё остаётся как есть.
+
     return {
+      // Состояние
       gender,
       muscleGroup,
       muscleSubgroup,
@@ -914,36 +708,50 @@ export default defineComponent({
       muscleSubgroups,
       complexes,
       workoutResults,
-      telegramUserId,
-      initData,
+      exercises,
+      patterns,
       isGenerating,
       timer,
       errorMessages,
       showBottomSheet,
-      showAddExerciseSheet, // Добавленная переменная
+      showAddExerciseSheet,
+      selectedPattern,
+      usedExerciseIds,
       date,
       snackbar,
+      telegramUserId,
+      initData,
 
-      // Методы
-      generateWorkout,
-      sendWorkout,
+      // Новое состояние
+      isLoading, // чтобы в шаблоне показывать/скрывать плейсхолдер
+
+      // Методы выбора
       selectGender,
       selectMuscleGroup,
       selectMuscleSubgroup,
       populateMuscleGroups,
       populateMuscleSubgroups,
       populateComplexes,
+
+      // Методы по работе с хранилищем (запросы)
+      loadExercises,
+      loadPatterns,
+
+      // Из хука (не меняем, но в шаблоне заменяем использование)
+      // generateWorkout, // <-- Оригинал
       removeExercise,
       regenerateExercise,
       increaseReps,
       decreaseReps,
-      showSnackbar,
-      openAddExerciseSheet,
-      handleAddExercise, // Метод для обработки добавления упражнения
 
-      // Добавленные свойства
-      exercises,
-      usedExerciseIds
+      // Обёртка c задержкой
+      generateWorkout: generateWorkoutWithLoading,
+
+      // Прочие методы
+      sendWorkout,
+      openAddExerciseSheet,
+      handleAddExercise,
+      showSnackbar
     }
   }
 })

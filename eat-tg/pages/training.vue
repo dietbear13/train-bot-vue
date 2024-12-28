@@ -20,7 +20,7 @@
           style="border-radius: 16px"
           :class="{ 'active-tab': activeTab === 0 }"
       >
-        Вики
+        Прога на неделю
       </v-tab>
 
       <v-tab
@@ -37,20 +37,20 @@
 
         :class="{ 'active-tab': activeTab === 2 }"
     >
-      Сплиты на неделю
+      Вики
     </v-tab>
     </v-tabs>
 
 
     <v-tabs-window v-model="activeTab">
       <v-tabs-window-item>
+        <TrainingOnWeek />
+      </v-tabs-window-item>
+      <v-tabs-window-item>
+        <TrainingByMuscles />
+      </v-tabs-window-item>
+      <v-tabs-window-item>
         <ExerciseSearch />
-      </v-tabs-window-item>
-      <v-tabs-window-item>
-          <TrainingByMuscles />
-      </v-tabs-window-item>
-      <v-tabs-window-item>
-          <TrainingByLevel />
       </v-tabs-window-item>
     </v-tabs-window>
   </v-container>
@@ -58,7 +58,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import TrainingByLevel from '~/components/TrainingByLevel.vue'
+import TrainingOnWeek from '~/components/TrainingOnWeek.vue'
 import TrainingByMuscles from '~/components/TrainingByMuscles.vue'
 import ExerciseSearch from "~/components/ExerciseSearch.vue";
 

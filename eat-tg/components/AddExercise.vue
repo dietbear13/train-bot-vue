@@ -31,15 +31,16 @@
         <v-list-item
             v-for="exercise in finalExercises"
             :key="exercise._id"
-            class="exercise-item mx-0"
+            class="exercise-item px-0"
+            :width="'98%'"
 
         >
-          <v-list-item>
+          <v-list-item class="mx-0">
             <v-list-item-title class="exercise-title">
               {{ exercise.name }}
             </v-list-item-title>
             <v-list-item-subtitle class="exercise-subtitle">
-              Основная мышца: {{ exercise.mainMuscle }}
+              {{ exercise.mainMuscle }}
             </v-list-item-subtitle>
           </v-list-item>
           <v-list-item-action>
@@ -327,7 +328,7 @@ export default defineComponent({
 
 .exercise-subtitle {
   font-size: 0.9rem;
-  color: gray;
+  color: #959595;
 }
 
 .add-button {

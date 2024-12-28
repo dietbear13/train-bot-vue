@@ -34,10 +34,9 @@ const router = useRouter();
 const route = useRoute();
 
 const menuItems = [
-  { name: 'home', path: '/', icon: 'mdi-home', order: 1 },
+  { name: 'home', path: '/', icon: 'mdi-dumbbell', order: 1 },
   { name: 'nutrition', path: '/nutrition', icon: 'mdi-food-apple', order: 2 },
-  { name: 'training', path: '/training', icon: 'mdi-dumbbell', order: 3 },
-  { name: 'profile', path: '/profile', icon: 'mdi-account', order: 4 },
+  { name: 'profile', path: '/profile', icon: 'mdi-account', order: 3 },
 ];
 
 const currentTab = ref('home');

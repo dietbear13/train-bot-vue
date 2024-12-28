@@ -22,7 +22,7 @@
       </v-btn>
 
       <!-- Слот для содержимого -->
-      <v-card-text class="pt-8">
+      <v-card-text class="pt-8 px-0">
         <slot></slot>
       </v-card-text>
     </v-card>
@@ -39,14 +39,9 @@ export default defineComponent({
       type: Boolean,
       required: true
     },
-    // Удаляем проп icon, так как он больше не используется
-    // icon: {
-    //   type: String,
-    //   default: '' // Иконка теперь опциональна
-    // },
     title: {
       type: String,
-      default: '' // Новый проп для заголовка
+      default: ''
     },
     persistent: {
       type: Boolean,
@@ -85,6 +80,11 @@ export default defineComponent({
 .relative-position {
   position: relative;
   padding-top: 16px; /* Добавляем отступ сверху для заголовка */
+}
+
+.v-bottom-sheet {
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
 }
 
 .header-title {
