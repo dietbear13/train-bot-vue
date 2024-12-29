@@ -485,7 +485,7 @@ const saveDate = () => {
  */
 const escapeMarkdownV2 = (text: string): string => {
   // Регулярное выражение для поиска ссылок [текст](url)
-  const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
+  const regex = /\[([^\]]+)\\]\(([^)]+)\)/g;
 
   // Функция для экранирования текста
   const escapeText = (str: string) => {

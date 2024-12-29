@@ -1,5 +1,3 @@
-<!-- ~/pages/profile.vue -->
-
 <template>
   <v-container>
     <h2 class="my-2">Профиль</h2>
@@ -11,32 +9,35 @@
 
     <!-- Секция для апгрейда до paidUser -->
     <div v-if="userStore.role === 'freeUser'" class="upgrade-section">
-      <v-alert type="info" class="my-2">
-        Чтобы воспользоваться полным функционалом бота и получить статус <strong>paidUser</strong>, пожалуйста, подпишитесь на наш Telegram канал.
-      </v-alert>
-
-      <v-card class="mb-4">
-        <v-card-text>
-          <p>
-            Перейдите в наш канал <a :href="channelLink" target="_blank">@training_health</a> и подпишитесь.
-          </p>
-          <v-btn color="primary" @click="goToChannel" class="my-2">
-            Перейти в канал
-          </v-btn>
-        </v-card-text>
-      </v-card>
-
-      <v-btn color="success" @click="checkSubscription">
-        Проверить подписку
-      </v-btn>
-
-      <v-btn text @click="goBack" class="ml-2">
-        Назад
-      </v-btn>
+      <!-- Контент для freeUser -->
+    </div>
+    <!-- Компонент AdminInfo для администраторов -->
+    <AdminInfo v-else-if="userStore.role === 'admin'" />
+    <!-- Другие роли или отсутствие роли -->
+    <div v-else>
+      <p>Неизвестная роль пользователя.</p>
     </div>
 
-    <!-- Компонент AdminInfo для администраторов -->
-    <AdminInfo v-if="userStore.role === 'admin'" />
+    <v-card class="mb-4">
+      <v-card-text>
+        <p>
+          Перейдите в наш канал <a :href="channelLink" target="_blank">@training_health</a> и подпишитесь.
+        </p>
+        <v-btn color="primary" @click="goToChannel" class="my-2">
+          Перейти в канал
+        </v-btn>
+      </v-card-text>
+    </v-card>
+
+    <v-btn color="success" @click="checkSubscription">
+      Проверить подписку
+    </v-btn>
+
+    <v-btn text @click="goBack" class="ml-2">
+      Назад
+    </v-btn>
+
+    <!-- Удален дублирующий AdminInfo -->
 
     <!-- Snackbar для уведомлений -->
     <v-snackbar
@@ -60,6 +61,7 @@
     </v-snackbar>
   </v-container>
 </template>
+
 
 <script setup lang="ts">
 import { ref } from 'vue';
@@ -89,6 +91,8 @@ const showSnackbar = (message: string, color: string = 'info') => {
   snackbar.value.show = true;
 };
 
+// ~/pages/profile.vue
+
 const checkSubscription = async () => {
   try {
     // Проверяем, не является ли пользователь администратором
@@ -98,7 +102,7 @@ const checkSubscription = async () => {
       return;
     }
 
-    // Замените URL и логику на ваш фактический API-эндпоинт
+    // Остальная логика проверки подписки для других ролей
     const response = await axios.post(`${primaryBaseURL}check-subscription`, {
       telegramId: userStore.telegramId,
     });
@@ -109,8 +113,6 @@ const checkSubscription = async () => {
 
       // Показываем сообщение об успехе
       showSnackbar('Вижу твою подписку! Пользуйся полным функционалом и не отписывайся', 'success');
-
-      // Дополнительно обновляем интерфейс, если необходимо
     } else {
       // Показываем сообщение об ошибке
       showSnackbar('Ты не подписался на канал или отписался от него', 'error');

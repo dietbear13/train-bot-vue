@@ -17,26 +17,27 @@
       <v-tab
           class="custom-tab"
           style="border-radius: 16px"
-
           :class="{ 'active-tab': activeTab === 0 }"
       >
-        Советы
+        Калькулятор КБЖУ
       </v-tab>
       <v-tab
           class="custom-tab"
           style="border-radius: 16px"
           :class="{ 'active-tab': activeTab === 1 }"
       >
-        Калькулятор КБЖУ
+        Советы
       </v-tab>
+
     </v-tabs>
 
     <v-tabs-window v-model="activeTab">
+      <v-tabs-window-item class="px-3">
+        <KbzhuCalculator />
+      </v-tabs-window-item>
+
       <v-tabs-window-item>
           <NutritionAdvice />
-      </v-tabs-window-item>
-      <v-tabs-window-item class="px-3">
-          <KbzhuCalculator />
       </v-tabs-window-item>
     </v-tabs-window>
   </v-container>

@@ -20,6 +20,7 @@
                 variant="text"
                 outlined
                 class="group-button mx-auto"
+                style="min-width: 100%;"
                 :class="{ 'selected-button': gender === option }"
                 @click="selectGender(option)"
                 rounded="lg"
@@ -92,15 +93,18 @@
         rounded="lg"
         width="100%"
     >
-      <v-icon left>mdi-dumbbell</v-icon>
-      <!--
-        СТАРЫЙ ВАРИАНТ (не удаляем, лишь закомментировали):
-        {{ timer > 0 ? `Повторная генерация через ${timer} с` : 'Сгенерировать' }}
-      -->
-      <!-- НОВЫЙ ВАРИАНТ -->
-      <span v-if="isLoading">Генерируем...</span>
-      <span v-else>Сгенерировать</span>
+      <!-- Иконка, которая при загрузке вращается -->
+      <span v-if="isLoading">Создаю.. </span>
+      <span v-else>Создать </span>
+      <v-icon
+          right
+          :class="{ rotatingDumbbell: isLoading }"
+      >
+        mdi-dumbbell
+      </v-icon>
+
     </v-btn>
+
     <!-- Информационное сообщение -->
     <p class="mt-2 ml-2" style="color: #858585">Данные не хранятся и не используются.</p>
 
@@ -657,46 +661,25 @@ export default defineComponent({
 
     // ----------------------------------------------------------
     // Переопределяем generateWorkout, чтобы "обернуть" вызов
-    // из хука в нашу логику "имитации загрузки".
-    // Аналогично при "Сгенерировать заново".
+    // из хука в логику "имитации загрузки".
     // ----------------------------------------------------------
-    // Исходный generateWorkout взят из хука,
-    // мы создаём дополнительный метод-обёртку:
     const realGenerateWorkout = generateWorkout
 
     async function generateWorkoutWithLoading() {
-      // 1) Скрываем реальный список, показываем "рыбный" плейсхолдер
+      // 1) Скрываем реальный список, показываем плейсхолдер
       isLoading.value = true
-      // Очищаем текущие результаты, чтобы не мерцали
-      // (либо можно хранить, но скрывать)
       workoutResults.value = []
 
-      // 2) Задаём время имитации 2.5-3.5 секунд
+      // 2) 2.5–3.5 секунды
       const loadTime = 2500 + Math.random() * 1000
-
-      // 3) Ждём loadTime
       await new Promise((resolve) => setTimeout(resolve, loadTime))
 
-      // 4) Теперь вызываем "настоящую" логику генерации
-      //    (она заполнит workoutResults, set isGenerating.value, etc.)
+      // 3) Запускаем "настоящую" логику генерации
       realGenerateWorkout()
 
-      // 5) Как только realGenerateWorkout выполнится — скрываем "загрузку"
-      //    Но в хуке generateWorkout уже ставится isGenerating.value = false
-      //    Поэтому вручную можем просто:
+      // 4) Прячем "загрузку"
       isLoading.value = false
     }
-
-    // Теперь в шаблоне вместо @click="generateWorkout"
-    // мы будем звать generateWorkoutWithLoading
-    // Но *ничего не удаляя* — пусть старая ссылка указывает
-    // всё же на generateWorkoutWithLoading.
-    //
-    // Так при "Сгенерировать заново" тоже вызовется
-    // generateWorkoutWithLoading().
-    //
-    // При перегенерации одного упражнения (кнопка @click="regenerateExercise")
-    // мы ничего не меняем, всё остаётся как есть.
 
     return {
       // Состояние
@@ -722,8 +705,8 @@ export default defineComponent({
       telegramUserId,
       initData,
 
-      // Новое состояние
-      isLoading, // чтобы в шаблоне показывать/скрывать плейсхолдер
+      // Поле isLoading, чтобы иконка крутилась и отображался плейсхолдер
+      isLoading,
 
       // Методы выбора
       selectGender,
@@ -733,21 +716,20 @@ export default defineComponent({
       populateMuscleSubgroups,
       populateComplexes,
 
-      // Методы по работе с хранилищем (запросы)
+      // Методы для загрузки
       loadExercises,
       loadPatterns,
 
-      // Из хука (не меняем, но в шаблоне заменяем использование)
-      // generateWorkout, // <-- Оригинал
+      // Из хука
       removeExercise,
       regenerateExercise,
       increaseReps,
       decreaseReps,
 
-      // Обёртка c задержкой
+      // Обёртка
       generateWorkout: generateWorkoutWithLoading,
 
-      // Прочие методы
+      // Прочие
       sendWorkout,
       openAddExerciseSheet,
       handleAddExercise,
@@ -768,23 +750,36 @@ export default defineComponent({
   margin-bottom: 16px; /* Добавляем нижний отступ */
 }
 
-/* Остальные стили остаются без изменений */
 .group-button {
-  min-width: 100px;
+  min-width: 100%;
 }
+
 .selected-button {
   background-color: var(--v-primary-base);
   color: white;
 }
 
-/* Нижний лист (BottomSheetWithClose.vue) */
+/* Вращение иконки */
+.rotatingDumbbell {
+  animation: rotate-dumbbell 1s linear infinite;
+}
+
+@keyframes rotate-dumbbell {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Остальные стили остаются без изменений */
 .rounded-bottom-sheet {
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
   overflow: hidden;
 }
 
-/* Колонки в таблице */
 .sets-reps-column {
   width: 80px;
   text-align: right;
@@ -797,7 +792,7 @@ export default defineComponent({
 .v-btn .v-icon {
   margin-right: 0;
 }
-/* Эффект при перетаскивании */
+/* Перетаскивание */
 .dragging {
   opacity: 0.5;
 }
@@ -825,7 +820,7 @@ export default defineComponent({
   text-align: center;
 }
 
-/* Обеспечиваем, что кнопка закрытия всегда видна и не перекрывается */
+/* Кнопка закрытия не перекрывается */
 .v-card-title {
   position: relative;
 }
