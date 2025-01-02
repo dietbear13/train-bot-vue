@@ -12,11 +12,12 @@ export interface IDay {
  * Родительский интерфейс данных
  */
 export interface ISplit {
-    split: string;       // тип сплита (фулбади и т.п.)
-    splitId: number;     // уникальный числовой внутренний id
-    gender: string;      // пол ("мужской", "женский" или "мужчина,женщина")
-    splitDays: string;   // например "2(пн,ср,пт)"
-    days: IDay[];        // массив дней, внутри — упражнения/паттерны
+    split: string;             // тип сплита (фулбади и т.п.)
+    splitComment: string;      // комментарий к сплиту
+    splitId: number;           // уникальный числовой внутренний id
+    gender: string;            // пол ("мужской", "женский" или "мужчина,женщина")
+    splitDays: string;         // например "2(пн,ср,пт)"
+    days: IDay[];              // массив дней, внутри — упражнения/паттерны
 }
 
 /**
@@ -36,7 +37,6 @@ const daySchema = new Schema<IDay>(
     {
         _id: false,
         // Можно отключить _id у дней, если не нужно
-        // иначе будет генерироваться _id для каждого "day"
     }
 );
 
@@ -47,6 +47,7 @@ const daySchema = new Schema<IDay>(
  */
 const splitSchema = new Schema<ISplitDocument>({
     split: { type: String, required: true },
+    splitComment: { type: String, required: true }, // Новое поле
     splitId: { type: Number, required: true },
     gender: { type: String, required: true },
     splitDays: { type: String, required: true },

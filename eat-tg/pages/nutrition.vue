@@ -45,8 +45,8 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import NutritionAdvice from '~/components/NutritionAdvice.vue'
-import KbzhuCalculator from '~/components/KbzhuCalculator.vue'
+import NutritionAdvice from '~/components/nutrition/NutritionAdvice.vue'
+import KbzhuCalculator from '~/components/nutrition/KbzhuCalculator.vue'
 
 // Инициализация активной вкладки с типизацией
 const activeTab = ref<number>(0)

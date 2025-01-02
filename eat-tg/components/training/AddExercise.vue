@@ -99,8 +99,8 @@ import { defineComponent, ref, computed, watch } from 'vue';
 import { useExerciseFilter } from '~/composables/useExerciseFilter';
 import { useApi } from '~/composables/useApi'; // Импортируем общий API-сервис
 import type { Exercise, WorkoutResult, RepetitionLevels } from '~/composables/types';
-import ExerciseInfo from '~/components/ExerciseInfo.vue';
-import BottomSheetWithClose from '~/components/BottomSheetWithClose.vue';
+import ExerciseInfo from '~/components/training/ExerciseInfo.vue';
+import BottomSheetWithClose from '~/components/shared/BottomSheetWithClose.vue';
 
 export default defineComponent({
   name: 'AddExercise',

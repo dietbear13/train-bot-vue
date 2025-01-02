@@ -31,6 +31,7 @@ const updateSplits = async () => {
         // Промежуточная группировка
         const grouped: Record<string, {
             split: string;
+            splitComment: string;
             splitId: number;
             gender: string;
             splitDays: string;
@@ -39,16 +40,18 @@ const updateSplits = async () => {
 
         for (const row of dataRows) {
             const split = row[0] || '';
-            const splitId = Number(row[1] || 0);
-            const gender = row[2] || '';
-            const splitDays = row[3] || '';
-            const numberDay = Number(row[4] || 0);
-            const patternOrExercise = row[5] || '';
+            const splitComment = row[1] || ''; // Новое поле
+            const splitId = Number(row[2] || 0);
+            const gender = row[3] || '';
+            const splitDays = row[4] || '';
+            const numberDay = Number(row[5] || 0);
+            const patternOrExercise = row[6] || '';
 
-            const key = `${split}|${splitId}|${gender}|${splitDays}`;
+            const key = `${split}|${splitComment}|${splitId}|${gender}|${splitDays}`;
             if (!grouped[key]) {
                 grouped[key] = {
                     split,
+                    splitComment, // Добавляем splitComment
                     splitId,
                     gender,
                     splitDays,
@@ -73,6 +76,7 @@ const updateSplits = async () => {
 
             splitsToInsert.push({
                 split: item.split,
+                splitComment: item.splitComment, // Добавляем splitComment
                 splitId: item.splitId,
                 gender: item.gender,
                 splitDays: item.splitDays,

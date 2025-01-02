@@ -73,7 +73,7 @@
 <script lang="ts">
 import { defineComponent, computed } from 'vue';
 import type { Exercise } from '~/composables/types';
-import BottomSheetWithClose from '~/components/BottomSheetWithClose.vue'; // Импортируем универсальный компонент
+import BottomSheetWithClose from '~/components/shared/BottomSheetWithClose.vue'; // Импортируем универсальный компонент
 
 export default defineComponent({
   name: 'ExerciseInfo',

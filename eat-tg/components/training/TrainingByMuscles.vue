@@ -20,7 +20,6 @@
                 variant="text"
                 outlined
                 class="group-button mx-auto"
-                style="min-width: 100%;"
                 :class="{ 'selected-button': gender === option }"
                 @click="selectGender(option)"
                 rounded="lg"
@@ -50,6 +49,7 @@
                 @click="selectMuscleGroup(option)"
                 rounded="lg"
                 block
+                variant="text"
             >
               {{ option }}
             </v-btn>
@@ -76,6 +76,7 @@
                 @click="selectMuscleSubgroup(option)"
                 rounded="lg"
                 block
+                variant="text"
             >
               {{ option }}
             </v-btn>
@@ -281,9 +282,7 @@ import axios, { type AxiosRequestConfig, type Method } from 'axios'
 import draggable from 'vuedraggable'
 import { retrieveLaunchParams } from '@telegram-apps/sdk'
 import AddExercise from './AddExercise.vue'
-import BottomSheetWithClose from '~/components/BottomSheetWithClose.vue'
-
-// 1) Импортируем ваш хук:
+import BottomSheetWithClose from '~/components/shared/BottomSheetWithClose.vue'
 import useWorkoutGenerator from '~/composables/useWorkoutGenerator'
 
 // --- Интерфейсы ---
@@ -670,11 +669,10 @@ export default defineComponent({
       isLoading.value = true
       workoutResults.value = []
 
-      // 2) 2.5–3.5 секунды
-      const loadTime = 2500 + Math.random() * 1000
+      // 2) 1.5–2.5 секунды
+      const loadTime = 2000 + Math.random() * 500
       await new Promise((resolve) => setTimeout(resolve, loadTime))
 
-      // 3) Запускаем "настоящую" логику генерации
       realGenerateWorkout()
 
       // 4) Прячем "загрузку"
@@ -751,7 +749,7 @@ export default defineComponent({
 }
 
 .group-button {
-  min-width: 100%;
+  min-width: 45%;
 }
 
 .selected-button {

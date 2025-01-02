@@ -49,7 +49,7 @@ bot.onText(/\/start/, (msg) => {
                 openTelegramLink('🍏 Питание', '/nutrition'), // Страница питания
             ],
             [
-                openTelegramLink('🔗 Открыть главную', ''), // Главная страница Mini App
+                openTelegramLink('🔗 тг-канал «кОчалка»', ''), // Главная страница Mini App
             ],
 
         ],

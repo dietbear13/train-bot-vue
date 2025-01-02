@@ -1,5 +1,5 @@
 // ~/composables/useSplitGenerator.ts
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import axios from 'axios'
 
 // Интерфейсы
@@ -18,6 +18,7 @@ interface SplitDay {
 interface SplitItem {
     _id: string
     split: string
+    splitComment?: string
     splitId: number
     gender: string
     splitDays: string
@@ -126,7 +127,7 @@ function tryFindExercise(
     repetitionLevel: string,
     genderStr: string,
     usedIds: Set<string>,
-    maxTries: number = 5
+    maxTries: number = 10
 ): { exercise: Exercise; reps: number; sets: number } | null {
     let attempt = 0
     while (attempt < maxTries) {
@@ -230,7 +231,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
         params.isGenerating.value = true
 
         try {
-            // 1) Парсим chosenSplit.splitDays, например: "2(пн,ср,пт)"
+            // 1) Парсим chosenSplit.splitDays, например: "2(пн,ср,чт,пт)"
             const matchDays = chosenSplit.splitDays.match(/^(\d+)\(([^)]+)\)/)
             if (!matchDays) {
                 params.errorMessages.value.push(`Некорректное поле splitDays: ${chosenSplit.splitDays}`)
@@ -238,13 +239,13 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
                 console.warn(`Некорректное поле splitDays: ${chosenSplit.splitDays}`)
                 return
             }
-            const countDays = parseInt(matchDays[1], 10) // "2"
-            const dayNames = matchDays[2].split(',').map(s => s.trim().toLowerCase()) // ["пн","ср","пт"]
+            const countDays = parseInt(matchDays[1], 10) // напр. "2"
+            const dayNames = matchDays[2].split(',').map(s => s.trim().toLowerCase()) // ["пн","ср","чт","пт"]
 
             console.log('countDays:', countDays)
             console.log('dayNames:', dayNames)
 
-            // 2) Определяем дни недели
+            // 2) Определяем дни недели (7 дней: пн..вс)
             const weekDays = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
 
             // 3) Очищаем finalPlan
@@ -256,18 +257,61 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
             // 5) Генерируем план для каждого дня недели
             for (let i = 0; i < weekDays.length; i++) {
                 const currentDay = weekDays[i]
-                if (dayNames.includes(currentDay)) {
-                    // Тренировка в этот день
-                    // Получаем соответствующий SplitDay по циклу
-                    const currentPatternDay = chosenSplit.days[patternIndex % countDays]
-                    patternIndex++ // Увеличиваем индекс для следующего тренировочного дня
 
+                if (dayNames.includes(currentDay)) {
+                    // Берём день по циклу (0..countDays-1)
+                    // но на всякий случай используем % выбранного фактического количества дней в chosenSplit.days
+                    const maxIndex = chosenSplit.days.length
+                    if (maxIndex === 0) {
+                        // Если в базе вообще нет days — добавим отдых
+                        console.warn('chosenSplit.days.length = 0, нечего генерировать.')
+                        finalPlan.value.push({
+                            dayName: capitalize(currentDay),
+                            exercises: []
+                        })
+                        continue
+                    }
+                    const safeIndex = patternIndex % maxIndex
+                    patternIndex++
+
+                    const currentPatternDay = chosenSplit.days[safeIndex]
+                    if (!currentPatternDay) {
+                        // Если всё же не нашли нужный индекс, добавим день отдыха
+                        console.warn(
+                            `Не найден currentPatternDay по индексу ${safeIndex}. Массив days:`,
+                            chosenSplit.days
+                        )
+                        finalPlan.value.push({
+                            dayName: capitalize(currentDay),
+                            exercises: []
+                        })
+                        continue
+                    }
+
+                    // Теперь генерируем список упражнений
                     const exList: FoundExercise[] = []
+                    // Соберём ID упражнений, чтобы не повторяться в рамках одного дня
+                    const usedIdsInDay = new Set<string>()
+
                     for (const item of currentPatternDay.patternOrExercise) {
-                        if (item.startsWith('ex:')) {
+                        // --- Логика обработки "или" (|) ---
+                        let chosenVariant = item
+                        if (item.includes('|')) {
+                            const splittedVariants = item.split('|')
+                            chosenVariant = splittedVariants[Math.floor(Math.random() * splittedVariants.length)].trim()
+
+                            // Если в исходной строке был префикс ex: или pa:, добавляем его при необходимости
+                            if (item.startsWith('ex:') && !chosenVariant.startsWith('ex:') && !chosenVariant.startsWith('pa:')) {
+                                chosenVariant = 'ex:' + chosenVariant
+                            } else if (item.startsWith('pa:') && !chosenVariant.startsWith('pa:') && !chosenVariant.startsWith('ex:')) {
+                                chosenVariant = 'pa:' + chosenVariant
+                            }
+                        }
+                        // --- Конец логики "|"
+
+                        if (chosenVariant.startsWith('ex:')) {
                             // Пример: "ex:широчайшая мышца,многосуставное-простое"
-                            const criteria = item.replace('ex:', '').trim()
-                            // Разбираем criteria на mainMuscle и difficultyLevel
+                            const criteria = chosenVariant.replace('ex:', '').trim()
                             const [mainMuscle, difficultyLevel] = criteria.split(',').map(s => s.trim())
                             if (!mainMuscle || !difficultyLevel) {
                                 console.warn(`Некорректные критерии: "${criteria}"`)
@@ -277,7 +321,6 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
 
                             console.log(`Поиск упражнений для "mainMuscle: ${mainMuscle}", "difficultyLevel: ${difficultyLevel}"`)
 
-                            // Находим упражнения по mainMuscle и difficultyLevel
                             const matchingExercises = exercises.value.filter(e => {
                                 return e.mainMuscle.toLowerCase() === mainMuscle.toLowerCase() &&
                                     e.difficultyLevel.toLowerCase() === difficultyLevel.toLowerCase()
@@ -299,7 +342,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
                                 matchingExercises,
                                 repetitionLevel,
                                 gender,
-                                new Set<string>(), // Передаём новый Set, чтобы избежать повторений
+                                usedIdsInDay,
                                 5
                             )
 
@@ -309,24 +352,92 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
                                 continue
                             }
 
+                            usedIdsInDay.add(found.exercise._id)
                             exList.push({
                                 _id: found.exercise._id,
                                 name: found.exercise.name,
                                 sets: found.sets,
                                 reps: found.reps
                             })
-                            // usedExerciseIds.add(found.exercise._id) // Если хотите избежать повторений
                             console.log(`Добавлено упражнение: ${found.exercise.name} - ${found.sets}x${found.reps}`)
-                        } else if (item.startsWith('pa:')) {
-                            // Обработка других типов, например 'pa:...'
-                            const criteria = item.replace('pa:', '').trim()
-                            // Здесь можно реализовать другую логику подбора
-                            exList.push({ _id: '', name: `PA-Logic: ${criteria}`, sets: 2, reps: 15 })
-                            console.log(`Добавлено упражнение по PA-логике: PA-Logic: ${criteria}`)
+                        } else if (chosenVariant.startsWith('pa:')) {
+                            /**
+                             *  Логика «паттерна»:
+                             *  Пример: "pa:спина,широчайшая мышца(2)" => category=спина, mainMuscle=широчайшая мышца, и нам нужно 2 упражнения
+                             */
+                            const criteria = chosenVariant.replace('pa:', '').trim()
+                            // Сначала проверяем, есть ли число в скобках (N)
+                            let timesToGenerate = 1
+                            const bracketMatch = criteria.match(/\((\d+)\)$/)
+                            let cleanedCriteria = criteria
+                            if (bracketMatch) {
+                                timesToGenerate = parseInt(bracketMatch[1], 10)
+                                // Удаляем "(N)" из конца
+                                cleanedCriteria = criteria.replace(/\(\d+\)$/, '').trim()
+                            }
+
+                            // Дальше разберём оставшуюся строку как "category, mainMuscle"
+                            const [category, mm] = cleanedCriteria.split(',').map(s => s.trim().toLowerCase())
+
+                            if (!category || !mm) {
+                                console.warn(`Некорректные критерии PA: "${criteria}"`)
+                                exList.push({ _id: '', name: `Некорректные критерии PA: ${criteria}`, sets: 0, reps: 0 })
+                                continue
+                            }
+
+                            console.log(`PA-логика: ищем ${timesToGenerate} упр. для category="${category}", mainMuscle="${mm}"`)
+
+                            // Фильтруем упражнения по category и mainMuscle
+                            const matchingExercises = exercises.value.filter(e => {
+                                const cat = e.category.toLowerCase()
+                                const muscle = e.mainMuscle.toLowerCase()
+                                return (
+                                    cat === category &&
+                                    muscle === mm &&
+                                    !usedIdsInDay.has(e._id)
+                                )
+                            })
+
+                            console.log(`Найдено упражнений по PA:`, matchingExercises)
+
+                            if (matchingExercises.length === 0) {
+                                console.warn(`Нет упражнений для PA-критериев: "${cleanedCriteria}"`)
+                                exList.push({ _id: '', name: `Нет PA-упражнений для ${criteria}`, sets: 0, reps: 0 })
+                                continue
+                            }
+
+                            // Генерируем нужное количество (timesToGenerate) упражнений
+                            for (let iPa = 0; iPa < timesToGenerate; iPa++) {
+                                const repetitionLevel = getRandomLoadLevel()
+                                console.log(`Используем уровень повторений (PA): ${repetitionLevel}`)
+
+                                const found = tryFindExercise(
+                                    matchingExercises,
+                                    repetitionLevel,
+                                    gender,
+                                    usedIdsInDay,
+                                    5
+                                )
+
+                                if (!found) {
+                                    console.warn(`Не удалось подобрать PA-упражнение #${iPa + 1} для "${cleanedCriteria}"`)
+                                    exList.push({ _id: '', name: `Не подобрано PA-упражнение ${cleanedCriteria}`, sets: 0, reps: 0 })
+                                    continue
+                                }
+
+                                usedIdsInDay.add(found.exercise._id)
+                                exList.push({
+                                    _id: found.exercise._id,
+                                    name: found.exercise.name,
+                                    sets: found.sets,
+                                    reps: found.reps
+                                })
+                                console.log(`Добавлено PA-упражнение: ${found.exercise.name} - ${found.sets}x${found.reps}`)
+                            }
                         } else {
                             // Неизвестный тип
-                            exList.push({ _id: '', name: `Неизвестный тип: ${item}`, sets: 3, reps: 10 })
-                            console.warn(`Неизвестный тип: ${item}`)
+                            exList.push({ _id: '', name: `Неизвестный тип: ${chosenVariant}`, sets: 3, reps: 10 })
+                            console.warn(`Неизвестный тип: ${chosenVariant}`)
                         }
                     }
 
@@ -415,11 +526,11 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
         // Использовать существующую логику для подбора нового упражнения
         const repetitionLevel = getRandomLoadLevel()
         const found = tryFindExercise(
-            exercises.value.filter(e => e._id === exercise._id), // Предполагаем, что нужно выбрать упражнение с таким же ID
+            exercises.value.filter(e => e._id === exercise._id),
             repetitionLevel,
             gender,
             new Set<string>(),
-            5
+            10
         )
 
         if (found) {

@@ -31,17 +31,17 @@
       </v-card-text>
     </v-card>
 
-    <!-- Выбор сплита -->
+    <!-- Выбор типа сплита -->
     <v-card
+        v-if="uniqueSplitTypes.length > 0"
         class="my-2 dark-background pa-3"
         variant="tonal"
-        v-if="availableSplits.length > 0"
     >
       <v-card-text class="pa-1">
         <v-row>
           <v-col
-              v-for="split in availableSplits"
-              :key="split._id"
+              v-for="type in uniqueSplitTypes"
+              :key="type"
               cols="12"
               sm="6"
               md="4"
@@ -49,25 +49,55 @@
           >
             <v-btn
                 block
-                :value="split"
-                :class="{ 'selected-button': selectedSplit?._id === split._id }"
-                @click="selectSplit(split)"
+                :value="type"
+                :class="{ 'selected-button': selectedSplitType === type }"
+                @click="selectSplitType(type)"
                 rounded="lg"
+                variant="text"
             >
-              <strong>{{ split.split }}</strong>
-              <div> splitDays: {{ split.splitDays }}</div>
+              <strong>{{ type }}</strong>
             </v-btn>
           </v-col>
         </v-row>
       </v-card-text>
     </v-card>
+
+    <!-- Выбор конкретного сплита -->
     <v-card
-        v-else
-        class="my-2 dark-background pa-3"
+        v-if="splitsToShow.length > 0"
+        class="my-2 dark-background pa-2 splits"
+        variant="tonal"
+    >
+      <v-card-text class="pa-1">
+        <v-row>
+          <v-col
+              v-for="split in splitsToShow"
+              :key="split._id"
+              cols="12"
+              sm="6"
+              style="border-radius: 14px"
+          >
+            <v-card
+                @click="selectSplit(split)"
+                :class="{ 'selected-split-card': selectedSplit?._id === split._id }"
+                outlined
+                class="split-card"
+            >
+              <v-card-text v-if="split.splitComment">{{ split.splitComment }}</v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+      </v-card-text>
+    </v-card>
+
+    <!-- Если нет доступных сплитов -->
+    <v-card
+        v-else-if="gender && uniqueSplitTypes.length === 0"
+        class="my-2 dark-background pa-2"
         variant="tonal"
     >
       <v-card-text>
-        <p>Выбери пол, потом число тренировок в неделю и сплит.</p>
+        <p>Нет доступных сплитов для выбранного пола.</p>
       </v-card-text>
     </v-card>
 
@@ -127,12 +157,7 @@
 
         <!-- Если НЕ идёт загрузка - показываем реальный результат (7 дней) -->
         <div v-else>
-          <!--
-            Выводим 7 "блоков":
-            каждый блок = заголовок "День N (dayName)" +
-            список (таблица) упражнений.
-            При отсутствии упражнений => "отдых".
-          -->
+          <!-- Выводим 7 "блоков" -->
           <div
               v-for="(day, idx) in finalPlan"
               :key="idx"
@@ -162,17 +187,16 @@
 
                 <!-- Управляющий блок -->
                 <div class="row-controls">
-                  <!--
-                    Левая часть: - reps +
-                  -->
+                  <!-- Левая часть: - reps + -->
                   <div class="sets-reps-row">
                     <v-btn
                         icon
                         small
-                        variant="plain"
+                        variant="text"
                         class="mx-0"
                         size="24px"
                         @click="decreaseRepsSplit(day.exercises, i2)"
+                        color="#db5856"
                     >
                       <v-icon small>mdi-minus</v-icon>
                     </v-btn>
@@ -183,37 +207,42 @@
 
                     <v-btn
                         icon
-                        variant="plain"
+                        variant="text"
                         class="mx-0"
                         size="24px"
                         @click="increaseRepsSplit(day.exercises, i2)"
+                        color="#77dd77"
                     >
                       <v-icon small>mdi-plus</v-icon>
                     </v-btn>
                   </div>
 
-                  <!-- Правая часть: refresh / delete (вертикально) -->
+                  <!-- Правая часть: refresh / delete / admin button (вертикально) -->
                   <div class="vertical-buttons">
                     <!-- refresh -->
                     <v-btn
                         icon
-                        variant="plain"
+                        variant="text"
                         class="mx-0"
                         size="24px"
                         @click="regenerateExerciseSplit(day.exercises, i2)"
+                        color="primary"
                     >
                       <v-icon>mdi-refresh</v-icon>
                     </v-btn>
                     <!-- delete -->
                     <v-btn
                         icon
-                        variant="plain"
+                        variant="text"
                         class="mx-0"
                         size="24px"
                         @click="removeExerciseSplit(day.exercises, i2)"
+                        color="#db5856"
                     >
                       <v-icon>mdi-delete</v-icon>
                     </v-btn>
+                    <!-- Кнопка "!" для админа -->
+                    <AdminExerciseButton :onLog="() => logExercises(ex)" />
                   </div>
                 </div>
               </div>
@@ -229,8 +258,9 @@
             rounded="lg"
             icon
             :disabled="!telegramUserId"
+            @click="sendWorkoutPlan"
         >
-          <!-- Только иконка (нет реальной логики) -->
+          <!-- Только иконка -->
           <v-icon>mdi-send</v-icon>
         </v-btn>
       </div>
@@ -259,8 +289,10 @@
 import { defineComponent, ref, computed, onMounted } from 'vue'
 import axios, { type AxiosRequestConfig, type Method } from 'axios'
 import { retrieveLaunchParams } from '@telegram-apps/sdk'
-import BottomSheetWithClose from '~/components/BottomSheetWithClose.vue'
+import BottomSheetWithClose from '~/components/shared/BottomSheetWithClose.vue'
+import AdminExerciseButton from '~/components/user/AdminExerciseButton.vue' // Импорт нового компонента
 import useSplitGenerator from '~/composables/useSplitGenerator'
+import { useUserStore } from '~/stores/userStore' // Импорт Pinia Store
 
 /** Обёртка для запросов (fallback). */
 const primaryBaseURL = 'https://fit-server-bot.ru.tuna.am/api/'
@@ -277,7 +309,10 @@ const apiRequest = async <T>(
     url: primaryBaseURL + endpoint,
     data,
     params,
-    timeout: 5000
+    timeout: 5000,
+    headers: {
+      'Content-Type': 'application/json'
+    }
   }
   try {
     const response = await axios(config)
@@ -291,7 +326,10 @@ const apiRequest = async <T>(
       url: fallbackBaseURL + endpoint,
       data,
       params,
-      timeout: 5000
+      timeout: 5000,
+      headers: {
+        'Content-Type': 'application/json'
+      }
     }
     try {
       const response = await axios(fallbackConfig)
@@ -317,6 +355,7 @@ interface SplitDay {
 interface SplitItem {
   _id: string
   split: string
+  splitComment?: string  // <--- добавляем поле, чтобы TypeScript не ругался
   splitId: number
   gender: string
   splitDays: string
@@ -332,8 +371,10 @@ interface TelegramUserData {
 
 export default defineComponent({
   name: 'TrainingOnWeek',
-  components: { BottomSheetWithClose },
+  components: { BottomSheetWithClose, AdminExerciseButton },
   setup() {
+    const userStore = useUserStore()
+
     // Пол / сплиты
     const genders = ['Мужчина', 'Женщина']
     const gender = ref<string>('')
@@ -365,7 +406,7 @@ export default defineComponent({
     const telegramUserId = ref<number | null>(null)
     const initData = ref<any>(null)
 
-    // Фильтруем сплиты
+    // Фильтруем сплиты по выбранному полу
     const availableSplits = computed(() => {
       if (!gender.value) return []
       return allSplits.value.filter(split =>
@@ -373,17 +414,58 @@ export default defineComponent({
       )
     })
 
+    // Вычисляем уникальные типы сплитов
+    const uniqueSplitTypes = computed(() => {
+      const types = availableSplits.value.map(split => split.split)
+      return Array.from(new Set(types))
+    })
+
+    // Выбранный тип сплита
+    const selectedSplitType = ref<string | null>(null)
+
+    // Сплиты, соответствующие выбранному типу, с уникальными splitComment и случайным splitId
+    const splitsToShow = computed(() => {
+      if (!selectedSplitType.value) return []
+      const splits = availableSplits.value.filter(
+          split => split.split === selectedSplitType.value && split.splitComment
+      )
+      const uniqueComments = Array.from(new Set(splits.map(s => s.splitComment)))
+      return uniqueComments.map(comment => {
+        const eligibleSplits = splits.filter(s => s.splitComment === comment)
+        const randomSplit = eligibleSplits[Math.floor(Math.random() * eligibleSplits.length)]
+        return {
+          _id: randomSplit._id, // Используем _id случайного сплита для правильного выделения
+          split: randomSplit.split, // Добавляем тип сплита
+          splitComment: randomSplit.splitComment,
+        }
+      })
+    })
+
     // Выбор пола
     const selectGender = (option: string) => {
       gender.value = option
+      selectedSplitType.value = null
       selectedSplit.value = null
       console.log('Выбран пол:', option)
     }
 
-    // Выбор сплита
-    const selectSplit = (split: SplitItem) => {
-      selectedSplit.value = split
-      console.log('Выбран сплит:', split)
+    // Выбор типа сплита
+    const selectSplitType = (type: string) => {
+      selectedSplitType.value = type
+      selectedSplit.value = null
+      console.log('Выбран тип сплита:', type)
+    }
+
+    // Выбор конкретного сплита
+    const selectSplit = (split: { _id: string, split: string, splitComment?: string }) => {
+      const chosenSplit = availableSplits.value.find(s => s._id === split._id)
+      if (chosenSplit) {
+        selectedSplit.value = chosenSplit
+        console.log('Выбран сплит:', chosenSplit)
+      } else {
+        console.warn(`Сплит с _id=${split._id} не найден.`)
+        showSnackbar('Сплит не найден.', 'error')
+      }
     }
 
     // Подключаем хук
@@ -432,7 +514,7 @@ export default defineComponent({
     // Функция для названия дня (0..6)
     const dayName = (index: number) => {
       const days = [
-        'Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'
+        'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'
       ]
       return days[index % 7]
     }
@@ -517,6 +599,53 @@ export default defineComponent({
       }
     })
 
+    // Функция для логирования конкретного упражнения (для админа)
+    const logExercises = async (exercise: any) => {
+      if (userStore.role !== 'admin') { // Проверка роли
+        console.warn('Только администратор может отправлять логи.')
+        showSnackbar('Доступ запрещён.', 'error')
+        return
+      }
+
+      // Добавляем логирование полученного упражнения для отладки
+      console.log('Получено упражнение для логирования:', exercise)
+
+      // Проверка telegramUserId
+      console.log('telegramUserId:', userStore.telegramId)
+
+      // Подготовка данных для отправки
+      const requestData = {
+        userId: userStore.telegramId,
+        exercise: {
+          name: exercise.name,
+          sets: exercise.sets,
+          reps: exercise.reps
+        }
+      }
+
+      // Логирование данных, которые будут отправлены
+      console.log('Отправляемые данные:', requestData)
+
+      try {
+        const response = await axios.post(`${primaryBaseURL}admin/log-exercises`, requestData, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+
+        showSnackbar('Сообщение успешно отправлено!', 'success')
+        console.log(`Сообщение "${exercise.name}" успешно отправлено админу. Ответ:`, response.data)
+      } catch (err: any) {
+        if (err.response) {
+          console.error('Ошибка при отправке сообщения:', err.response.data)
+          showSnackbar(`Ошибка: ${err.response.data.message || 'Не удалось отправить сообщение.'}`, 'error')
+        } else {
+          console.error('Ошибка при отправке сообщения:', err.message)
+          showSnackbar('Не удалось отправить сообщение.', 'error')
+        }
+      }
+    }
+
     return {
       // Пол и массивы
       genders,
@@ -524,6 +653,11 @@ export default defineComponent({
       allSplits,
       selectedSplit,
       availableSplits,
+
+      // Уникальные типы сплитов и выбранный тип
+      uniqueSplitTypes,
+      selectedSplitType,
+      splitsToShow,
 
       // Флаги
       isLoading,
@@ -539,6 +673,7 @@ export default defineComponent({
 
       // Методы выбора
       selectGender,
+      selectSplitType,
       selectSplit,
 
       // Метод-обёртка (с задержкой)
@@ -559,7 +694,10 @@ export default defineComponent({
       increaseRepsSplit,
       decreaseRepsSplit,
       removeExerciseSplit,
-      regenerateExerciseSplit
+      regenerateExerciseSplit,
+
+      // Новый метод для логирования упражнений
+      logExercises
     }
   }
 })
@@ -572,12 +710,52 @@ export default defineComponent({
 }
 
 .group-button {
-  min-width: 100px;
+  min-width: 45%;
 }
 
 .selected-button {
   background-color: var(--v-primary-base);
   color: white;
+}
+
+.split-card {
+  cursor: pointer;
+  transition: background-color 0.3s, border 0.3s;
+}
+
+.split-card:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.split-card.selected-split-card {
+  background-color: rgba(33, 150, 243, 1); /* Полупрозрачный синий фон */
+  border: 2px solid var(--v-primary-base);
+  color: white;
+}
+
+.split-card .v-card-title {
+  font-weight: bold;
+}
+
+.split-card .v-card-text {
+  font-style: italic;
+  color: #ccc;
+}
+
+.split-card.selected-split-card .v-card-text {
+  color: #fff;
+}
+
+.split-card.selected-split-card .v-card-title {
+  color: #fff;
+}
+
+.split-card:not(.selected-split-card) {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.split-card:not(.selected-split-card):hover {
+  background-color: rgba(255, 255, 255, 0.1);
 }
 
 /* Блок под каждый день (7 штук). */
@@ -667,7 +845,7 @@ export default defineComponent({
   box-shadow: inset 0 0 3px rgba(0,0,0,0.5);
 }
 
-/* Правый блок (refresh / delete) — по вертикали */
+/* Правый блок (refresh / delete / admin button) — по вертикали */
 .vertical-buttons {
   display: flex;
   flex-direction: column;
@@ -678,6 +856,10 @@ export default defineComponent({
 /* Вращение иконки */
 .rotatingDumbbell {
   animation: rotate-dumbbell 1s linear infinite;
+}
+
+.splits {
+  border-radius: 14px
 }
 
 @keyframes rotate-dumbbell {

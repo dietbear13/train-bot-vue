@@ -1,3 +1,5 @@
+<!-- components/KbzhuCalculator.vue -->
+
 <template>
   <div class="py-1">
     <p>Все вводимые в калькулятор данные не сохраняются и не используются.</p>
@@ -41,21 +43,23 @@
             mandatory
             class="flex-nowrap align-center"
         >
-          <v-btn
+          <v-slide-group-item
               v-for="bodyType in bodyTypes"
               :key="bodyType.value"
               :value="bodyType.value"
-              variant="text"
-              outlined
-              class="group-button mx-auto px-3"
-              :class="{ 'selected-button': formData.bodyType === bodyType.value }"
-              @click="selectBodyType(bodyType.value)"
-              rounded="lg"
-              center-active
-
           >
-            {{ bodyType.text }}
-          </v-btn>
+            <v-btn
+                variant="text"
+                :value="bodyType.value"
+                outlined
+                class="mx-auto px-3"
+                :class="{ 'selected-button': formData.bodyType === bodyType.value }"
+                @click="selectBodyType(bodyType.value)"
+                rounded="lg"
+            >
+              {{ bodyType.text }}
+            </v-btn>
+          </v-slide-group-item>
         </v-slide-group>
       </v-card-text>
     </v-card>
@@ -111,19 +115,23 @@
             center-active
             mandatory
         >
-          <v-btn
+          <v-slide-group-item
               v-for="goal in goals"
               :key="goal.value"
               :value="goal.value"
-              variant="text"
-              outlined
-              class="group-button mx-auto px-3"
-              :class="{ 'selected-button': formData.goal === goal.value }"
-              @click="selectGoal(goal.value)"
-              rounded="lg"
           >
-            {{ goal.text }}
-          </v-btn>
+            <v-btn
+                variant="text"
+                :value="goal.value"
+                outlined
+                class="group-button mx-auto px-3"
+                :class="{ 'selected-button': formData.goal === goal.value }"
+                @click="selectGoal(goal.value)"
+                rounded="lg"
+            >
+              {{ goal.text }}
+            </v-btn>
+          </v-slide-group-item>
         </v-slide-group>
       </v-card-text>
     </v-card>
@@ -152,12 +160,21 @@
     <!-- Кнопка расчёта -->
     <v-btn
         :disabled="isGenerating || timer > 0"
-        @click="calculateKbzhu"
-        color="primary"
-        class="mt-2"
-        rounded="lg"
+        @click="onCalculate"
+        color="success"
+    class="mt-2"
+    rounded="lg"
+    width="100%"
     >
-      {{ timer > 0 ? `Повторный расчёт через ${timer} с` : 'Рассчитать' }}
+    <!-- Иконка, которая при загрузке вращается -->
+    <span v-if="isGenerating">Рассчитываю.. </span>
+    <span v-else>Рассчитать</span>
+    <v-icon
+        right
+        :class="{ rotatingDumbbell: isGenerating }"
+    >
+      mdi-calculator
+    </v-icon>
     </v-btn>
 
     <!-- Сообщение об ошибке -->
@@ -184,11 +201,11 @@
         <v-card-title class="ml-4">Результаты расчёта</v-card-title>
         <v-card-text class="my-2">
           <div class="mb-4">
-            <div>Калории в сутки: <strong>{{ kbzhuResult.calories }} ккал</strong></div>
-            <div>Калории от тренировок: <strong>{{ kbzhuResult.extraCalories }} ккал</strong></div>
-            <div>Белки: <strong>{{ kbzhuResult.proteins }} г</strong></div>
-            <div>Жиры: <strong>{{ kbzhuResult.fats }} г</strong></div>
-            <div>Углеводы: <strong>{{ kbzhuResult.carbs }} г</strong></div>
+            <div>Калории в сутки: <strong>{{ kbzhuResult?.calories }} ккал</strong></div>
+            <div>Калории от тренировок: <strong>{{ kbzhuResult?.extraCalories }} ккал</strong></div>
+            <div>Белки: <strong>{{ kbzhuResult?.proteins }} г</strong></div>
+            <div>Жиры: <strong>{{ kbzhuResult?.fats }} г</strong></div>
+            <div>Углеводы: <strong>{{ kbzhuResult?.carbs }} г</strong></div>
           </div>
 
           <!-- Добавляем canvas для диаграммы -->
@@ -198,21 +215,22 @@
 
           <div class="text-center my-2">
             <v-btn
-                color="primary"
-                @click="sendKbzhuResult"
-                :disabled="!telegramUserId"
-                rounded="lg"
-                class="mb-1"
+                color="success"
+            @click="sendKbzhuResult"
+            :disabled="!telegramUserId"
+            rounded="lg"
+            class="mb-1"
             >
-              <v-icon left>mdi-send</v-icon>
-              Отправить себе
+            <v-icon left>mdi-send</v-icon>
+            Отправить себе
             </v-btn>
             <v-btn
                 @click="closeBottomSheet"
-                rounded="lg"
-                variant="plain"
+                variant="text"
+            class="group-button mx-auto"
+            rounded="lg"
             >
-              Закрыть
+            Закрыть
             </v-btn>
           </div>
         </v-card-text>
@@ -227,6 +245,9 @@ import axios from 'axios';
 import { retrieveLaunchParams } from "@telegram-apps/sdk";
 import ScrollPicker from 'vue3-scroll-picker';
 import Chart from 'chart.js/auto';
+
+// Импортируем наш хук
+import { useKbzhu } from '~~/composables/useKbzhu'; // подставьте нужный путь
 
 // Интерфейсы для типов данных
 interface FormData {
@@ -252,9 +273,6 @@ interface KbzhuResult {
   carbs: number
 }
 
-// Добавляем ref для диаграммы
-let macroChart: Chart | null = null;
-
 // Определение базовых URL-адресов
 const primaryBaseURL = 'https://fit-server-bot.ru.tuna.am/api/'
 const fallbackBaseURL = 'http://localhost:3002/api/'
@@ -279,8 +297,6 @@ const goals: Option[] = [
   { text: 'Удержание', value: 'удержание' },
   { text: 'Набор', value: 'набор' },
 ]
-
-// Функция обработчика выбора цели питания
 
 const workoutsLabels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
@@ -347,7 +363,6 @@ const selectGoal = (goal: string) => {
   console.log('Selected Goal:', formData.goal);
 };
 
-
 // Вычисляемые свойства для отображения текста
 const goalText = computed(() => {
   return goals.find(goal => goal.value === formData.goal)?.text || '';
@@ -361,18 +376,30 @@ const ageSelection = ref<string[]>(['30'])     // Начальное значе�
 // Состояние для v-bottom-sheet
 const showBottomSheet = ref(false)
 
-// Состояние для результатов расчёта
-const kbzhuResult = ref<KbzhuResult | null>(null)
+// Добавляем ref для диаграммы
+let macroChart: Chart | null = null;
 
-// Состояния для генерации и таймера
-const isGenerating = ref(false)
-const timer = ref(0)
-let intervalId: number | null = null
+// --- ПОДКЛЮЧАЕМ НАШ ХУК ---
+const {
+  kbzhuResult,
+  isGenerating,
+  errorMessages,
+  timer,
+  calculateKbzhu
+} = useKbzhu()
 
-// Сообщения об ошибках
-const errorMessages = ref<string[]>([])
+// Следим за значениями ScrollPicker и обновляем formData
+watch(heightSelection, (newVal) => {
+  formData.height = parseInt(newVal[0]) || ''
+})
+watch(weightSelection, (newVal) => {
+  formData.weight = parseInt(newVal[0]) || ''
+})
+watch(ageSelection, (newVal) => {
+  formData.age = parseInt(newVal[0]) || ''
+})
 
-// Функции обработчиков выбора пола
+// Функции обработчиков выбора пола/телосложения
 const selectGender = (gender: string) => {
   formData.gender = gender;
   console.log('Selected Gender:', formData.gender);
@@ -388,28 +415,13 @@ const selectGender = (gender: string) => {
   }
 }
 
-// Функция обработчика выбора телосложения
 const selectBodyType = (bodyType: string) => {
   formData.bodyType = bodyType;
   console.log('Selected Body Type:', formData.bodyType);
 }
 
-
-// Обновление formData при изменении ScrollPicker
-watch(heightSelection, (newVal) => {
-  formData.height = parseInt(newVal[0]) || ''
-})
-
-watch(weightSelection, (newVal) => {
-  formData.weight = parseInt(newVal[0]) || ''
-})
-
-watch(ageSelection, (newVal) => {
-  formData.age = parseInt(newVal[0]) || ''
-})
-
+// Запрашиваем данные Telegram при монтировании
 onMounted(() => {
-  // Инициализация данных пользователя из Telegram
   if (process.client) {
     const launchParams = retrieveLaunchParams();
     if (launchParams && launchParams.initData) {
@@ -428,169 +440,18 @@ onMounted(() => {
   }
 });
 
-// Функция для расчёта КБЖУ по формуле FPA
-const calculateKbzhu = async () => {
-  if (isGenerating.value || timer.value > 0) {
-    return
-  }
-
-  isGenerating.value = true
-  errorMessages.value = [] // Очистка предыдущих ошибок
-  kbzhuResult.value = null // Очистка предыдущих результатов
-
-  const gender = formData.gender.toLowerCase()
-  const bodyType = formData.bodyType.toLowerCase()
-  const goal = formData.goal.toLowerCase()
-  const height = typeof formData.height === 'number' ? formData.height : parseFloat(formData.height as string)
-  const weight = typeof formData.weight === 'number' ? formData.weight : parseFloat(formData.weight as string)
-  const workoutsPerWeek = formData.workoutsPerWeek
-
-  // Расчёт BMR по формуле Миффлина-Сан Жеора с использованием возраста
-  let BMR: number
-  const age = typeof formData.age === 'number' ? formData.age : parseInt(formData.age as string)
-
-  // Сбор специфических ошибок
-  if (!gender) {
-    errorMessages.value.push('Выберите пол.')
-  }
-  if (!bodyType) {
-    errorMessages.value.push('Выберите телосложение.')
-  }
-  if (!goal) {
-    errorMessages.value.push('Выберите цель питания.')
-  }
-  if (isNaN(height) || height < 150 || height > 250) {
-    errorMessages.value.push('Введите корректный рост (150-250 см).')
-  }
-  if (isNaN(weight) || weight < 40 || weight > 250) {
-    errorMessages.value.push('Введите корректный вес (40-250 кг).')
-  }
-  if (isNaN(workoutsPerWeek) || workoutsPerWeek < 0 || workoutsPerWeek > 10) {
-    errorMessages.value.push('Введите корректное число тренировок в неделю (0-10).')
-  }
-  if (isNaN(age) || age < 10 || age > 120) {  // Новая проверка для возраста
-    errorMessages.value.push('Введите корректный возраст (10-120 лет).')
-  }
-
-  // Если есть ошибки в базовой валидации
-  if (errorMessages.value.length > 0) {
-    isGenerating.value = false
-    return
-  }
-
-  if (gender === 'мужчина') {
-    BMR = (10 * weight) + (6.25 * height) - (5 * age) + 5
-  } else if (gender === 'женщина') {
-    BMR = (10 * weight) + (6.25 * height) - (5 * age) - 161
-  } else {
-    errorMessages.value.push('Некорректный пол.')
-    isGenerating.value = false
-    return
-  }
-
-  // Коэффициент активности (фиксированный на 1.4)
-  const activityCoefficient = 1.4
-
-  // Расчёт TDEE
-  let TDEE = BMR * activityCoefficient
-
-  // Корректировка калорийности в зависимости от цели
-  // Предположим, что:
-  // - Похудение: -15%
-  // - Удержание веса: 0%
-  // - Набор веса: +15%
-  let calorieAdjustmentFactor = 1
-  if (goal === 'похудение') {
-    calorieAdjustmentFactor = 0.85
-  } else if (goal === 'набор') {
-    calorieAdjustmentFactor = 1.15
-  }
-
-  TDEE = TDEE * calorieAdjustmentFactor
-
-  // Расчёт дополнительных калорий из тренировок
-  let extraCalories = 0
-  if (workoutsPerWeek > 0) {
-    if (gender === 'мужчина') {
-      extraCalories = (workoutsPerWeek * 6 * 60) / 7
-    } else if (gender === 'женщина') {
-      extraCalories = (workoutsPerWeek * 5 * 60) / 7
-    }
-    TDEE += extraCalories
-  }
-
-  // Таблица коэффициентов белков и жиров
-  const proteinFatCoefficients: Record<string, Record<string, { protein: number, fat: number }>> = {
-    'мужчина': {
-      'худощавое': { protein: 1.7, fat: 1.05 },
-      'среднее': { protein: 1.9, fat: 1.0 },
-      'плотное': { protein: 2.1, fat: 0.9 },
-    },
-    'женщина': {
-      'худощавое': { protein: 1.6, fat: 1.15 },
-      'среднее': { protein: 1.7, fat: 1.1 },
-      'плотное': { protein: 1.8, fat: 1.05 },
-    },
-  }
-
-
-  // Получаем коэффициенты
-  const coefficients = proteinFatCoefficients[gender]?.[bodyType]
-  if (!coefficients) {
-    errorMessages.value.push('Не удалось получить коэффициенты для выбранного пола и телосложения.')
-    isGenerating.value = false
-    return
-  }
-
-  // Расчёт белков и жиров
-  const proteins = coefficients.protein * weight
-  const fats = coefficients.fat * weight
-
-  // Расчёт калорий из белков и жиров
-  const proteinCalories = proteins * 4
-  const fatCalories = fats * 9
-
-  // Расчёт калорий из углеводов
-  const carbCalories = TDEE - (proteinCalories + fatCalories)
-  const carbs = carbCalories / 4
-
-  // Округление результатов
-  kbzhuResult.value = {
-    calories: Math.round(TDEE),
-    extraCalories: Math.round(extraCalories),
-    proteins: Math.round(proteins),
-    fats: Math.round(fats),
-    carbs: Math.round(carbs),
-  }
-
-  // Открываем v-bottom-sheet с результатами
-  showBottomSheet.value = true
-
-  // Ждём обновления DOM перед созданием диаграммы
-  await nextTick();
-  updateMacroChart();
-
-  // Запуск таймера повторной генерации
-  timer.value = 10
-  intervalId = window.setInterval(() => {
-    timer.value--
-    if (timer.value <= 0 && intervalId !== null) {
-      window.clearInterval(intervalId)
-      intervalId = null
-    }
-  }, 1000)
-
-  isGenerating.value = false
+// Эта функция просто вызывает calculateKbzhu из нашего хука
+const onCalculate = () => {
+  calculateKbzhu(formData, showBottomSheet, nextTick, updateMacroChart)
 }
 
-// Функция для обновления диаграммы
+// Функция для обновления диаграммы (остаётся здесь)
 const updateMacroChart = () => {
   if (!kbzhuResult.value) return;
 
   const proteinCalories = kbzhuResult.value.proteins * 4;
   const fatCalories = kbzhuResult.value.fats * 9;
   const carbCalories = kbzhuResult.value.carbs * 4;
-
   const totalMacroCalories = proteinCalories + fatCalories + carbCalories;
 
   const proteinPercent = ((proteinCalories / totalMacroCalories) * 100).toFixed(1);
@@ -619,8 +480,8 @@ const updateMacroChart = () => {
         backgroundColor: [
           '#42A5F5', // Синий для белков
           '#FFA726', // Оранжевый для жиров
-          '#66BB6A', // Зеленый для углеводов
-          '#d16060', // Зеленый для углеводов
+          '#66BB6A', // Зелёный для углеводов
+          '#d16060', // Для примера
         ],
         hoverOffset: 4
       }]
@@ -668,7 +529,7 @@ const sendKbzhuResult = async () => {
 
   try {
     await axios.post(`${primaryBaseURL}send-kbzhu`, {
-      userId: telegramUserId.value, // Здесь userId === chatId
+      userId: telegramUserId.value,
       kbzhuResult: kbzhuResult.value
     })
 
@@ -703,8 +564,8 @@ const sendKbzhuResult = async () => {
 
 /* Настройка неактивных опций */
 .scroll-picker .scroll-picker__option.inactive {
-  color: rgba(57, 57, 57, 0.53); /* Полупрозрачный серый цвет */
-  background-color: #00000033; /* Тёмный фон */
+  color: rgba(57, 57, 57, 0.53);
+  background-color: #00000033;
 }
 
 /* Настройка центральной зоны */
@@ -717,9 +578,33 @@ const sendKbzhuResult = async () => {
   background-color: #121212 !important;
 }
 
+.group-button {
+  min-width: 45%;
+}
+
 .selected-button {
-  background-color: #1E88E5 !important; /* Синий фон для выбранной кнопки */
+  background-color: var(--v-primary-base) !important; /* Используем CSS-переменную для консистентности */
   color: white !important;
+}
+
+/* Вращение иконки */
+.rotatingDumbbell {
+  animation: rotate-dumbbell 1s linear infinite;
+}
+
+@keyframes rotate-dumbbell {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Стилизация контейнера диаграммы */
+.chart-container {
+  max-width: 300px;
+  margin: 20px auto;
 }
 
 /* Скрытие скроллбара */
@@ -732,9 +617,25 @@ const sendKbzhuResult = async () => {
   -ms-overflow-style: none; /* IE 10+ */
 }
 
-/* Стилизация контейнера диаграммы */
-.chart-container {
-  max-width: 300px;
-  margin: 20px auto;
+/* Остальные стили остаются без изменений */
+.rounded-bottom-sheet {
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  overflow: hidden;
+}
+
+/* Контейнер для кнопок закрытия и отправки */
+.text-center .v-btn {
+  min-width: 150px;
+}
+
+/* Изменение цвета иконки для кнопок */
+.v-btn .v-icon {
+  margin-right: 0;
+}
+
+/* Перетаскивание (если необходимо) */
+.dragging {
+  opacity: 0.5;
 }
 </style>

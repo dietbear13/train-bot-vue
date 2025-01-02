@@ -57,10 +57,10 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import TrainingOnWeek from '~/components/TrainingOnWeek.vue'
-import TrainingByMuscles from '~/components/TrainingByMuscles.vue'
-import ExerciseSearch from "~/components/ExerciseSearch.vue"
-import HowToUse from '~/components/HowToUseGenerator.vue' // Импортируем компонент HowToUse
+import TrainingOnWeek from '~/components/training/TrainingOnWeek.vue'
+import TrainingByMuscles from '~/components/training/TrainingByMuscles.vue'
+import ExerciseSearch from "~/components/training/ExerciseSearch.vue"
+import HowToUse from '~/components/training/HowToUseGenerator.vue' // Импортируем компонент HowToUse
 
 // Инициализация активной вкладки с типизацией
 const activeTab = ref<number>(0)

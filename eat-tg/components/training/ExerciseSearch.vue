@@ -304,7 +304,7 @@ import type { AxiosRequestConfig, Method } from 'axios';
 import { useUserStore } from '~/stores/userStore';
 import { useExerciseFilter } from '~/composables/useExerciseFilter';
 import type { Exercise } from '~/composables/types'; // Импорт типа отдельно
-import ExerciseInfo from '~/components/ExerciseInfo.vue'; // Импортируем компонент
+import ExerciseInfo from '~/components/training/ExerciseInfo.vue'; // Импортируем компонент
 
 export default defineComponent({
   name: 'ExerciseSearch',

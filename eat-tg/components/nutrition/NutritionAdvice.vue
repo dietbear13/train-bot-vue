@@ -77,9 +77,9 @@
 import { ref } from 'vue'
 
 // Импорт изображений
-import maintenanceImage from '@/assets/maintenance.png'
-import massgainImage from '@/assets/massgain.jpeg'
-import weightlossImage from '@/assets/weightloss.jpeg'
+import maintenanceImage from 'assets/maintenance.png'
+import massgainImage from 'assets/massgain.jpeg'
+import weightlossImage from 'assets/weightloss.jpeg'
 
 // Интерфейс для элементов совета
 interface AdviceItem {

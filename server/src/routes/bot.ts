@@ -2,16 +2,11 @@
 import { Router, Request, Response } from 'express';
 import TelegramBot from 'node-telegram-bot-api';
 import User from '../models/User';
-
-// Если нужно, импортируем модели или другие зависимости
-// import Exercise from '../../src/models/Exercise';
-// и т.д.
+import dotenv from 'dotenv';
+dotenv.config();
 
 const router = Router();
 
-// Предполагаем, что у нас уже есть токен в .env
-import dotenv from 'dotenv';
-dotenv.config();
 const botToken = process.env.TELEGRAM_BOT_TOKEN as string;
 const bot = new TelegramBot(botToken, { polling: false });
 
@@ -20,22 +15,14 @@ const bot = new TelegramBot(botToken, { polling: false });
  * но не URL в ссылках.
  */
 const escapeMarkdownV2 = (text: string): string => {
-    // Регулярное выражение для поиска ссылок [текст](url)
-    const regex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    // Список специальных символов для MarkdownV2
+    const specialChars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'];
+    const escapeRegex = new RegExp(`([${specialChars.map(char => '\\' + char).join('')}])`, 'g');
 
-    // Функция для экранирования специальных символов, не используемых для форматирования
-    const escapeNonFormatting = (str: string) => {
-        return str.replace(/([#>+=|{}.!])/g, '\\$1').replace(/\|\|/g, '\\|\\|');
-    };
+    // Экранирование всех специальных символов
+    let escapedText = text.replace(escapeRegex, '\\$1');
 
-    // Экранируем текст внутри ссылок, не экранируя URL
-    const escapedText = text.replace(regex, (match, p1, p2) => {
-        const escapedP1 = escapeNonFormatting(p1);
-        return `[${escapedP1}](${p2})`;
-    });
-
-    // Экранируем оставшиеся спецсимволы вне ссылок
-    return escapedText.replace(/([#>+=|{}.!])/g, '\\$1').replace(/\|\|/g, '\\|\\|');
+    return escapedText;
 };
 
 /**
@@ -80,6 +67,11 @@ const schedulePost = (channelId: string, content: string, imageUrl: string | und
 
     // Парсим время публикации
     const scheduledDate = moment(time);
+
+    // Проверяем, корректно ли распарсено время
+    if (!scheduledDate.isValid()) {
+        throw new Error('Некорректное время публикации');
+    }
 
     // Создаём строку cron-формата
     const cronTime = `${scheduledDate.minute()} ${scheduledDate.hour()} ${scheduledDate.date()} ${scheduledDate.month() + 1} *`;
@@ -312,7 +304,7 @@ const sendKbzhuResultToUser = (
             console.log(`KbzhuResult sent to user ${chatId}`);
         })
         .catch((error) => {
-            console.error('Error sending KbzhuResult to user:', error.message);
+            console.error('Error sending KbzhuResult to user:', error.response?.body || error.message);
         });
 };
 
@@ -332,6 +324,51 @@ router.post('/send-kbzhu', async (req: Request, res: Response) => {
     } catch (error: any) {
         console.error('Ошибка при отправке сообщения в Telegram:', error.message);
         res.status(500).json({ message: 'Ошибка при отправке сообщения в Telegram' });
+    }
+});
+
+/**
+ * Маршрут для логирования характеристик упражнений (только для администраторов)
+ */
+router.post('/admin/log-exercises', async (req: Request, res: Response) => {
+    const { userId, exercise } = req.body;
+    console.log("userId exercise", userId, exercise)
+    if (!userId || !exercise) {
+        return res.status(400).json({ message: 'Необходимо указать userId и exercise' });
+    }
+
+    try {
+        // Получаем информацию о пользователе (при необходимости)
+        const user = await User.findOne({ telegramId: userId });
+        if (!user) {
+            return res.status(404).json({ message: 'Пользователь не найден' });
+        }
+
+        // Формируем сообщение для администратора
+        let message = `🔧 *Лог упражнения от пользователя:* ${userId}\n\n`;
+        message += `*Упражнение:* ${exercise.name}\n`;
+        message += `*Подходы × Повторения:* ${exercise.sets}×${exercise.reps}\n`;
+
+        // Если есть дополнительные данные
+        if (exercise.dataUsed && Object.keys(exercise.dataUsed).length > 0) {
+            message += `*Дополнительные данные:* ${JSON.stringify(exercise.dataUsed)}\n`;
+        }
+
+        // Экранируем специальные символы для MarkdownV2
+        const escapedMessage = escapeMarkdownV2(message);
+
+        // Отправляем сообщение администратору
+        const adminChatId = 327844310; // Telegram ID администратора
+        await bot.sendMessage(adminChatId, escapedMessage, {
+            parse_mode: 'MarkdownV2',
+            disable_web_page_preview: true,
+        });
+
+        console.log(`Характеристика упражнения ${exercise.name} от пользователя ${userId} успешно отправлена админу.`);
+        res.json({ message: 'Характеристика упражнения успешно отправлена администратору.' });
+    } catch (error: any) {
+        console.error('Ошибка при отправке характеристики упражнения админу:', error.message);
+        res.status(500).json({ message: 'Ошибка при отправке характеристики упражнения админу' });
     }
 });
 
