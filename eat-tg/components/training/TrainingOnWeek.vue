@@ -290,7 +290,7 @@ import { defineComponent, ref, computed, onMounted } from 'vue'
 import axios, { type AxiosRequestConfig, type Method } from 'axios'
 import { retrieveLaunchParams } from '@telegram-apps/sdk'
 import BottomSheetWithClose from '~/components/shared/BottomSheetWithClose.vue'
-import AdminExerciseButton from '~/components/user/AdminExerciseButton.vue' // Импорт нового компонента
+import AdminExerciseButton from '~/components/userAndAdmin/AdminExerciseButton.vue' // Импорт нового компонента
 import useSplitGenerator from '~/composables/useSplitGenerator'
 import { useUserStore } from '~/stores/userStore' // Импорт Pinia Store
 
@@ -591,7 +591,7 @@ export default defineComponent({
         if (initData.value && initData.value.user) {
           userData.value = initData.value.user
           telegramUserId.value = userData.value.id
-          console.log('Telegram user ID:', telegramUserId.value)
+          console.log('Telegram userAndAdmin ID:', telegramUserId.value)
         } else {
           console.error('Нет данных пользователя (Telegram).')
           showSnackbar('Нет данных пользователя (Telegram).', 'error')

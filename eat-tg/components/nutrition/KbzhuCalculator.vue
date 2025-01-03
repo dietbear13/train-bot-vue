@@ -1,9 +1,6 @@
 <!-- components/KbzhuCalculator.vue -->
-
 <template>
   <div class="py-1">
-    <p>Все вводимые в калькулятор данные не сохраняются и не используются.</p>
-
     <!-- Выбор пола -->
     <v-card class="my-2 dark-background pa-1" variant="tonal">
       <v-card-text class="pa-1">
@@ -21,9 +18,8 @@
           >
             <v-btn
                 variant="text"
-                :value="gender.value"
                 outlined
-                class="group-button mx-auto"
+                class="gender-button mx-auto"
                 :class="{ 'selected-button': formData.gender === gender.value }"
                 @click="selectGender(gender.value)"
                 rounded="lg"
@@ -50,9 +46,8 @@
           >
             <v-btn
                 variant="text"
-                :value="bodyType.value"
                 outlined
-                class="mx-auto px-3"
+                class="group-button mx-auto"
                 :class="{ 'selected-button': formData.bodyType === bodyType.value }"
                 @click="selectBodyType(bodyType.value)"
                 rounded="lg"
@@ -64,44 +59,56 @@
       </v-card-text>
     </v-card>
 
-    <!-- Ввод роста, веса и возраста с помощью ScrollPicker -->
+    <!-- Ввод роста, веса и возраста с помощью v-select -->
     <v-row class="no-gutters">
       <!-- Ввод роста -->
       <v-col cols="4" class="pr-1">
-        <v-card class="my-0 dark-background pa-0" variant="tonal">
-          <ScrollPicker
-              :options="heightOptions"
-              v-model="heightSelection"
-              class="scroll-picker"
-              active-style="color: white; background-color: transparent;"
-              inactive-style="color: #39393987; background-color: transparent;"
-          />
+        <v-card class="my-0 dark-background pa-2" variant="tonal">
+          <v-select
+              :items="heightOptions"
+              label="Рост"
+              variant="outlined"
+              v-model.number="formData.height"
+              item-title="text"
+              item-value="value"
+              dense
+              hide-details
+              :return-object="false"
+          ></v-select>
         </v-card>
       </v-col>
 
       <!-- Ввод веса -->
       <v-col cols="4" class="px-1">
-        <v-card class="my-0 dark-background pa-0" variant="tonal">
-          <ScrollPicker
-              :options="weightOptions"
-              v-model="weightSelection"
-              class="scroll-picker"
-              active-style="color: white; background-color: transparent;"
-              inactive-style="color: #39393987; background-color: transparent;"
-          />
+        <v-card class="my-0 dark-background pa-2" variant="tonal">
+          <v-select
+              :items="weightOptions"
+              label="Вес"
+              variant="outlined"
+              v-model.number="formData.weight"
+              item-title="text"
+              item-value="value"
+              dense
+              hide-details
+              :return-object="false"
+          ></v-select>
         </v-card>
       </v-col>
 
       <!-- Ввод возраста -->
       <v-col cols="4" class="pl-1">
-        <v-card class="my-0 dark-background pa-0" variant="tonal">
-          <ScrollPicker
-              :options="ageOptions"
-              v-model="ageSelection"
-              class="scroll-picker"
-              active-style="color: white; background-color: transparent;"
-              inactive-style="color: #39393987; background-color: transparent;"
-          />
+        <v-card class="my-0 dark-background pa-2" variant="tonal">
+          <v-select
+              :items="ageOptions"
+              label="Возраст"
+              variant="outlined"
+              v-model.number="formData.age"
+              item-title="text"
+              item-value="value"
+              dense
+              hide-details
+              :return-object="false"
+          ></v-select>
         </v-card>
       </v-col>
     </v-row>
@@ -122,9 +129,8 @@
           >
             <v-btn
                 variant="text"
-                :value="goal.value"
                 outlined
-                class="group-button mx-auto px-3"
+                class="group-button mx-auto"
                 :class="{ 'selected-button': formData.goal === goal.value }"
                 @click="selectGoal(goal.value)"
                 rounded="lg"
@@ -157,25 +163,29 @@
       </v-card-text>
     </v-card>
 
+
     <!-- Кнопка расчёта -->
     <v-btn
-        :disabled="isGenerating || timer > 0"
+        :disabled="isAnimating || isGenerating"
         @click="onCalculate"
         color="success"
-    class="mt-2"
-    rounded="lg"
-    width="100%"
+        class="mt-2"
+        rounded="lg"
+        width="100%"
     >
-    <!-- Иконка, которая при загрузке вращается -->
-    <span v-if="isGenerating">Рассчитываю.. </span>
-    <span v-else>Рассчитать</span>
-    <v-icon
-        right
-        :class="{ rotatingDumbbell: isGenerating }"
-    >
-      mdi-calculator
-    </v-icon>
+      <!-- Текст кнопки в зависимости от состояния -->
+      <span v-if="isAnimating">создаю.. </span>
+      <span v-else-if="isGenerating">Рассчитываю.. </span>
+      <span v-else>Рассчитать</span>
+      <!-- Иконка, которая при загрузке вращается -->
+      <v-icon
+          right
+          :class="{ rotatingDumbbell: isAnimating || isGenerating }"
+      >
+        mdi-calculator
+      </v-icon>
     </v-btn>
+    <p style="color:gray">Вводимые данные не сохраняются и не используются.</p>
 
     <!-- Сообщение об ошибке -->
     <v-alert
@@ -190,52 +200,41 @@
       </ul>
     </v-alert>
 
-    <!-- v-bottom-sheet для отображения результатов расчёта -->
-    <v-bottom-sheet
+    <!-- Используем компонент BottomSheetWithClose для отображения результатов расчёта -->
+    <BottomSheetWithClose
         v-model="showBottomSheet"
-        scrim
+        title="Результаты расчёта"
         :persistent="false"
-        content-class="rounded-bottom-sheet"
+        max-width="600px"
     >
-      <v-card>
-        <v-card-title class="ml-4">Результаты расчёта</v-card-title>
-        <v-card-text class="my-2">
-          <div class="mb-4">
-            <div>Калории в сутки: <strong>{{ kbzhuResult?.calories }} ккал</strong></div>
-            <div>Калории от тренировок: <strong>{{ kbzhuResult?.extraCalories }} ккал</strong></div>
-            <div>Белки: <strong>{{ kbzhuResult?.proteins }} г</strong></div>
-            <div>Жиры: <strong>{{ kbzhuResult?.fats }} г</strong></div>
-            <div>Углеводы: <strong>{{ kbzhuResult?.carbs }} г</strong></div>
-          </div>
+      <v-card-text class="my-2">
+        <div class="mb-4">
+          <div>Калории в сутки: <strong>{{ kbzhuResult.calories }} ккал</strong></div>
+          <div>Калории от тренировок: <strong>{{ kbzhuResult.extraCalories }} ккал</strong></div>
+          <div>Белки: <strong>{{ kbzhuResult.proteins }} г</strong></div>
+          <div>Жиры: <strong>{{ kbzhuResult.fats }} г</strong></div>
+          <div>Углеводы: <strong>{{ kbzhuResult.carbs }} г</strong></div>
+        </div>
 
-          <!-- Добавляем canvas для диаграммы -->
-          <div class="chart-container">
-            <canvas id="macroChart"></canvas>
-          </div>
+        <!-- Добавляем canvas для диаграммы -->
+        <div class="chart-container">
+          <canvas id="macroChart"></canvas>
+        </div>
 
-          <div class="text-center my-2">
-            <v-btn
-                color="success"
-            @click="sendKbzhuResult"
-            :disabled="!telegramUserId"
-            rounded="lg"
-            class="mb-1"
-            >
+        <div class="text-center my-2">
+          <v-btn
+              color="success"
+              @click="sendKbzhuResult"
+              :disabled="!telegramUserId"
+              rounded="lg"
+              class="mb-1"
+          >
             <v-icon left>mdi-send</v-icon>
             Отправить себе
-            </v-btn>
-            <v-btn
-                @click="closeBottomSheet"
-                variant="text"
-            class="group-button mx-auto"
-            rounded="lg"
-            >
-            Закрыть
-            </v-btn>
-          </div>
-        </v-card-text>
-      </v-card>
-    </v-bottom-sheet>
+          </v-btn>
+        </div>
+      </v-card-text>
+    </BottomSheetWithClose>
   </div>
 </template>
 
@@ -243,26 +242,33 @@
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
 import axios from 'axios';
 import { retrieveLaunchParams } from "@telegram-apps/sdk";
-import ScrollPicker from 'vue3-scroll-picker';
 import Chart from 'chart.js/auto';
 
 // Импортируем наш хук
 import { useKbzhu } from '~~/composables/useKbzhu'; // подставьте нужный путь
 
+// Импортируем компонент BottomSheetWithClose
+import BottomSheetWithClose from '../shared/BottomSheetWithClose.vue'; // Убедитесь в корректности пути
+
 // Интерфейсы для типов данных
 interface FormData {
   gender: string
   bodyType: string
-  age: number | ''
-  height: number | ''
-  weight: number | ''
+  age: number | null
+  height: number | null
+  weight: number | null
   goal: string
   workoutsPerWeek: number
 }
 
-interface Option {
+interface StringOption {
   text: string
   value: string
+}
+
+interface NumberOption {
+  text: string
+  value: number
 }
 
 interface KbzhuResult {
@@ -281,18 +287,18 @@ const fallbackBaseURL = 'http://localhost:3002/api/'
 const telegramUserId = ref<string | null>(null)
 
 // Данные для селекторов
-const genders: Option[] = [
+const genders: StringOption[] = [
   { text: 'Мужчина', value: 'мужчина' },
   { text: 'Женщина', value: 'женщина' },
 ]
 
-const bodyTypes: Option[] = [
+const bodyTypes: StringOption[] = [
   { text: 'Худощавое', value: 'худощавое' },
   { text: 'Среднее', value: 'среднее' },
   { text: 'Плотное', value: 'плотное' },
 ]
 
-const goals: Option[] = [
+const goals: StringOption[] = [
   { text: 'Похудение', value: 'похудение' },
   { text: 'Удержание', value: 'удержание' },
   { text: 'Набор', value: 'набор' },
@@ -320,58 +326,70 @@ const getYearDeclension = (age: number): string => {
   return 'лет';
 };
 
-// Опции для ScrollPicker с правильным склонением
-const ageOptions = [
-  Array.from({ length: 111 }, (_, i) => {
-    const age = 10 + i;
-    const declension = getYearDeclension(age);
-    return {
-      label: `${age} ${declension}`,
-      value: `${age}`,
-    };
-  }),
-];
+// Опции для v-select с правильным склонением
+const ageOptions: NumberOption[] = Array.from({ length: 111 }, (_, i) => {
+  const age = 10 + i;
+  const declension = getYearDeclension(age);
+  return {
+    text: `${age} ${declension}`,
+    value: age,
+  };
+});
 
 // Опции для роста и веса
-const heightOptions = [
-  Array.from({ length: 101 }, (_, i) => ({
-    label: `${150 + i} см`,
-    value: `${150 + i}`,
-  })),
-];
+const heightOptions: NumberOption[] = Array.from({ length: 101 }, (_, i) => ({
+  text: `${150 + i} см`,
+  value: 150 + i,
+}));
 
-const weightOptions = [
-  Array.from({ length: 211 }, (_, i) => ({
-    label: `${40 + i} кг`,
-    value: `${40 + i}`,
-  })),
-];
+const weightOptions: NumberOption[] = Array.from({ length: 211 }, (_, i) => ({
+  text: `${40 + i} кг`,
+  value: 40 + i,
+}));
 
 // Реактивные данные формы
 const formData = reactive<FormData>({
   gender: '',
   bodyType: '',
-  age: '',
-  height: '',
-  weight: '',
+  age: null,
+  height: null,
+  weight: null,
   goal: '',
   workoutsPerWeek: 3,
 })
+
+// Watcher для отслеживания изменений в formData
+watch(formData, (newVal) => {
+  console.log('formData изменился:', JSON.stringify(newVal, null, 2));
+}, { deep: true });
+
+// Функции обработчиков выбора пола/телосложения
+const selectGender = (gender: string) => {
+  formData.gender = gender;
+  console.log('Selected Gender:', formData.gender);
+
+  if (gender === 'мужчина') { // Мужчина
+    formData.height = 175;
+    formData.weight = 90;
+    formData.age = 30;
+  } else if (gender === 'женщина') { // Женщина
+    formData.height = 170;
+    formData.weight = 60;
+    formData.age = 30;
+  }
+
+  console.log('После выбора пола:', JSON.stringify(formData, null, 2));
+}
+
+const selectBodyType = (bodyType: string) => {
+  formData.bodyType = bodyType;
+  console.log('Selected Body Type:', formData.bodyType);
+}
 
 const selectGoal = (goal: string) => {
   formData.goal = goal;
   console.log('Selected Goal:', formData.goal);
 };
-
-// Вычисляемые свойства для отображения текста
-const goalText = computed(() => {
-  return goals.find(goal => goal.value === formData.goal)?.text || '';
-});
-
-// Состояние для ScrollPicker
-const heightSelection = ref<string[]>(['170']) // Начальное значение
-const weightSelection = ref<string[]>(['70'])  // Начальное значение
-const ageSelection = ref<string[]>(['30'])     // Начальное значение
 
 // Состояние для v-bottom-sheet
 const showBottomSheet = ref(false)
@@ -384,41 +402,20 @@ const {
   kbzhuResult,
   isGenerating,
   errorMessages,
-  timer,
   calculateKbzhu
 } = useKbzhu()
 
-// Следим за значениями ScrollPicker и обновляем formData
-watch(heightSelection, (newVal) => {
-  formData.height = parseInt(newVal[0]) || ''
-})
-watch(weightSelection, (newVal) => {
-  formData.weight = parseInt(newVal[0]) || ''
-})
-watch(ageSelection, (newVal) => {
-  formData.age = parseInt(newVal[0]) || ''
-})
+// Watcher для kbzhuResult
+watch(kbzhuResult, (newResult) => {
+  console.log('kbzhuResult изменился:', newResult);
+});
 
-// Функции обработчиков выбора пола/телосложения
-const selectGender = (gender: string) => {
-  formData.gender = gender;
-  console.log('Selected Gender:', formData.gender);
-
-  if (gender === 'мужчина') {
-    heightSelection.value = ['175'];
-    weightSelection.value = ['90'];
-    ageSelection.value = ['30'];
-  } else if (gender === 'женщина') {
-    heightSelection.value = ['170'];
-    weightSelection.value = ['60'];
-    ageSelection.value = ['30'];
+// Watcher для errorMessages
+watch(errorMessages, (newErrors) => {
+  if (newErrors.length > 0) {
+    console.error('errorMessages:', newErrors);
   }
-}
-
-const selectBodyType = (bodyType: string) => {
-  formData.bodyType = bodyType;
-  console.log('Selected Body Type:', formData.bodyType);
-}
+});
 
 // Запрашиваем данные Telegram при монтировании
 onMounted(() => {
@@ -440,14 +437,29 @@ onMounted(() => {
   }
 });
 
-// Эта функция просто вызывает calculateKbzhu из нашего хука
-const onCalculate = () => {
+// Новый ref для анимации имитации генерации
+const isAnimating = ref(false)
+
+// Эта функция теперь сначала имитирует генерацию, а затем вызывает реальную логику
+const onCalculate = async () => {
+  console.log('Вызов onCalculate с formData:', JSON.stringify(formData, null, 2));
+  isAnimating.value = true
+
+  // Генерируем случайную задержку между 1.1 и 1.3 секунд
+  const delay = 1100 + Math.random() * 200 // миллисекунды
+  await new Promise(resolve => setTimeout(resolve, delay))
+
+  isAnimating.value = false
+
+  // Вызываем реальную логику расчёта
   calculateKbzhu(formData, showBottomSheet, nextTick, updateMacroChart)
 }
 
 // Функция для обновления диаграммы (остаётся здесь)
 const updateMacroChart = () => {
   if (!kbzhuResult.value) return;
+
+  console.log('Обновление диаграммы с kbzhuResult:', kbzhuResult.value);
 
   const proteinCalories = kbzhuResult.value.proteins * 4;
   const fatCalories = kbzhuResult.value.fats * 9;
@@ -459,7 +471,10 @@ const updateMacroChart = () => {
   const carbPercent = ((carbCalories / totalMacroCalories) * 100).toFixed(1);
 
   const ctx = (document.getElementById('macroChart') as HTMLCanvasElement)?.getContext('2d');
-  if (!ctx) return;
+  if (!ctx) {
+    console.error('Не удалось получить контекст для диаграммы.');
+    return;
+  }
 
   // Уничтожаем предыдущую диаграмму, если она есть
   if (macroChart) {
@@ -506,9 +521,11 @@ const updateMacroChart = () => {
       }
     }
   });
+
+  console.log('Диаграмма обновлена');
 }
 
-// Функция для управления v-bottom-sheet
+// Функция для управления v-bottom-sheet (используем новый компонент)
 const closeBottomSheet = () => {
   showBottomSheet.value = false
   // Уничтожаем диаграмму при закрытии
@@ -522,10 +539,11 @@ const closeBottomSheet = () => {
 const sendKbzhuResult = async () => {
   if (!kbzhuResult.value || !telegramUserId.value) {
     errorMessages.value.push('Не удалось отправить результаты. Проверьте данные пользователя.')
+    console.error('sendKbzhuResult: отсутствуют kbzhuResult или telegramUserId');
     return
   }
 
-  console.log('Отправка результатов для Telegram ID:', telegramUserId.value)
+  console.log('Отправка результатов для Telegram ID:', telegramUserId.value, 'kbzhuResult:', kbzhuResult.value);
 
   try {
     await axios.post(`${primaryBaseURL}send-kbzhu`, {
@@ -542,49 +560,19 @@ const sendKbzhuResult = async () => {
 </script>
 
 <style scoped>
-/* Настройка размеров ScrollPicker */
-.scroll-picker {
-  width: 100%;
-  height: 80px; /* Уменьшенная высота */
-  overflow: hidden;
-  position: relative;
-}
-
-/* Настройка текста опций */
-.scroll-picker .scroll-picker__option {
-  font-size: 16px;
-  text-align: center;
-}
-
-/* Настройка активной опции */
-.scroll-picker .scroll-picker__option.active {
-  color: white;
-  background-color: transparent;
-}
-
-/* Настройка неактивных опций */
-.scroll-picker .scroll-picker__option.inactive {
-  color: rgba(57, 57, 57, 0.53);
-  background-color: #00000033;
-}
-
-/* Настройка центральной зоны */
-.scroll-picker .scroll-picker__center-overlay {
-  background: linear-gradient(to bottom, transparent, #00000033, transparent);
-}
-
 /* Дополнительные стили для темной темы */
 .dark-background {
   background-color: #121212 !important;
 }
 
-.group-button {
+.gender-button {
   min-width: 45%;
 }
 
+/* Аналогично TrainingByMuscles: выделение выбранной кнопки */
 .selected-button {
-  background-color: var(--v-primary-base) !important; /* Используем CSS-переменную для консистентности */
-  color: white !important;
+  background-color: var(--v-primary-base);
+  color: white;
 }
 
 /* Вращение иконки */
@@ -605,16 +593,6 @@ const sendKbzhuResult = async () => {
 .chart-container {
   max-width: 300px;
   margin: 20px auto;
-}
-
-/* Скрытие скроллбара */
-.scroll-picker ::v-deep .scroll-picker__scroll-area::-webkit-scrollbar {
-  display: none; /* Safari и Chrome */
-}
-
-.scroll-picker ::v-deep .scroll-picker__scroll-area {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE 10+ */
 }
 
 /* Остальные стили остаются без изменений */

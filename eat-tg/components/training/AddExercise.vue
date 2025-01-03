@@ -3,7 +3,6 @@
   <BottomSheetWithClose
       v-model="sheet"
       title="Добавить упражнение"
-      :max-width="'600px'"
       :persistent="false"
       :min-height="'95%'"
   >

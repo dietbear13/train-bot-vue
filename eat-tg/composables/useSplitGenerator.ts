@@ -121,13 +121,13 @@ function getRepsOptions(
     return repsValue
 }
 
-// Поиск упражнения (до 5 попыток)
+// Поиск упражнения (до 20 попыток)
 function tryFindExercise(
     matchingExercises: Exercise[],
     repetitionLevel: string,
     genderStr: string,
     usedIds: Set<string>,
-    maxTries: number = 10
+    maxTries: number = 20
 ): { exercise: Exercise; reps: number; sets: number } | null {
     let attempt = 0
     while (attempt < maxTries) {

@@ -255,7 +255,7 @@ const sendWorkoutToUser = (
             console.log(`Workout sent to user ${chatId}`);
         })
         .catch((error) => {
-            console.error('Error sending message to user:', error.response?.body || error.message);
+            console.error('Error sending message to userAndAdmin:', error.response?.body || error.message);
         });
 };
 
@@ -304,7 +304,7 @@ const sendKbzhuResultToUser = (
             console.log(`KbzhuResult sent to user ${chatId}`);
         })
         .catch((error) => {
-            console.error('Error sending KbzhuResult to user:', error.response?.body || error.message);
+            console.error('Error sending KbzhuResult to userAndAdmin:', error.response?.body || error.message);
         });
 };
 
@@ -345,9 +345,8 @@ router.post('/admin/log-exercises', async (req: Request, res: Response) => {
         }
 
         // Формируем сообщение для администратора
-        let message = `🔧 *Лог упражнения от пользователя:* ${userId}\n\n`;
-        message += `*Упражнение:* ${exercise.name}\n`;
-        message += `*Подходы × Повторения:* ${exercise.sets}×${exercise.reps}\n`;
+        let message = `🔧 Лог упражнения\n\n`;
+        message += `Упражнение: ${exercise.name}\n`;
 
         // Если есть дополнительные данные
         if (exercise.dataUsed && Object.keys(exercise.dataUsed).length > 0) {

@@ -6,7 +6,7 @@
       :persistent="persistent"
       class="rounded-t-xl"
   >
-    <v-card class="relative-position">
+    <v-card class="relative-position rounded-t-xl">
       <!-- Заголовок вместо иконки -->
       <div class="header-title">{{ title }}</div>
 
@@ -73,18 +73,13 @@ export default defineComponent({
 
 <style scoped>
 .rounded-t-xl {
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
+  border-top-left-radius: 16px!important;
+  border-top-right-radius: 16px!important;
 }
 
 .relative-position {
   position: relative;
   padding-top: 16px; /* Добавляем отступ сверху для заголовка */
-}
-
-.v-bottom-sheet {
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
 }
 
 .header-title {

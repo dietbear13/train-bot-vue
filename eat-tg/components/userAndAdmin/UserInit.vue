@@ -96,7 +96,7 @@ onMounted(async () => {
         const result = await apiRequest<{
           role?: string;
           error?: string;
-        }>('post', 'check-user', {
+        }>('post', 'check-userAndAdmin', {
           telegramId: telegramUserId,
         });
 
@@ -130,7 +130,7 @@ onMounted(async () => {
                 );
 
                 try {
-                  await apiRequest('post', 'update-user-role', {
+                  await apiRequest('post', 'update-userAndAdmin-role', {
                     telegramId: telegramUserId,
                     role: 'freeUser',
                   });

@@ -1,7 +1,5 @@
-// src/bot.ts
-
 import dotenv from 'dotenv';
-import TelegramBot, { InlineKeyboardMarkup, WebAppInfo } from 'node-telegram-bot-api';
+import TelegramBot, { InlineKeyboardMarkup } from 'node-telegram-bot-api';
 
 // Загрузка переменных окружения из .env файла
 dotenv.config();
@@ -31,7 +29,20 @@ const openTelegramLink = (text: string, path: string): any => {
         text: text,
         web_app: {
             url: `${appUrl}${path}`, // Полный URL вашего Mini App с добавленным путем
-        } as WebAppInfo,
+        },
+    };
+};
+
+/**
+ * Функция для создания URL-кнопки
+ * @param text Текст кнопки
+ * @param url URL для перехода
+ * @returns Кнопка с параметром url
+ */
+const openUrlButton = (text: string, url: string): any => {
+    return {
+        text: text,
+        url: url,
     };
 };
 
@@ -49,9 +60,8 @@ bot.onText(/\/start/, (msg) => {
                 openTelegramLink('🍏 Питание', '/nutrition'), // Страница питания
             ],
             [
-                openTelegramLink('🔗 тг-канал «кОчалка»', ''), // Главная страница Mini App
+                openUrlButton('🔗 тг-канал «кОчалка»', 'https://t.me/training_health'), // Переход в канал
             ],
-
         ],
     };
 

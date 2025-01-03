@@ -5,7 +5,7 @@
       icon
       @click="handleClick"
       color="warning"
-      title="Отправить характеристики упражнений"
+      size="24px"
   >
     <v-icon>mdi-alert</v-icon>
   </v-btn>
