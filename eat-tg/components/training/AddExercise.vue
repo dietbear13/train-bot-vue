@@ -36,7 +36,7 @@
         >
           <v-list-item class="mx-0">
             <v-list-item-title class="exercise-title">
-              {{ exercise.name }}
+              {{ formatExerciseName(exercise.name) }}
             </v-list-item-title>
             <v-list-item-subtitle class="exercise-subtitle">
               {{ exercise.mainMuscle }}
@@ -50,7 +50,7 @@
                     variant="plain"
                     icon
                     @click="openExerciseInfoButton(exercise)"
-                    :title="'Информация о ' + exercise.name"
+                    :title="'Информация о ' + formatExerciseName(exercise.name)"
                     aria-label="Информация об упражнении"
                     v-bind="slotProps.attrs"
                     v-on="slotProps.on"
@@ -186,7 +186,7 @@ export default defineComponent({
     // Дополнительная фильтрация по сложности и полу с ограничением до 30 результатов
     const finalExercises = computed(() => {
       const gender = props.gender;
-      let repsKeys: (keyof RepetitionLevels)[] = [];
+      let repsKeys: (keyof RepetitionLevels)[] = {};
 
       if (gender === 'Мужчина') {
         repsKeys = ['maleRepsLight', 'maleRepsMedium', 'maleRepsHeavy'];
@@ -296,6 +296,15 @@ export default defineComponent({
       console.log('Final Exercises:', newVal);
     });
 
+    /**
+     * Новый метод: делает первый символ заглавным,
+     * остальные символы остаются в исходном регистре.
+     */
+    const formatExerciseName = (rawName: string): string => {
+      if (!rawName) return '';
+      return rawName.charAt(0).toUpperCase() + rawName.slice(1);
+    };
+
     return {
       searchQuery,
       finalExercises, // Используем в шаблоне для отображения
@@ -306,6 +315,7 @@ export default defineComponent({
       selectedExercise, // Добавлено для хранения выбранного упражнения
       openExerciseInfoButton, // Добавлено для открытия информации
       isLoading,
+      formatExerciseName // Добавлено для форматирования названия упражнения
     };
   },
 });
@@ -338,9 +348,8 @@ export default defineComponent({
 
 /* Заголовок внутри тела листа */
 .headline {
-  font-size: 1.5rem;
+  font-size: 1.2rem;
   font-weight: bold;
-  text-align: center;
 }
 
 .headline.mb-4 {

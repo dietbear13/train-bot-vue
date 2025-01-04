@@ -39,7 +39,7 @@
             class="exercise-item"
         >
           <v-list-item-title class="exercise-title">
-            {{ exercise.name }}
+            {{ formatExerciseName(exercise.name) }}
           </v-list-item-title>
           <v-list-item-action>
             <v-chip class="mr-2" small color="primary" text-color="white">
@@ -66,7 +66,7 @@
                     variant="plain"
                     icon
                     @click="openExerciseInfo(exercise)"
-                    :title="'Информация о ' + exercise.name"
+                    :title="'Информация о ' + formatExerciseName(exercise.name)"
                     aria-label="Информация об упражнении"
                     v-bind="slotProps.attrs"
                     v-on="slotProps.on"
@@ -275,7 +275,7 @@
           </v-btn>
         </v-card-title>
         <v-card-text>
-          Вы уверены, что хотите удалить упражнение "{{ exerciseToDelete?.name }}"?
+          Вы уверены, что хотите удалить упражнение "{{ formatExerciseName(exerciseToDelete?.name) }}"?
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -601,6 +601,15 @@ export default defineComponent({
       loadExercises();
     });
 
+    /**
+     * Метод для форматирования названия упражнения
+     * Делает первый символ заглавным, остальные остаются без изменений
+     */
+    const formatExerciseName = (rawName: string): string => {
+      if (!rawName) return '';
+      return rawName.charAt(0).toUpperCase() + rawName.slice(1);
+    };
+
     return {
       searchQuery,
       onSearchInput,
@@ -634,6 +643,11 @@ export default defineComponent({
       displayedExercises,
       editExercise,
       getGifUrl,
+
+      /**
+       * Метод для форматирования названия упражнения
+       */
+      formatExerciseName
     };
   },
 });

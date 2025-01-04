@@ -175,7 +175,7 @@
                   </div>
                 </td>
                 <td class="drag-handle" style="padding: 0 4px;">
-                  {{ element.name }}
+                  {{ formatExerciseName(element.name) }}
                 </td>
                 <td
                     class="fixed-width sets-reps-column"
@@ -715,6 +715,15 @@ export default defineComponent({
       isLoading.value = false
     }
 
+    /**
+     * Новый метод: делает первый символ заглавным,
+     * остальные символы остаются в исходном регистре.
+     */
+    const formatExerciseName = (rawName: string): string => {
+      if (!rawName) return ''
+      return rawName.charAt(0).toUpperCase() + rawName.slice(1)
+    }
+
     return {
       // Состояние
       gender,
@@ -770,7 +779,10 @@ export default defineComponent({
       sendWorkout,
       openAddExerciseSheet,
       handleAddExercise,
-      showSnackbar
+      showSnackbar,
+
+      // Метод для форматирования названия упражнения
+      formatExerciseName
     }
   }
 })
