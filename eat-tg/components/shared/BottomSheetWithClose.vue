@@ -5,6 +5,7 @@
       :max-width="maxWidth"
       :persistent="persistent"
       class="rounded-t-xl"
+      min-width="'95%'"
   >
     <v-card class="relative-position rounded-t-xl">
       <!-- Заголовок вместо иконки -->

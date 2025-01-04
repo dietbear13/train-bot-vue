@@ -1,4 +1,3 @@
-<!-- components/TrainingOnWeek.vue -->
 <template>
   <v-form @submit.prevent="generateSplitWorkout">
     <!-- Выбор пола -->
@@ -157,15 +156,39 @@
 
         <!-- Если НЕ идёт загрузка - показываем реальный результат (7 дней) -->
         <div v-else>
+          <!-- Кнопка для перегенерации всего сплита сразу, с уже выбранными параметрами -->
+          <v-btn
+              block
+              color="success"
+              class="mb-3"
+              rounded="lg"
+              :disabled="isLoading"
+              @click="regenerateWholeSplit"
+          >
+            <v-icon left>mdi-refresh</v-icon>
+            пересоздать весь сплит
+          </v-btn>
+
           <!-- Выводим 7 "блоков" -->
           <div
               v-for="(day, idx) in finalPlan"
               :key="idx"
               class="day-block mb-3"
           >
-            <!-- Заголовок дня -->
+            <!-- Заголовок дня + кнопка для обновления упражнений дня (если не "отдых") -->
             <h3 class="day-heading">
               День {{ idx + 1 }} ({{ dayName(idx) }})
+              <v-btn
+                  v-if="day.exercises.length > 0"
+                  icon
+                  variant="text"
+                  class="mx-2"
+                  size="24px"
+                  @click="refreshDayExercises(idx)"
+                  color="primary"
+              >
+                <v-icon>mdi-refresh</v-icon>
+              </v-btn>
             </h3>
 
             <!-- Если нет упражнений => отдых -->
@@ -180,9 +203,9 @@
                   :key="i2"
                   class="exercise-row"
               >
-                <!-- Название упражнения -->
+                <!-- Название упражнения (используем formatExerciseName) -->
                 <div class="exercise-name">
-                  {{ ex.name }}
+                  {{ formatExerciseName(ex.name) }}
                 </div>
 
                 <!-- Управляющий блок -->
@@ -225,7 +248,7 @@
                         variant="text"
                         class="mx-0"
                         size="24px"
-                        @click="regenerateExerciseSplit(day.exercises, i2)"
+                        @click="regenerateExerciseSplit(day.exercises, i2, idx)"
                         color="primary"
                     >
                       <v-icon>mdi-refresh</v-icon>
@@ -472,7 +495,8 @@ export default defineComponent({
     const {
       finalPlan,
       generateSplitPlan,
-      sendWorkoutPlan
+      sendWorkoutPlan,
+      regenerateExercise, // <-- из хука
     } = useSplitGenerator({
       isLoading,
       isGenerating,
@@ -519,8 +543,8 @@ export default defineComponent({
       return days[index % 7]
     }
 
-    // Методы изменения повторений / удаления / перегенерации
-    const standardRepsValues = [5, 6, 8, 10, 12, 15, 20]
+    // Методы изменения повторений / удаления / перегенерации (локальные)
+    const standardRepsValues = [5, 6, 8, 10, 12, 15, 20, 24, 30, 45, 60, 75, 90, 105, 120]
     function getSets(reps: number): number {
       if (reps === 5) return 5
       if (reps === 6 || reps === 8) return 4
@@ -560,10 +584,31 @@ export default defineComponent({
     const removeExerciseSplit = (exercisesArr: any, index: number) => {
       exercisesArr.splice(index, 1)
     }
-    const regenerateExerciseSplit = (exercisesArr: any, index: number) => {
-      const ex = exercisesArr[index]
-      ex.name = ex.name
-      console.log(`Упражнение перегенерировано: ${ex.name}`)
+
+    // Оживляем кнопку refresh у каждого упражнения (шаг №1)
+    // Передаём dayIndex третьим параметром
+    const regenerateExerciseSplit = (exercisesArr: any, index: number, dayIndex: number) => {
+      // Вызываем метод из хука для ре-логики
+      // Важно: regenerateExercise ожидает (dayIndex, exerciseIndex, gender)
+      regenerateExercise(dayIndex, index, gender.value)
+      console.log(`Упражнение #${index} в дне #${dayIndex} перегенерировано.`)
+    }
+
+    // Добавляем кнопку обновления для всего дня (шаг №2)
+    const refreshDayExercises = (dayIndex: number) => {
+      // Проходим по всем упражнениям дня и регенерируем
+      if (!finalPlan.value[dayIndex]) return
+      finalPlan.value[dayIndex].exercises.forEach((_, exIndex) => {
+        regenerateExercise(dayIndex, exIndex, gender.value)
+      })
+      console.log(`Все упражнения дня #${dayIndex + 1} перегенерированы.`)
+    }
+
+    // Добавляем кнопку перегенерации всего сплита (шаг №3)
+    const regenerateWholeSplit = async () => {
+      // Повторно вызываем уже существующий процесс генерации
+      await generateSplitWorkout()
+      console.log('Весь сплит был перегенерирован.')
     }
 
     // Загрузка сплитов при монтировании
@@ -646,6 +691,15 @@ export default defineComponent({
       }
     }
 
+    /**
+     * Новый метод: делает первый символ заглавным,
+     * остальные символы остаются в исходном регистре.
+     */
+    const formatExerciseName = (rawName: string): string => {
+      if (!rawName) return ''
+      return rawName.charAt(0).toUpperCase() + rawName.slice(1)
+    }
+
     return {
       // Пол и массивы
       genders,
@@ -696,8 +750,15 @@ export default defineComponent({
       removeExerciseSplit,
       regenerateExerciseSplit,
 
-      // Новый метод для логирования упражнений
-      logExercises
+      // Новые методы для обновления дней и всего сплита
+      refreshDayExercises,
+      regenerateWholeSplit,
+
+      // Метод для логирования упражнений
+      logExercises,
+
+      // Метод для вывода упражнения с заглавной буквы
+      formatExerciseName
     }
   }
 })

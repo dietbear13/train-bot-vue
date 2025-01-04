@@ -1,10 +1,10 @@
-// ~/composables/useWorkoutGenerator.ts
-import { ref } from 'vue'
+import { Ref } from 'vue'
 
-// Если у вас есть общий файл types.ts, импортируйте из него:
-import type { Exercise, WorkoutResult, Pattern } from '~/composables/types'
-// Либо используйте локальные интерфейсы/типы
+// Если у вас есть общий файл types.ts, импортируйте из него (пример):
+// import type { Exercise, WorkoutResult, Pattern } from '~/composables/types'
+// Либо используйте локальные интерфейсы/типы, как ниже.
 
+import type { Exercise, WorkoutResult, Pattern } from '~/components/training/TrainingByMuscles.vue'
 import axios, { type AxiosRequestConfig, type Method } from 'axios'
 
 const primaryBaseURL = 'https://fit-server-bot.ru.tuna.am/api/'
@@ -76,6 +76,10 @@ function getRandomLoadLevel(): string {
     else return 'тяжёлая'
 }
 
+/**
+ * Возвращает строку повторений (например, "10,12,15") или null,
+ * если значение не подходит под нужные условия.
+ */
 function getRepsOptions(
     exercise: Exercise,
     repetitionLevel: string,
@@ -92,13 +96,17 @@ function getRepsOptions(
         console.warn(`Неизвестный уровень нагрузки: "${loadLevel}"`)
         return null
     }
+
+    // Ключ типа 'maleRepsLight', 'femaleRepsMedium' и т.д.
     const repsKey = `${genderStr === 'Мужчина' ? 'male' : 'female'}Reps${capitalize(mappedLevel)}` as keyof Exercise
 
-    const repsValue = exercise[repsKey]
-    if (!repsValue || repsValue === '—') {
+    // Явно считаем, что хранимые значения — это строки (с запятыми).
+    const possibleRepsValue = exercise[repsKey]
+    // Если нет значения или оно равно '—', возвращаем null
+    if (typeof possibleRepsValue !== 'string' || possibleRepsValue === '—') {
         return null
     }
-    return repsValue
+    return possibleRepsValue
 }
 
 // Поиск упражнения (до 5 или 10 попыток)
@@ -167,9 +175,27 @@ function tryFindExercise(
     return null
 }
 
+// Тип для аргумента, принимаемого хуком
+interface HookParams {
+    gender: Ref<string>,
+    muscleGroup: Ref<string>,
+    muscleSubgroup: Ref<string>,
+    patterns: Ref<Pattern[]>,
+    exercises: Ref<Exercise[]>,
+    usedExerciseIds: Ref<Set<string>>,
+    workoutResults: Ref<WorkoutResult[]>,
+    selectedPattern: Ref<Pattern | null>,
+    isGenerating: Ref<boolean>,
+    timer: Ref<number>,
+    errorMessages: Ref<string[]>,
+    intervalId: { value: number | null },
+    showBottomSheet: Ref<boolean>,
+    showSnackbar: (message: string, color?: string) => void
+}
+
 // Сам хук
-export default function useWorkoutGenerator(
-    {
+export default function useWorkoutGenerator(params: HookParams) {
+    const {
         gender,
         muscleGroup,
         muscleSubgroup,
@@ -183,28 +209,11 @@ export default function useWorkoutGenerator(
         errorMessages,
         intervalId,
         showBottomSheet,
-        showSnackbar,
-    }: {
-        gender: Ref<string>,
-        muscleGroup: Ref<string>,
-        muscleSubgroup: Ref<string>,
-        patterns: Ref<Pattern[]>,
-        exercises: Ref<Exercise[]>,
-        usedExerciseIds: Ref<Set<string>>,
-        workoutResults: Ref<WorkoutResult[]>,
-        selectedPattern: Ref<Pattern | null>,
-        isGenerating: Ref<boolean>,
-        timer: Ref<number>,
-        errorMessages: Ref<string[]>,
-        intervalId: { value: number | null },
-        showBottomSheet: Ref<boolean>,
-        showSnackbar: (message: string, color?: string) => void
-    }
-) {
+        showSnackbar
+    } = params
+
     // Тот же generateWorkout, но в конце мы выставляем 3-секундный таймер
-    // (Теперь в компоненте мы имитируем "плавную загрузку" вместо этого таймера,
-    //  но сам код ниже мы НЕ удаляем, чтобы соблюсти условие "ничего не удаляя".)
-    function generateWorkout() {
+    function generateWorkout(): void {
         if (isGenerating.value || timer.value > 0) return
 
         if (!gender.value || !muscleGroup.value || !muscleSubgroup.value) {
@@ -268,9 +277,11 @@ export default function useWorkoutGenerator(
                 )
                 continue
             }
+
+            // Формируем ключ для доступа к свойствам exercises: maleRepsLight / femaleRepsHeavy и т.п.
             const repsKey = `${
                 gender.value === 'Мужчина' ? 'male' : 'female'
-            }Reps${capitalize(mappedLevel)}`
+            }Reps${capitalize(mappedLevel)}` as keyof Exercise
 
             const matchingExercises = exercises.value.filter((e) => {
                 if (!e.category || !e.mainMuscle) return false
@@ -351,7 +362,7 @@ export default function useWorkoutGenerator(
         showBottomSheet.value = true
     }
 
-    function removeExercise(index: number) {
+    function removeExercise(index: number): void {
         const ex = workoutResults.value[index]
         if (ex && ex._id) {
             usedExerciseIds.value.delete(ex._id)
@@ -359,7 +370,7 @@ export default function useWorkoutGenerator(
         workoutResults.value.splice(index, 1)
     }
 
-    function regenerateExercise(index: number) {
+    function regenerateExercise(index: number): void {
         if (!selectedPattern.value) {
             console.warn('Паттерн не выбран.')
             return
@@ -373,6 +384,22 @@ export default function useWorkoutGenerator(
         const mg = selectedPattern.value.muscleGroup.toLowerCase()
         const mm = selectedPattern.value.mainMuscle.toLowerCase()
 
+        // Используем повторений именно из patternExercise, а не из e
+        const normalizedRepetitionLevel = patternExercise.repetitionLevel
+            .toLowerCase()
+            .replace('ё', 'е')
+        const mappedLevel = levelMapping[normalizedRepetitionLevel]
+
+        // Если вдруг уровень не распознан, ничего не делаем
+        if (!mappedLevel) {
+            console.warn(`Неизвестный уровень повторений: "${patternExercise.repetitionLevel}".`)
+            return
+        }
+
+        const repsKey = `${
+            gender.value === 'Мужчина' ? 'male' : 'female'
+        }Reps${capitalize(mappedLevel)}` as keyof Exercise
+
         const matchingExercises = exercises.value.filter((e) => {
             if (!e.category || !e.mainMuscle) return false
 
@@ -383,12 +410,6 @@ export default function useWorkoutGenerator(
                 e.additionalMuscles.toLowerCase().includes(mmToFind)
 
             const notUsed = !usedExerciseIds.value.has(e._id)
-
-            // e.repetitionLevel нет в Exercise, но сохраняем вашу логику без изменений:
-            const repsKey = `${
-                gender.value === 'Мужчина' ? 'male' : 'female'
-            }Reps${capitalize(levelMapping[e.repetitionLevel.toLowerCase().replace('ё', 'е')])}`
-
             const hasValidReps = e[repsKey] && e[repsKey] !== '—'
 
             return catMatch && mmMatch && notUsed && hasValidReps
@@ -420,9 +441,9 @@ export default function useWorkoutGenerator(
         }
     }
 
-    const standardRepsValues = [5, 6, 8, 10, 12, 15, 20]
+    const standardRepsValues = [5, 6, 8, 10, 12, 15, 20, 30, 45, 60, 75, 90, 105, 120]
 
-    function increaseReps(index: number) {
+    function increaseReps(index: number): void {
         const ex = workoutResults.value[index]
         const current = ex.reps
         const idx = standardRepsValues.indexOf(current)
@@ -436,7 +457,7 @@ export default function useWorkoutGenerator(
         ex.sets = getSets(ex.reps)
     }
 
-    function decreaseReps(index: number) {
+    function decreaseReps(index: number): void {
         const ex = workoutResults.value[index]
         const current = ex.reps
         const idx = standardRepsValues.indexOf(current)

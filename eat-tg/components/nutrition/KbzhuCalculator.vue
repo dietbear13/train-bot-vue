@@ -223,7 +223,7 @@
 
         <div class="text-center my-2">
           <v-btn
-              color="success"
+              color="primary"
               @click="sendKbzhuResult"
               :disabled="!telegramUserId"
               rounded="lg"
