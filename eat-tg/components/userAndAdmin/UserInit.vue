@@ -7,7 +7,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
 import { useUserStore } from '~/stores/userStore';
-import axios, { Method } from 'axios';
+import axios, { type Method } from 'axios';
 
 const config = useRuntimeConfig();
 const apiBaseURL = config.public.apiBaseUrl;
@@ -96,7 +96,7 @@ onMounted(async () => {
         const result = await apiRequest<{
           role?: string;
           error?: string;
-        }>('post', 'check-userAndAdmin', {
+        }>('post', 'check-user', {
           telegramId: telegramUserId,
         });
 

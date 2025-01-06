@@ -134,7 +134,7 @@ function tryFindExercise(
     repetitionLevel: string,
     genderStr: string,
     usedIds: Set<string>,
-    maxTries: number = 20
+    maxTries: number = 500
 ): { exercise: Exercise; reps: number; sets: number } | null {
     let attempt = 0
     while (attempt < maxTries) {
@@ -214,7 +214,7 @@ function generateExercisesFromPattern(
     gender: string,
     usedIdsInDay: Set<string>,
     allExercises: Exercise[],
-    maxTries: number = 50
+    maxTries: number = 500
 ): FoundExercise[] {
     const exList: FoundExercise[] = []
 
@@ -354,6 +354,20 @@ function generateExercisesFromPattern(
     return exList
 }
 
+// Функция для названия дня (0..6)
+function dayName(index: number): string {
+    const days = [
+        'Понедельник',
+        'Вторник',
+        'Среда',
+        'Четверг',
+        'Пятница',
+        'Суббота',
+        'Воскресенье'
+    ]
+    return days[index % 7]
+}
+
 export default function useSplitGenerator(params: UseSplitGeneratorParams) {
     const finalPlan = ref<GeneratedDay[]>([]) // 7 дней, exercises: FoundExercise[]
 
@@ -425,7 +439,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
                     if (maxIndex === 0) {
                         console.warn('chosenSplit.days.length = 0, нечего генерировать.')
                         finalPlan.value.push({
-                            dayName: capitalize(currentDay),
+                            dayName: dayName(i), // Используем полное название дня
                             exercises: []
                         })
                         continue
@@ -437,7 +451,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
                     if (!currentPatternDay) {
                         console.warn(`Не найден currentPatternDay по индексу ${safeIndex}.`)
                         finalPlan.value.push({
-                            dayName: capitalize(currentDay),
+                            dayName: dayName(i), // Используем полное название дня
                             exercises: []
                         })
                         continue
@@ -463,18 +477,18 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
                     }
 
                     finalPlan.value.push({
-                        dayName: capitalize(currentDay),
+                        dayName: dayName(i), // Используем полное название дня
                         exercises: exList,
                         patternOrExercise: patternArray // Сохраняем для day-рефреша
                     })
-                    console.log(`День ${i + 1} (${currentDay}):`, exList)
+                    console.log(`День ${i + 1} (${dayName(i)}):`, exList)
                 } else {
                     // День отдыха
                     finalPlan.value.push({
-                        dayName: capitalize(currentDay),
+                        dayName: dayName(i), // Используем полное название дня
                         exercises: []
                     })
-                    console.log(`День ${i + 1} (${currentDay}): отдых`)
+                    console.log(`День ${i + 1} (${dayName(i)}): отдых`)
                 }
             }
 
@@ -492,7 +506,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
         }
     }
 
-    // Функция для отправки плана через Telegram
+// Функция для отправки плана через Telegram
     async function sendWorkoutPlan() {
         if (!params.telegramUserId.value) {
             params.showSnackbar('Не указан Telegram ID.', 'error')
@@ -500,10 +514,12 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
             return
         }
 
+        console.log('Отправляемый план тренировок:', finalPlan.value)
+
         try {
             const baseURL = 'https://fit-server-bot.ru.tuna.am/api'
-            console.log(`Отправка плана тренировок на URL: ${baseURL}/send-workout`)
-            await axios.post(`${baseURL}/send-workout`, {
+            console.log(`Отправка плана тренировок на URL: ${baseURL}/send-detailed-plan`)
+            await axios.post(`${baseURL}/send-detailed-plan`, {
                 userId: params.telegramUserId.value,
                 plan: finalPlan.value,
             })

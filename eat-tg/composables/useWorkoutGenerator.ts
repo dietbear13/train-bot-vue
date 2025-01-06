@@ -115,7 +115,7 @@ function tryFindExercise(
     repetitionLevel: string,
     genderStr: string,
     usedIds: Set<string>,
-    maxTries: number = 5
+    maxTries: number = 500
 ): { exercise: Exercise; reps: number; sets: number } | null {
     let attempt = 0
     while (attempt < maxTries) {

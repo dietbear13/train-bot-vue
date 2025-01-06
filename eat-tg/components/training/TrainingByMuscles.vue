@@ -258,8 +258,8 @@
               class="mb-1"
           >
             <v-icon left>mdi-refresh</v-icon>
-            <span v-if="isLoading">Генерируем заново...</span>
-            <span v-else>Сгенерировать заново</span>
+            <span v-if="isLoading">Создаю другую..</span>
+            <span v-else>Создать другую</span>
           </v-btn>
           <v-btn
               color="primary"
@@ -891,7 +891,7 @@ export default defineComponent({
 /* Текст внутри контейнера подходов и повторений */
 .sets-reps-text {
   font-weight: bold;
-  min-width: 50px;
+  min-width: 54px;
   text-align: center;
   color: #ececec;
   background-color: #444;

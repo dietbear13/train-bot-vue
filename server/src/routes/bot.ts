@@ -11,6 +11,58 @@ const botToken = process.env.TELEGRAM_BOT_TOKEN as string;
 const bot = new TelegramBot(botToken, { polling: false });
 
 /**
+ * Интерфейс для упражнения.
+ */
+interface Exercise {
+    name: string;
+    sets: number;
+    reps: number;
+}
+
+/**
+ * Интерфейс для дня недели с упражнениями.
+ */
+interface GeneratedDay {
+    dayName: string;
+    exercises: Exercise[];
+    patternOrExercise?: string[]; // Опциональное поле, если используется
+}
+
+/**
+ * Функция для экранирования специальных символов HTML.
+ */
+const escapeHTML = (text: string): string => {
+    return text.replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+};
+
+/**
+ * Функция для форматирования недельного тренировочного плана в HTML-сообщение.
+ */
+const formatWeeklyWorkoutMessageHTML = (plan: GeneratedDay[]): string => {
+    let message = `<b>Программа на неделю</b>\n\n`;
+
+    plan.forEach(day => {
+        if (day.exercises && day.exercises.length > 0) {
+            message += `<u>${escapeHTML(day.dayName)}:</u>\n`;
+            day.exercises.forEach((exercise, index) => {
+                message += `${index + 1}. ${escapeHTML(exercise.name)} — ${exercise.sets}×${exercise.reps}\n`;
+            });
+            message += `\n`;
+        }
+    });
+
+    // Добавляем ссылки
+    message += `<a href="https://t.me/freeload_top_bot">Программы тренировок</a>\n`;
+    message += `<a href="https://t.me/training_health">тг-канал «кОчалка»</a>\n`;
+
+    return message;
+};
+
+/**
  * Функция для экранирования специальных символов MarkdownV2,
  * но не URL в ссылках.
  */
@@ -19,14 +71,14 @@ const escapeMarkdownV2 = (text: string): string => {
     const specialChars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'];
     const escapeRegex = new RegExp(`([${specialChars.map(char => '\\' + char).join('')}])`, 'g');
 
-    // Экранирование всех специальных символов
+    // Заменяем каждый специальный символ на экранированный
     let escapedText = text.replace(escapeRegex, '\\$1');
 
     return escapedText;
 };
 
 /**
- * Функция для отправки поста в канал без предпросмотра ссылок
+ * Функция для отправки поста в канал с MarkdownV2
  */
 const sendPost = async (channelId: string, content: string, imageUrl?: string) => {
     try {
@@ -237,10 +289,10 @@ const sendWorkoutToUser = (
     workout: { name: string; sets: number; reps: number }[]
 ) => {
     let message = `${muscleGroup}, тренировка (${date})\n\n`;
-    message += '[Генератор тренировок](https://t.me/freeload_top_bot)\n';
-    message += '[Канал о тренировках и здоровье](https://t.me/training_health)\n\n';
+    message += 'Генератор тренировок: https://t.me/freeload_top_bot\n';
+    message += 'Канал о тренировках и здоровье: https://t.me/training_health\n\n';
     workout.forEach((exercise, index) => {
-        message += `${index + 1}. ${exercise.name} — ${exercise.sets}×${exercise.reps}\n`;
+        message += `${index + 1}\\. ${escapeMarkdownV2(exercise.name)} — ${exercise.sets}×${exercise.reps}\n`;
     });
 
     // Логирование для отладки
@@ -248,14 +300,14 @@ const sendWorkoutToUser = (
 
     bot
         .sendMessage(chatId, message, {
-            parse_mode: 'Markdown',
+            parse_mode: 'MarkdownV2',
             disable_web_page_preview: true,
         })
         .then(() => {
             console.log(`Workout sent to user ${chatId}`);
         })
         .catch((error) => {
-            console.error('Error sending message to userAndAdmin:', error.response?.body || error.message);
+            console.error('Error sending message to user:', error.response?.body || error.message);
         });
 };
 
@@ -293,6 +345,7 @@ const sendKbzhuResultToUser = (
 
     console.log(`KbzhuResult sent to user ${chatId}`);
 
+    // Экранирование только динамических частей
     const escapedMessage = escapeMarkdownV2(message);
 
     bot
@@ -304,7 +357,7 @@ const sendKbzhuResultToUser = (
             console.log(`KbzhuResult sent to user ${chatId}`);
         })
         .catch((error) => {
-            console.error('Error sending KbzhuResult to userAndAdmin:', error.response?.body || error.message);
+            console.error('Error sending KbzhuResult to user:', error.response?.body || error.message);
         });
 };
 
@@ -323,7 +376,7 @@ router.post('/send-kbzhu', async (req: Request, res: Response) => {
         res.json({ message: 'Результаты отправлены в Telegram' });
     } catch (error: any) {
         console.error('Ошибка при отправке сообщения в Telegram:', error.message);
-        res.status(500).json({ message: 'Ошибка при отправке сообщения в Telegram' });
+        res.status(500).json({ message: 'Ошибка при отправке сообщения в Telegram', error: error.message });
     }
 });
 
@@ -332,7 +385,8 @@ router.post('/send-kbzhu', async (req: Request, res: Response) => {
  */
 router.post('/admin/log-exercises', async (req: Request, res: Response) => {
     const { userId, exercise } = req.body;
-    console.log("userId exercise", userId, exercise)
+    console.log("userId exercise", userId, exercise);
+
     if (!userId || !exercise) {
         return res.status(400).json({ message: 'Необходимо указать userId и exercise' });
     }
@@ -346,19 +400,19 @@ router.post('/admin/log-exercises', async (req: Request, res: Response) => {
 
         // Формируем сообщение для администратора
         let message = `🔧 Лог упражнения\n\n`;
-        message += `Упражнение: ${exercise.name}\n`;
+        message += `Упражнение: ${escapeMarkdownV2(exercise.name)}\n`;
 
         // Если есть дополнительные данные
         if (exercise.dataUsed && Object.keys(exercise.dataUsed).length > 0) {
-            message += `*Дополнительные данные:* ${JSON.stringify(exercise.dataUsed)}\n`;
+            message += `*Дополнительные данные:* ${escapeMarkdownV2(JSON.stringify(exercise.dataUsed))}\n`;
         }
 
-        // Экранируем специальные символы для MarkdownV2
-        const escapedMessage = escapeMarkdownV2(message);
+        // Логирование сообщения для отладки
+        console.log('Сообщение для отправки администратору:', message);
 
         // Отправляем сообщение администратору
         const adminChatId = 327844310; // Telegram ID администратора
-        await bot.sendMessage(adminChatId, escapedMessage, {
+        await bot.sendMessage(adminChatId, message, {
             parse_mode: 'MarkdownV2',
             disable_web_page_preview: true,
         });
@@ -368,6 +422,44 @@ router.post('/admin/log-exercises', async (req: Request, res: Response) => {
     } catch (error: any) {
         console.error('Ошибка при отправке характеристики упражнения админу:', error.message);
         res.status(500).json({ message: 'Ошибка при отправке характеристики упражнения админу' });
+    }
+});
+
+/**
+ * Маршрут для отправки недельного (или любого другого) плана
+ * с полями userId, plan[] (массив дней).
+ */
+router.post('/send-detailed-plan', async (req: Request, res: Response) => {
+    const { userId, plan } = req.body;
+
+    // Валидация входных данных
+    if (!userId || !plan || !Array.isArray(plan)) {
+        return res
+            .status(400)
+            .json({ message: 'Нужно передать userId и plan (array of days).' });
+    }
+
+    try {
+        // Форматируем план в HTML
+        const formattedMessage = formatWeeklyWorkoutMessageHTML(plan);
+
+        // Логирование полученных данных
+        console.log('Полученный план тренировок:', plan);
+        console.log('Отформатированное сообщение для отправки:', formattedMessage);
+
+        // Отправляем сообщение пользователю
+        await bot.sendMessage(userId, formattedMessage, {
+            parse_mode: 'HTML',
+            disable_web_page_preview: true,
+        });
+
+        console.log(`План успешно отправлен пользователю: ${userId}`);
+        res.json({ message: 'План отправлен в Telegram.' });
+    } catch (error: any) {
+        console.error('Ошибка при отправке плана в Telegram:', error.message);
+        res
+            .status(500)
+            .json({ message: 'Ошибка при отправке плана в Telegram.', error: error.message });
     }
 });
 

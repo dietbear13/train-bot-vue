@@ -26,7 +26,11 @@ const bot = new TelegramBot(botToken, { polling: false });
 const app = express();
 const port = 3002;
 
-app.use(cors());
+app.use(cors({
+    origin: 'https://giveaway-bot.ru.tuna.am', // Замените на ваш источник
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Разрешенные методы
+    credentials: true // Если вы используете куки или авторизацию
+}));
 app.use(express.json());
 
 // Подключение к MongoDB

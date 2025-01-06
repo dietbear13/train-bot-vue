@@ -144,14 +144,13 @@
       <v-card-text class="ma-0">
         <!-- Если идёт загрузка - показываем рыбное содержимое -->
         <div v-if="isLoading" class="mb-2" style="text-align:center;">
-          <p>Генерируем тренировку...</p>
+          <p>Пересоздаю тренировку..</p>
           <v-progress-linear
               color="primary"
               indeterminate
               height="4"
               class="mt-3"
           ></v-progress-linear>
-          <p style="margin-top: 1rem;">[ Рыбное содержимое ]</p>
         </div>
 
         <!-- Если НЕ идёт загрузка - показываем реальный результат (7 дней) -->
@@ -274,7 +273,7 @@
         </div>
       </v-card-text>
 
-      <!-- Кнопка (рыбная) "Отправить себе" -->
+      <!-- Кнопка "Отправить себе" -->
       <div class="text-center mt-2">
         <v-btn
             color="primary"
@@ -742,7 +741,7 @@ export default defineComponent({
       // Из хука
       finalPlan,
       generateSplitPlan,
-      sendWorkoutPlan,
+      sendWorkoutPlan, // Используем sendWorkoutPlan вместо sendDetailedWorkoutPlan
 
       // Методы по работе с упражнениями (reps, remove, regenerate)
       increaseRepsSplit,
