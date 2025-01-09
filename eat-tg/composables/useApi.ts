@@ -7,8 +7,8 @@ import type { AxiosRequestConfig, Method } from 'axios';
  * Composable для выполнения API-запросов с переключением на резервный сервер при ошибке
  */
 export function useApi() {
-    const primaryBaseURL = 'https://fit-server-bot.ru.tuna.am/api/';
-    const fallbackBaseURL = 'http://localhost:3002/api/';
+    const primaryBaseURL = 'http://fitnesstgbot.ru/api/';
+    const fallbackBaseURL = 'http://localhost:3001/api/';
 
     /**
      * Функция для выполнения API-запросов с переключением на резервный сервер при ошибке

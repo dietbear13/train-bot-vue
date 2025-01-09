@@ -72,7 +72,7 @@ import axios from 'axios';
 const userStore = useUserStore();
 
 const channelLink = 'https://t.me/training_health';
-const primaryBaseURL = 'https://fit-server-bot.ru.tuna.am/api/';
+const primaryBaseURL = 'http://fitnesstgbot.ru/api/';
 
 const goToChannel = () => {
   window.open(channelLink, '_blank');

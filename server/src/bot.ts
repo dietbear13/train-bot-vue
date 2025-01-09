@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import TelegramBot, { InlineKeyboardMarkup } from 'node-telegram-bot-api';
+import TelegramBot, {InlineKeyboardMarkup} from 'node-telegram-bot-api';
 
 // Загрузка переменных окружения из .env файла
 dotenv.config();
@@ -16,7 +16,16 @@ if (!appUrl) {
 }
 
 // Инициализация бота с использованием polling
-const bot = new TelegramBot(botToken, { polling: true });
+const bot = new TelegramBot(botToken, {
+    polling: true,
+    request: {
+        url: botToken,
+        agentOptions:{
+            keepAlive: true,
+            family: 4
+        }
+    }
+});
 
 /**
  * Функция для создания кнопки Telegram Mini App

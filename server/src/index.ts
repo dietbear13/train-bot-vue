@@ -27,7 +27,7 @@ const app = express();
 const port = 3002;
 
 app.use(cors({
-    origin: 'https://giveaway-bot.ru.tuna.am', // Замените на ваш источник
+    origin: '*', // Замените на ваш источник
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Разрешенные методы
     credentials: true // Если вы используете куки или авторизацию
 }));
@@ -35,7 +35,7 @@ app.use(express.json());
 
 // Подключение к MongoDB
 mongoose
-    .connect('mongodb://localhost:27017/fitness-app', {} as mongoose.ConnectOptions)
+    .connect('mongodb://mongodb:27017/fitness-app', {} as mongoose.ConnectOptions)
     .then(() => {
         console.log('Connected to MongoDB');
     })
@@ -45,6 +45,9 @@ mongoose
 
 // Обратите внимание, что в самих файлах маршрутов пути начинаются без /api,
 // поэтому здесь указываем префикс /api там, где нужен.
+app.use('/api/log', (req,res)=>{console.log("req", req)
+res.send('OK')
+});
 app.use('/api', splitsRoutes);
 app.use('/api', botRoutes);
 app.use('/api', usersRoutes);

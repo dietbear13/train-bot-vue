@@ -1,4 +1,6 @@
-import { ref, onMounted } from 'vue'
+// useSplitGenerator.ts
+
+import { ref, onMounted, type Ref } from 'vue'
 import axios from 'axios'
 
 // Интерфейсы
@@ -36,12 +38,13 @@ interface GeneratedDay {
 }
 
 interface UseSplitGeneratorParams {
-    isLoading: any        // Ref<boolean>
-    isGenerating: any     // Ref<boolean>
-    showBottomSheet: any  // Ref<boolean>
-    errorMessages: any    // Ref<string[]>
+    isLoading: Ref<boolean>
+    isGenerating: Ref<boolean>
+    showBottomSheet: Ref<boolean>
+    errorMessages: Ref<string[]>
     showSnackbar: (msg: string, color?: string) => void
-    telegramUserId: any   // Ref<number|null>
+    telegramUserId: Ref<number | null>
+    selectedSplitRef: Ref<SplitItem | null> // Новый параметр
 }
 
 interface Exercise {
@@ -134,7 +137,7 @@ function tryFindExercise(
     repetitionLevel: string,
     genderStr: string,
     usedIds: Set<string>,
-    maxTries: number = 500
+    maxTries: number = 55
 ): { exercise: Exercise; reps: number; sets: number } | null {
     let attempt = 0
     while (attempt < maxTries) {
@@ -214,7 +217,7 @@ function generateExercisesFromPattern(
     gender: string,
     usedIdsInDay: Set<string>,
     allExercises: Exercise[],
-    maxTries: number = 500
+    maxTries: number = 55
 ): FoundExercise[] {
     const exList: FoundExercise[] = []
 
@@ -309,6 +312,7 @@ function generateExercisesFromPattern(
         })
 
         console.log(`Найдено упражнений по PA:`, matchingExercises)
+        console.log(`!!! maxTries:`, maxTries)
         if (matchingExercises.length === 0) {
             console.warn(`Нет упражнений для PA-критериев: "${cleanedCriteria}"`)
             exList.push({ _id: '', name: `Нет PA-упражнений для ${criteria}`, sets: 0, reps: 0, originalPattern: pattern })
@@ -377,7 +381,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
     // Функция для загрузки упражнений
     async function loadExercises() {
         try {
-            const baseURL = 'https://fit-server-bot.ru.tuna.am/api'
+            const baseURL = 'http://fitnesstgbot.ru/api'
             console.log(`Загрузка упражнений с URL: ${baseURL}/exercises`)
             const { data } = await axios.get<Exercise[]>(`${baseURL}/exercises`)
             exercises.value = Array.isArray(data) ? data : []
@@ -506,7 +510,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
         }
     }
 
-// Функция для отправки плана через Telegram
+    // Функция для отправки плана через Telegram
     async function sendWorkoutPlan() {
         if (!params.telegramUserId.value) {
             params.showSnackbar('Не указан Telegram ID.', 'error')
@@ -517,11 +521,14 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
         console.log('Отправляемый план тренировок:', finalPlan.value)
 
         try {
-            const baseURL = 'https://fit-server-bot.ru.tuna.am/api'
+            const baseURL = 'http://fitnesstgbot.ru/api'
             console.log(`Отправка плана тренировок на URL: ${baseURL}/send-detailed-plan`)
             await axios.post(`${baseURL}/send-detailed-plan`, {
                 userId: params.telegramUserId.value,
                 plan: finalPlan.value,
+                // Новые поля:
+                splitName: params.selectedSplitRef.value?.split || '',
+                splitComment: params.selectedSplitRef.value?.splitComment || ''
             })
             params.showSnackbar('Тренировка успешно отправлена!', 'success')
             console.log('Тренировка успешно отправлена пользователю:', params.telegramUserId.value)

@@ -1,4 +1,5 @@
 // routes/bot.ts
+
 import { Router, Request, Response } from 'express';
 import TelegramBot from 'node-telegram-bot-api';
 import User from '../models/User';
@@ -41,9 +42,22 @@ const escapeHTML = (text: string): string => {
 
 /**
  * Функция для форматирования недельного тренировочного плана в HTML-сообщение.
+ * Теперь принимает splitName и splitComment.
+ * **Исключает** из сообщения дни отдыха (где exercises пусты).
  */
-const formatWeeklyWorkoutMessageHTML = (plan: GeneratedDay[]): string => {
-    let message = `<b>Программа на неделю</b>\n\n`;
+const formatWeeklyWorkoutMessageHTML = (
+    plan: GeneratedDay[],
+    splitName: string,
+    splitComment?: string
+): string => {
+    let message = `<b>${escapeHTML(splitName)}</b>\n`;
+
+    // Добавляем splitComment, если он есть
+    if (splitComment && splitComment.trim() !== '') {
+        message += `<i>${escapeHTML(splitComment)}</i>\n\n`;
+    } else {
+        message += `\n`; // Добавляем пустую строку для разделения
+    }
 
     plan.forEach(day => {
         if (day.exercises && day.exercises.length > 0) {
@@ -53,6 +67,7 @@ const formatWeeklyWorkoutMessageHTML = (plan: GeneratedDay[]): string => {
             });
             message += `\n`;
         }
+        // **Исключаем** дни отдыха, то есть не добавляем их в сообщение
     });
 
     // Добавляем ссылки
@@ -205,106 +220,26 @@ router.post('/publish-post', async (req: Request, res: Response) => {
 });
 
 /**
- * Маршрут для получения информации о пользователе из Telegram API
- */
-router.post('/get-user-info', async (req: Request, res: Response) => {
-    const { telegramId } = req.body;
-
-    if (!telegramId) {
-        return res.status(400).json({ message: 'Необходимо указать telegramId' });
-    }
-
-    try {
-        const response = await fetch(`https://api.telegram.org/bot${botToken}/getChat`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: telegramId }),
-        });
-        const data = await response.json();
-
-        if (data.ok) {
-            res.json(data.result);
-        } else {
-            res.status(400).json({ message: data.description });
-        }
-    } catch (error: any) {
-        console.error('Ошибка при запросе к Telegram API:', error.message);
-        res.status(500).json({ message: 'Ошибка при запросе к Telegram API' });
-    }
-});
-
-/**
- * Маршрут для проверки подписки пользователя на канал и обновления его роли
- */
-router.post('/check-subscription', async (req: Request, res: Response) => {
-    const { telegramId } = req.body;
-
-    if (!telegramId) {
-        return res.status(400).json({ message: 'Необходимо указать telegramId' });
-    }
-
-    try {
-        const channelId = '@training_health';
-        const chatMember = await bot.getChatMember(channelId, telegramId);
-        const isSubscribed = ['member', 'administrator', 'creator'].includes(chatMember.status);
-
-        // Получаем пользователя из базы данных
-        const user = await User.findOne({ telegramId });
-
-        if (!user) {
-            return res.status(404).json({ message: 'Пользователь не найден' });
-        }
-
-        // Если пользователь является администратором, не изменяем его роль
-        if (user.role === 'admin') {
-            return res.json({
-                isSubscribed: true,
-                message: 'Пользователь является администратором, роль не изменена.'
-            });
-        }
-
-        if (isSubscribed) {
-            user.role = 'paidUser';
-            await user.save();
-            res.json({
-                isSubscribed: true,
-                message: 'Подписка подтверждена, роль пользователя обновлена.'
-            });
-        } else {
-            res.json({ isSubscribed: false, message: 'Пользователь не подписан на канал.' });
-        }
-    } catch (error: any) {
-        console.error('Ошибка при проверке подписки:', error.message);
-        res.status(500).json({ message: 'Ошибка при проверке подписки' });
-    }
-});
-
-/**
  * Функция для отправки тренировки пользователю
  */
 const sendWorkoutToUser = (
     chatId: number,
-    muscleGroup: string,
-    date: string,
-    workout: { name: string; sets: number; reps: number }[]
+    splitName: string,
+    splitComment: string | undefined,
+    plan: GeneratedDay[]
 ) => {
-    let message = `${muscleGroup}, тренировка (${date})\n\n`;
-    message += 'Генератор тренировок: https://t.me/freeload_top_bot\n';
-    message += 'Канал о тренировках и здоровье: https://t.me/training_health\n\n';
-    workout.forEach((exercise, index) => {
-        message += `${index + 1}\\. ${escapeMarkdownV2(exercise.name)} — ${exercise.sets}×${exercise.reps}\n`;
-    });
+    let message = formatWeeklyWorkoutMessageHTML(plan, splitName, splitComment);
 
     // Логирование для отладки
     console.log('Сообщение для отправки:', message);
 
     bot
         .sendMessage(chatId, message, {
-            parse_mode: 'MarkdownV2',
+            parse_mode: 'HTML',
             disable_web_page_preview: true,
         })
         .then(() => {
-            console.log(`Workout sent to user ${chatId}`);
+            console.log(`План тренировок отправлен пользователю ${chatId}`);
         })
         .catch((error) => {
             console.error('Error sending message to user:', error.response?.body || error.message);
@@ -313,20 +248,21 @@ const sendWorkoutToUser = (
 
 /**
  * Маршрут для отправки тренировки
+ * Теперь принимает splitName и splitComment
  */
 router.post('/send-workout', async (req: Request, res: Response) => {
-    const { userId, muscleGroup, date, workout } = req.body;
+    const { userId, splitName, splitComment, plan } = req.body;
 
-    if (!userId || !muscleGroup || !date || !workout) {
-        return res.status(400).json({ message: 'Необходимо указать userId, muscleGroup, date и workout' });
+    if (!userId || !splitName || !plan || !Array.isArray(plan)) {
+        return res.status(400).json({ message: 'Необходимо указать userId, splitName и plan (array of days).' });
     }
 
     try {
-        sendWorkoutToUser(userId, muscleGroup, date, workout);
+        sendWorkoutToUser(userId, splitName, splitComment, plan);
         res.json({ message: 'Тренировка отправлена в Telegram' });
     } catch (error: any) {
         console.error('Ошибка при отправке сообщения в Telegram:', error.message);
-        res.status(500).json({ message: 'Ошибка при отправке сообщения в Telegram' });
+        res.status(500).json({ message: 'Ошибка при отправке сообщения в Telegram', error: error.message });
     }
 });
 
@@ -427,21 +363,29 @@ router.post('/admin/log-exercises', async (req: Request, res: Response) => {
 
 /**
  * Маршрут для отправки недельного (или любого другого) плана
- * с полями userId, plan[] (массив дней).
+ * с полями userId, plan[] (массив дней), splitName и splitComment.
  */
 router.post('/send-detailed-plan', async (req: Request, res: Response) => {
-    const { userId, plan } = req.body;
+    const { userId, plan, splitName, splitComment } = req.body;
 
     // Валидация входных данных
     if (!userId || !plan || !Array.isArray(plan)) {
         return res
             .status(400)
-            .json({ message: 'Нужно передать userId и plan (array of days).' });
+            .json({ message: 'Нужно передать userId, plan (array of days), splitName и splitComment.' });
     }
 
+    // Валидация splitName
+    if (!splitName || typeof splitName !== 'string') {
+        return res.status(400).json({ message: 'Нужно передать splitName (строка).' });
+    }
+
+    // splitComment может быть опциональным
+    const validSplitComment = splitComment && typeof splitComment === 'string' ? splitComment : '';
+
     try {
-        // Форматируем план в HTML
-        const formattedMessage = formatWeeklyWorkoutMessageHTML(plan);
+        // Форматируем план в HTML с использованием splitName и splitComment
+        const formattedMessage = formatWeeklyWorkoutMessageHTML(plan, splitName, validSplitComment);
 
         // Логирование полученных данных
         console.log('Полученный план тренировок:', plan);

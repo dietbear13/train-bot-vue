@@ -280,8 +280,8 @@ interface KbzhuResult {
 }
 
 // Определение базовых URL-адресов
-const primaryBaseURL = 'https://fit-server-bot.ru.tuna.am/api/'
-const fallbackBaseURL = 'http://localhost:3002/api/'
+const primaryBaseURL = 'http://fitnesstgbot.ru/api/'
+const fallbackBaseURL = 'http://localhost:3001/api/'
 
 // Инициализация данных пользователя из Telegram
 const telegramUserId = ref<string | null>(null)

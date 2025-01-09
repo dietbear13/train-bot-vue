@@ -1,13 +1,9 @@
-import { Ref } from 'vue'
-
-// Если у вас есть общий файл types.ts, импортируйте из него (пример):
-// import type { Exercise, WorkoutResult, Pattern } from '~/composables/types'
-// Либо используйте локальные интерфейсы/типы, как ниже.
+import { type Ref } from 'vue'
 
 import type { Exercise, WorkoutResult, Pattern } from '~/components/training/TrainingByMuscles.vue'
 import axios, { type AxiosRequestConfig, type Method } from 'axios'
 
-const primaryBaseURL = 'https://fit-server-bot.ru.tuna.am/api/'
+const primaryBaseURL = 'http://fitnesstgbot.ru/api/'
 const fallbackBaseURL = 'http://localhost:3002/api/'
 
 // Функция для запросов с fallback
@@ -115,7 +111,7 @@ function tryFindExercise(
     repetitionLevel: string,
     genderStr: string,
     usedIds: Set<string>,
-    maxTries: number = 500
+    maxTries: number = 55
 ): { exercise: Exercise; reps: number; sets: number } | null {
     let attempt = 0
     while (attempt < maxTries) {
@@ -313,7 +309,7 @@ export default function useWorkoutGenerator(params: HookParams) {
                 patternExercise.repetitionLevel,
                 gender.value,
                 usedExerciseIds.value,
-                10
+                100
             )
 
             if (!found) {
@@ -425,7 +421,7 @@ export default function useWorkoutGenerator(params: HookParams) {
             patternExercise.repetitionLevel,
             gender.value,
             usedExerciseIds.value,
-            5
+            100
         )
         if (!found) {
             console.warn('Не удалось подобрать новое упражнение:', patternExercise)

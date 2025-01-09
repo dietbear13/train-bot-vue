@@ -1,3 +1,5 @@
+<!-- TrainingOnWeek.vue -->
+
 <template>
   <v-form @submit.prevent="generateSplitWorkout">
     <!-- Выбор пола -->
@@ -139,7 +141,7 @@
     <!-- BottomSheetWithClose для отображения результата -->
     <BottomSheetWithClose
         v-model="showBottomSheet"
-        title="Программа на неделю"
+        :title="selectedSplit ? `${selectedSplit.split} на неделю` : 'Программа на неделю'"
     >
       <v-card-text class="ma-0">
         <!-- Если идёт загрузка - показываем рыбное содержимое -->
@@ -155,6 +157,11 @@
 
         <!-- Если НЕ идёт загрузка - показываем реальный результат (7 дней) -->
         <div v-else>
+          <!-- Новая секция для комментария -->
+          <div v-if="selectedSplit?.splitComment" class="split-comment-area mb-3">
+            <strong>{{ selectedSplit.splitComment }}</strong>
+          </div>
+
           <!-- Кнопка для перегенерации всего сплита сразу, с уже выбранными параметрами -->
           <v-btn
               block
@@ -317,8 +324,8 @@ import useSplitGenerator from '~/composables/useSplitGenerator'
 import { useUserStore } from '~/stores/userStore' // Импорт Pinia Store
 
 /** Обёртка для запросов (fallback). */
-const primaryBaseURL = 'https://fit-server-bot.ru.tuna.am/api/'
-const fallbackBaseURL = 'http://localhost:3002/api/'
+const primaryBaseURL = 'http://fitnesstgbot.ru/api/'
+const fallbackBaseURL = 'http://localhost:3001/api/'
 
 const apiRequest = async <T>(
     method: Method,
@@ -495,14 +502,15 @@ export default defineComponent({
       finalPlan,
       generateSplitPlan,
       sendWorkoutPlan,
-      regenerateExercise, // <-- из хука
+      regenerateExercise,
     } = useSplitGenerator({
       isLoading,
       isGenerating,
       showBottomSheet,
       errorMessages,
       showSnackbar,
-      telegramUserId
+      telegramUserId,
+      selectedSplitRef: selectedSplit
     })
 
     // «Реальный» метод генерации (не меняем логику внутри)
@@ -885,7 +893,7 @@ export default defineComponent({
   gap: 8px;
 }
 
-/* Левый блок (минус, reps, плюс) */
+/* Левая часть (минус, reps, плюс) */
 .sets-reps-row {
   display: flex;
   align-items: center;
@@ -929,5 +937,12 @@ export default defineComponent({
   100% {
     transform: rotate(360deg);
   }
+}
+
+/* Новая стилизация для splitComment */
+.split-comment-area {
+  font-size: 1rem;
+  color: #ccc;
+  /* Добавьте дополнительные стили по желанию */
 }
 </style>

@@ -418,8 +418,8 @@ const topicHashtags: TopicHashtags = {
 };
 
 // Определение базовых URL-адресов
-const primaryBaseURL = 'https://fit-server-bot.ru.tuna.am/api';
-const fallbackBaseURL = 'http://localhost:3002/api';
+const primaryBaseURL = 'http://fitnesstgbot.ru/api';
+const fallbackBaseURL = 'http://localhost:3001/api';
 
 // Вычисляемые свойства
 const canSubmit = computed(() => {
