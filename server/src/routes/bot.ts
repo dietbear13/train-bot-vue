@@ -61,7 +61,7 @@ const formatWeeklyWorkoutMessageHTML = (
 
     plan.forEach(day => {
         if (day.exercises && day.exercises.length > 0) {
-            message += `<u>${escapeHTML(day.dayName)}:</u>\n`;
+            message += `<u>${escapeHTML(day.dayName)}</u>\n`;
             day.exercises.forEach((exercise, index) => {
                 message += `${index + 1}. ${escapeHTML(exercise.name)} — ${exercise.sets}×${exercise.reps}\n`;
             });
@@ -71,7 +71,7 @@ const formatWeeklyWorkoutMessageHTML = (
     });
 
     // Добавляем ссылки
-    message += `<a href="https://t.me/freeload_top_bot">Программы тренировок</a>\n`;
+    message += `<a href="https://t.me/freeload_top_bot">бот с тренировками</a>\n`;
     message += `<a href="https://t.me/training_health">тг-канал «кОчалка»</a>\n`;
 
     return message;
