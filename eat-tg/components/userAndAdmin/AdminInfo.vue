@@ -330,7 +330,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useUserStore } from '~/stores/userStore';
-import axios from 'axios';
+import { useApi } from '~/composables/useApi';
 
 // Интерфейсы
 interface Channel {
@@ -364,6 +364,8 @@ interface TelegramUserInfo {
   username?: string;
   // Добавьте другие поля, если необходимо
 }
+
+const { apiRequest } = useApi();
 
 // Реактивные переменные для первой вкладки (публикация поста)
 const activeTab = ref<number>(0);
@@ -417,10 +419,6 @@ const topicHashtags: TopicHashtags = {
   Питание: '#питание',
 };
 
-// Определение базовых URL-адресов
-const primaryBaseURL = 'http://fitnesstgbot.ru/api';
-const fallbackBaseURL = 'http://localhost:3001/api';
-
 // Вычисляемые свойства
 const canSubmit = computed(() => {
   return (
@@ -454,23 +452,15 @@ const checkBotAccess = async () => {
   }
 
   try {
-    // Сначала пытаемся проверить доступ через основной сервер
-    const response = await axios.post(`${primaryBaseURL}/check-bot-access`, {
+    // Проверяем доступ бота к каналу через API
+    const response = await apiRequest<{ hasAccess: boolean }>('post', 'check-bot-access', {
       channelId: selectedChannel.value,
     });
-    hasAccess.value = response.data.hasAccess;
-  } catch (error) {
-    console.error('Ошибка при проверке доступа бота через primaryBaseURL:', error);
-    try {
-      // Если не удалось, пробуем через локальный сервер
-      const response = await axios.post(`${fallbackBaseURL}/check-bot-access`, {
-        channelId: selectedChannel.value,
-      });
-      hasAccess.value = response.data.hasAccess;
-    } catch (fallbackError) {
-      console.error('Ошибка при проверке доступа бота через fallbackBaseURL:', fallbackError);
-      hasAccess.value = false;
-    }
+    hasAccess.value = response.hasAccess;
+  } catch (error: any) {
+    console.error('Ошибка при проверке доступа бота:', error);
+    hasAccess.value = false;
+    errorMessage.value = 'Не удалось проверить доступ бота к каналу.';
   }
 };
 
@@ -527,26 +517,17 @@ const submitPost = async () => {
       scheduledTime: publishNow.value ? null : new Date(scheduledTime.value).toISOString(),
     };
 
-    // Сначала пытаемся отправить данные на основной сервер
-    await axios.post(`${primaryBaseURL}/publish-post`, payload);
+    // Отправляем данные через API
+    await apiRequest('post', 'publish-post', payload);
 
     successMessage.value = 'Пост успешно опубликован!';
     errorMessage.value = '';
     // Сбрасываем форму
     resetForm();
   } catch (error: any) {
-    console.error('Ошибка при публикации поста через primaryBaseURL:', error);
-    try {
-      // Если не удалось, пробуем через локальный сервер
-      await axios.post(`${fallbackBaseURL}/publish-post`, payload);
-      successMessage.value = 'Пост успешно опубликован через локальный сервер!';
-      errorMessage.value = '';
-      resetForm();
-    } catch (fallbackError) {
-      console.error('Ошибка при публикации поста через fallbackBaseURL:', fallbackError);
-      errorMessage.value = 'Ошибка при публикации поста на серверах.';
-      successMessage.value = '';
-    }
+    console.error('Ошибка при публикации поста:', error);
+    errorMessage.value = 'Ошибка при публикации поста на серверах.';
+    successMessage.value = '';
   }
 };
 
@@ -562,22 +543,11 @@ const resetForm = () => {
 // Получаем доступные каналы (в которых бот является администратором)
 const fetchChannels = async () => {
   try {
-    console.log('Пытаемся получить каналы с primaryBaseURL');
-    const response = await axios.get(`${primaryBaseURL}/get-channels`);
-    console.log('Полученные каналы с primaryBaseURL:', response.data);
-    channels.value = response.data.channels;
-  } catch (error) {
-    console.error('Ошибка при получении каналов с primaryBaseURL:', error);
-    try {
-      console.log('Пытаемся получить каналы с fallbackBaseURL');
-      const response = await axios.get(`${fallbackBaseURL}/get-channels`);
-      console.log('Полученные каналы с fallbackBaseURL:', response.data);
-      channels.value = response.data.channels;
-    } catch (fallbackError) {
-      console.error('Ошибка при получении каналов с fallbackBaseURL:', fallbackError);
-      // Если оба запроса не удались, выводим сообщение об ошибке
-      errorMessage.value = 'Не удалось получить список каналов с серверов.';
-    }
+    const response = await apiRequest<{ channels: Channel[] }>('get', 'get-channels');
+    channels.value = response.channels;
+  } catch (error: any) {
+    console.error('Ошибка при получении каналов:', error);
+    errorMessage.value = 'Не удалось получить список каналов с серверов.';
   }
 };
 
@@ -586,13 +556,13 @@ const fetchChannels = async () => {
 // Функция для получения информации о пользователе из Telegram API через сервер
 const fetchUserInfo = async (userId: number): Promise<TelegramUserInfo> => {
   try {
-    const response = await axios.post(`${primaryBaseURL}/get-user-info`, {
+    const response = await apiRequest<TelegramUserInfo>('post', 'get-user-info', {
       telegramId: userId,
     });
 
-    if (response.data) {
-      console.log('Данные пользователя из Telegram API:', response.data);
-      return response.data;
+    if (response) {
+      console.log('Данные пользователя из Telegram API:', response);
+      return response;
     } else {
       console.error('Нет данных в ответе от Telegram API');
       return { first_name: 'Неизвестно', last_name: '', username: 'unknown' };
@@ -607,14 +577,14 @@ const fetchUsers = async () => {
   loading.value = true;
   userError.value = null;
   try {
-    const response = await axios.get(`${primaryBaseURL}/users`, {
+    const response = await apiRequest<{ users: User[] }>('get', 'users', null, {
       headers: {
-        Authorization: `Bearer ${import.meta.env.VITE_TELEGRAM_BOT_API_KEY}`, // Предполагается, что токен хранится в переменных окружения
+        Authorization: `Bearer ${import.meta.env.VITE_TELEGRAM_BOT_API_KEY}`,
       },
     });
-    users.value = response.data.users;
+    users.value = response.users;
     filteredUsers.value = users.value;
-  } catch (err) {
+  } catch (err: any) {
     console.error('Ошибка при загрузке пользователей:', err);
     userError.value = 'Не удалось загрузить пользователей.';
   } finally {

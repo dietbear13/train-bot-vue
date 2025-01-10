@@ -1,49 +1,6 @@
 import { type Ref } from 'vue'
 
 import type { Exercise, WorkoutResult, Pattern } from '~/components/training/TrainingByMuscles.vue'
-import axios, { type AxiosRequestConfig, type Method } from 'axios'
-
-const primaryBaseURL = 'http://fitnesstgbot.ru/api/'
-const fallbackBaseURL = 'http://localhost:3002/api/'
-
-// Функция для запросов с fallback
-const apiRequest = async <T>(
-    method: Method,
-    endpoint: string,
-    data?: any,
-    params?: any
-): Promise<T> => {
-    const config: AxiosRequestConfig = {
-        method,
-        url: primaryBaseURL + endpoint,
-        data,
-        params,
-        timeout: 5000
-    }
-    try {
-        const response = await axios(config)
-        return response.data
-    } catch (primaryError) {
-        console.warn(
-            `Основной сервер не доступен: ${primaryError}. Переключение на резервный сервер.`
-        )
-        // Пробуем резервный сервер
-        const fallbackConfig: AxiosRequestConfig = {
-            method,
-            url: fallbackBaseURL + endpoint,
-            data,
-            params,
-            timeout: 5000
-        }
-        try {
-            const response = await axios(fallbackConfig)
-            return response.data
-        } catch (fallbackError) {
-            console.error(`Резервный сервер также не доступен: ${fallbackError}`)
-            throw fallbackError
-        }
-    }
-}
 
 // Вспомогательные функции
 function getSets(reps: number): number {

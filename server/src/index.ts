@@ -35,7 +35,9 @@ app.use(express.json());
 
 // Подключение к MongoDB
 mongoose
-    .connect('mongodb://mongodb:27017/fitness-app', {} as mongoose.ConnectOptions)
+    .connect('mongodb://localhost:27017/fitness-app', {} as mongoose.ConnectOptions)
+    // На прод строка ниже
+    // .connect('mongodb://mongodb:27017/fitness-app', {} as mongoose.ConnectOptions)
     .then(() => {
         console.log('Connected to MongoDB');
     })

@@ -7,59 +7,13 @@
 <script setup lang="ts">
 import { onMounted } from 'vue';
 import { useUserStore } from '~/stores/userStore';
-import axios, { type Method } from 'axios';
+import { useApi } from '~/composables/useApi';
 
-const config = useRuntimeConfig();
-const apiBaseURL = config.public.apiBaseUrl;
 
 const ensureTrailingSlash = (url: string) =>
     url.endsWith('/') ? url : `${url}/`;
 
-const primaryBaseURL = 'http://fitnesstgbot.ru/api/';
-const fallbackBaseURL = 'http://localhost:3001/api/';
-
-const apiRequest = async <T>(
-    method: Method,
-    endpoint: string,
-    data?: any,
-    params?: any
-): Promise<T> => {
-  const axiosInstance = axios.create({
-    baseURL: primaryBaseURL,
-    timeout: 5000,
-  });
-
-  try {
-    console.log(
-        `Отправка запроса: ${method.toUpperCase()} ${primaryBaseURL}${endpoint}`,
-        { data, params }
-    );
-    const response = await axiosInstance.request<T>({
-      method,
-      url: endpoint,
-      data,
-      params,
-    });
-    console.log('Ответ от основного сервера:', response.data);
-    return response.data;
-  } catch (primaryError) {
-    console.warn(
-        `Основной сервер недоступен: ${primaryError}. Переключение на резервный сервер.`
-    );
-    const fallbackInstance = axios.create({
-      baseURL: fallbackBaseURL,
-      timeout: 5000,
-    });
-    const response = await fallbackInstance.request<T>({
-      method,
-      url: endpoint,
-      data,
-      params,
-    });
-    console.log('Ответ от резервного сервера:', response.data);
-    return response.data;
-  }
-};
+const { apiRequest } = useApi();
 
 interface TelegramUserData {
   id: number;

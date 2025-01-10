@@ -1,17 +1,31 @@
-// composables/useApi.ts
+// ~/composables/useApi.ts
+import axios, { AxiosInstance, AxiosRequestConfig, Method } from 'axios'
 
-import axios from 'axios';
-import type { AxiosRequestConfig, Method } from 'axios';
+// Базовые URL для основных и резервных серверов
+const primaryBaseURL = 'https://fit-server-bot.ru.tuna.am/api/'
+const fallbackBaseURL = 'http://localhost:3002/api/'
+// const primaryBaseURL = 'https://fitnesstgbot.ru/api/'
+
+// Создаём экземпляр Axios с основным базовым URL
+const axiosInstance: AxiosInstance = axios.create({
+    baseURL: primaryBaseURL,
+    timeout: 5000,
+})
+
 
 /**
- * Composable для выполнения API-запросов с переключением на резервный сервер при ошибке
+ * Composable useApi для управления API-запросами.
  */
 export function useApi() {
-    const primaryBaseURL = 'http://fitnesstgbot.ru/api/';
-    const fallbackBaseURL = 'http://localhost:3001/api/';
-
     /**
-     * Функция для выполнения API-запросов с переключением на резервный сервер при ошибке
+     * Функция для отправки API-запросов.
+     *
+     * @template T - Тип данных, которые ожидаются в ответе.
+     * @param method - HTTP-метод запроса (GET, POST, и т.д.).
+     * @param endpoint - Конечная точка API (например, 'exercises').
+     * @param data - Данные для отправки в теле запроса (для методов POST, PUT и т.д.).
+     * @param params - Параметры запроса (для методов GET).
+     * @returns Promise с данными типа T.
      */
     const apiRequest = async <T>(
         method: Method,
@@ -21,37 +35,21 @@ export function useApi() {
     ): Promise<T> => {
         const config: AxiosRequestConfig = {
             method,
-            url: primaryBaseURL + endpoint,
+            url: endpoint,
             data,
             params,
-            timeout: 30000,
-        };
+        }
 
         try {
-            const response = await axios(config);
-            return response.data;
-        } catch (primaryError) {
-            console.warn(
-                `Основной сервер не доступен: ${primaryError}. Переключение на резервный сервер.`
-            );
-            const fallbackConfig: AxiosRequestConfig = {
-                method,
-                url: fallbackBaseURL + endpoint,
-                data,
-                params,
-                timeout: 5000,
-            };
-            try {
-                const response = await axios(fallbackConfig);
-                return response.data;
-            } catch (fallbackError) {
-                console.error(`Резервный сервер тоже недоступен: ${fallbackError}`);
-                throw fallbackError;
-            }
+            const response = await axiosInstance(config)
+            return response.data
+        } catch (error) {
+            console.error(`Ошибка при запросе к ${endpoint}:`, error)
+            throw error
         }
-    };
+    }
 
     return {
         apiRequest,
-    };
+    }
 }

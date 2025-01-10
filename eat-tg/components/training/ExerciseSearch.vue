@@ -20,10 +20,25 @@
       </v-btn>
     </div>
 
+    <!-- Фиксированная кнопка открытия BottomSheet -->
+    <v-btn
+        icon
+        @click="toggleWorkoutSheet"
+        variant="tonal"
+        class="sticky-workout-btn"
+        elevation="2"
+    >
+      <v-badge :content="workoutResults.length" color="primary" overlap>
+        <template #badge>
+          <span v-if="workoutResults.length > 0">{{ workoutResults.length }}</span>
+        </template>
+        <v-icon size="28">mdi-dumbbell</v-icon>
+      </v-badge>
+    </v-btn>
+
     <!-- Список упражнений или индикатор загрузки -->
     <v-card class="ma-0 dark-background pa-2" variant="tonal">
       <template v-if="isLoading">
-        <!-- Пока данные грузятся, показываем skeleton loader -->
         <v-skeleton-loader
             type="list-item"
             class="my-2"
@@ -32,7 +47,6 @@
         />
       </template>
       <template v-else>
-        <!-- Если данные загружены, отображаем максимум 50 упражнений -->
         <v-list-item
             v-for="exercise in displayedExercises"
             :key="exercise._id"
@@ -59,7 +73,29 @@
               </v-btn>
             </div>
 
-            <!-- Кнопка информации об упражнении через ExerciseInfo.vue -->
+            <!-- Кнопка добавления в тренировку -->
+            <v-tooltip bottom>
+              <template #activator="{ on, attrs }">
+                <v-btn
+                    icon
+                    variant="plain"
+                    v-bind="attrs"
+                    v-on="on"
+                    @click="addToWorkout(exercise)"
+                >
+                  <!-- Показываем "mdi-plus" или "mdi-check" на 1 сек после добавления -->
+                  <v-icon color="green" v-if="!justAdded[exercise._id]">
+                    mdi-plus
+                  </v-icon>
+                  <v-icon color="green" v-else>
+                    mdi-check
+                  </v-icon>
+                </v-btn>
+              </template>
+              <span>Добавить в тренировку</span>
+            </v-tooltip>
+
+            <!-- Кнопка информации об упражнении -->
             <v-tooltip bottom>
               <template #activator="slotProps">
                 <v-btn
@@ -82,16 +118,15 @@
       </template>
     </v-card>
 
-    <!-- Использование компонента ExerciseInfo -->
+    <!-- Компонент ExerciseInfo -->
     <ExerciseInfo
         :exercise="selectedExercise"
         v-model="showExerciseInfo"
     />
 
     <!-- Диалог добавления упражнения -->
-    <v-dialog v-model="showAddExerciseDialog" max-width="600px">
+    <v-dialog v-model="showAddExerciseDialog">
       <v-card>
-        <!-- Обновлённый заголовок с кнопкой закрытия -->
         <v-card-title class="d-flex justify-between align-center">
           <span class="headline">Добавить упражнение</span>
           <v-btn icon @click="closeAddExerciseDialog" aria-label="Закрыть">
@@ -105,66 +140,65 @@
               label="Название упражнения"
               v-model="newExercise.name"
               required
-          ></v-text-field>
+          />
           <v-text-field
               hide-details="auto"
               variant="solo-filled"
               label="Подгруппа"
               v-model="newExercise.subcategory"
               required
-          ></v-text-field>
+          />
           <v-text-field
               hide-details="auto"
               variant="solo-filled"
               label="Основная мышца"
               v-model="newExercise.mainMuscle"
               required
-          ></v-text-field>
+          />
           <v-text-field
               hide-details="auto"
               variant="solo-filled"
               label="Дополнительные мышцы"
               v-model="newExercise.additionalMuscles"
-          ></v-text-field>
+          />
           <v-text-field
               hide-details="auto"
               variant="solo-filled"
               label="Тип упражнения"
               v-model="newExercise.typeExercise"
-          ></v-text-field>
+          />
           <v-text-field
               hide-details="auto"
               variant="solo-filled"
               label="Оборудование"
               v-model="newExercise.equipment"
               required
-          ></v-text-field>
+          />
           <v-checkbox
               hide-details="auto"
               label="Предупреждение по GIF"
               v-model="newExercise.isWarnGif"
-          ></v-checkbox>
+          />
           <v-textarea
               hide-details="auto"
               label="Техника выполнения"
               v-model="newExercise.technique"
-          ></v-textarea>
+          />
           <v-checkbox
               hide-details="auto"
               label="При проблемах со спиной"
               v-model="newExercise.spineRestrictions"
-          ></v-checkbox>
+          />
           <v-checkbox
               hide-details="auto"
               label="При проблемах с коленями"
               v-model="newExercise.kneeRestrictions"
-          ></v-checkbox>
+          />
           <v-checkbox
               hide-details="auto"
               label="При проблемах с плечами"
               v-model="newExercise.shoulderRestrictions"
-          ></v-checkbox>
-          <!-- Добавьте другие поля по необходимости -->
+          />
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -175,9 +209,8 @@
     </v-dialog>
 
     <!-- Диалог редактирования упражнения -->
-    <v-dialog v-model="showEditExerciseDialog" max-width="600px">
+    <v-dialog v-model="showEditExerciseDialog">
       <v-card>
-        <!-- Обновлённый заголовок с кнопкой закрытия -->
         <v-card-title class="d-flex justify-between align-center">
           <span class="headline">Редактировать упражнение</span>
           <v-btn icon @click="closeEditExerciseDialog" aria-label="Закрыть">
@@ -185,7 +218,6 @@
           </v-btn>
         </v-card-title>
         <v-card-text>
-          <!-- Скрытое поле для _id -->
           <input type="hidden" v-model="editExerciseData._id" />
 
           <v-text-field
@@ -194,67 +226,66 @@
               label="Название упражнения"
               v-model="editExerciseData.name"
               required
-          ></v-text-field>
+          />
           <v-text-field
               hide-details="auto"
               variant="solo-filled"
               label="Подгруппа"
               v-model="editExerciseData.subcategory"
               required
-          ></v-text-field>
+          />
           <v-text-field
               hide-details="auto"
               variant="solo-filled"
               label="Основная мышца"
               v-model="editExerciseData.mainMuscle"
               required
-          ></v-text-field>
+          />
           <v-text-field
               hide-details="auto"
               variant="solo-filled"
               label="Дополнительные мышцы"
               v-model="editExerciseData.additionalMuscles"
-          ></v-text-field>
+          />
           <v-text-field
               hide-details="auto"
               variant="solo-filled"
               label="Тип упражнения"
               v-model="editExerciseData.typeExercise"
-          ></v-text-field>
+          />
           <v-text-field
               hide-details="auto"
               variant="solo-filled"
               label="Оборудование"
               v-model="editExerciseData.equipment"
               required
-          ></v-text-field>
+          />
           <v-checkbox
               hide-details="auto"
               label="Предупреждение по GIF"
               v-model="editExerciseData.isWarnGif"
-          ></v-checkbox>
+          />
           <v-textarea
               hide-details="auto"
               variant="solo-filled"
               label="Техника выполнения"
               v-model="editExerciseData.technique"
-          ></v-textarea>
+          />
           <v-checkbox
               hide-details="auto"
               label="При проблемах со спиной"
               v-model="editExerciseData.spineRestrictions"
-          ></v-checkbox>
+          />
           <v-checkbox
               hide-details="auto"
               label="При проблемах с коленями"
               v-model="editExerciseData.kneeRestrictions"
-          ></v-checkbox>
+          />
           <v-checkbox
               hide-details="auto"
               label="При проблемах с плечами"
               v-model="editExerciseData.shoulderRestrictions"
-          ></v-checkbox>
-          <!-- Добавьте другие поля по необходимости -->
+          />
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -265,9 +296,8 @@
     </v-dialog>
 
     <!-- Диалог подтверждения удаления -->
-    <v-dialog v-model="showDeleteConfirmDialog" max-width="500px">
+    <v-dialog v-model="showDeleteConfirmDialog">
       <v-card>
-        <!-- Обновлённый заголовок с кнопкой закрытия -->
         <v-card-title class="d-flex justify-between align-center">
           <span class="headline">Подтверждение удаления</span>
           <v-btn icon @click="closeDeleteConfirmDialog" aria-label="Закрыть">
@@ -285,387 +315,490 @@
       </v-card>
     </v-dialog>
 
-    <!-- v-bottom-sheet с информацией об упражнении и GIF -->
-    <!-- Поскольку вы уже используете компонент ExerciseInfo.vue для отображения информации, можно удалить этот нижний лист или оставить его для других целей -->
-    <!-- Если он используется для другого функционала, добавьте кнопку закрытия аналогично -->
-    <!--
-    <v-bottom-sheet v-model="showExerciseInfo" max-width="600px">
-      ...
-    </v-bottom-sheet>
-    -->
+    <!-- BottomSheetWithClose для тренировки -->
+    <BottomSheetWithClose
+        v-model="showWorkoutSheet"
+        title="Моя тренировка"
+    >
+      <v-data-table
+          :items="workoutResults"
+          class="rounded-bottom-sheet fixed-table-layout"
+          hide-default-header
+          hide-default-footer
+      >
+        <draggable
+            tag="tbody"
+            v-model="workoutResults"
+            handle=".drag-handle"
+            animation="200"
+            item-key="_id"
+            @end="onWorkoutReorder"
+        >
+          <template #item="{ element, index }">
+            <tr class="pa-2">
+              <td class="action-handle">
+                <div class="drag-handle" style="display: flex; align-items: center;">
+                  <v-icon class="mr-1">mdi-shuffle-variant</v-icon>
+                </div>
+              </td>
+              <td class="drag-handle" style="padding: 0 4px;">
+                {{ formatExerciseName(element.name) }}
+              </td>
+
+              <!-- Колонка sets × reps -->
+              <td class="fixed-width sets-reps-column" style="padding: 0 4px;">
+                <div class="sets-reps-container">
+                  <v-btn
+                      icon
+                      @click="decreaseReps(index)"
+                      variant="plain"
+                      class="mx-0"
+                      size="24px"
+                      color="#db5856"
+                  >
+                    <v-icon small>mdi-minus</v-icon>
+                  </v-btn>
+                  <span class="sets-reps-text">
+                    {{ element.sets }} × {{ element.reps }}
+                  </span>
+                  <v-btn
+                      icon
+                      size="24px"
+                      color="#77dd77"
+                      @click="increaseReps(index)"
+                      variant="plain"
+                      class="mx-0"
+                  >
+                    <v-icon small>mdi-plus</v-icon>
+                  </v-btn>
+                </div>
+              </td>
+
+              <!-- Кнопки "обновить" и "удалить" -->
+              <td class="fixed-width action-column" style="padding: 0 4px;">
+                <div style="display: flex; flex-direction: column; align-items: center;">
+                  <v-btn
+                      icon
+                      @click="removeExercise(index)"
+                      variant="plain"
+                      size="24px"
+                      color="#db5856"
+                      class="my-1"
+                  >
+                    <v-icon>mdi-delete</v-icon>
+                  </v-btn>
+                </div>
+              </td>
+            </tr>
+          </template>
+        </draggable>
+      </v-data-table>
+
+      <!-- Кнопка "Отправить себе" -->
+      <div class="text-center mt-3 mb-2">
+        <v-btn
+            color="primary"
+            rounded="lg"
+            @click="sendWorkout"
+            :disabled="!telegramUserId"
+        >
+          <v-icon left>mdi-send</v-icon>
+          Отправить себе
+        </v-btn>
+      </div>
+    </BottomSheetWithClose>
   </div>
 </template>
 
-
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted } from 'vue';
-import axios from 'axios';
-import type { AxiosRequestConfig, Method } from 'axios';
 import { useUserStore } from '~/stores/userStore';
 import { useExerciseFilter } from '~/composables/useExerciseFilter';
-import type { Exercise } from '~/composables/types'; // Импорт типа отдельно
-import ExerciseInfo from '~/components/training/ExerciseInfo.vue'; // Импортируем компонент
+import type { Exercise } from '~/composables/types';
+import ExerciseInfo from '~/components/training/ExerciseInfo.vue';
+import { useApi } from '~/composables/useApi';
+import draggable from 'vuedraggable';
+import BottomSheetWithClose from '~/components/shared/BottomSheetWithClose.vue';
+
+interface WorkoutItem extends Exercise {
+  sets: number;
+  reps: number;
+}
 
 export default defineComponent({
   name: 'ExerciseSearch',
   components: {
-    ExerciseInfo
+    ExerciseInfo,
+    draggable,
+    BottomSheetWithClose,
   },
   setup() {
-    const primaryBaseURL = 'http://fitnesstgbot.ru/api/';
-    const fallbackBaseURL = 'http://localhost:3001/api/';
+    const { apiRequest } = useApi();
 
-    /**
-     * Функция для выполнения API-запросов с переключением на резервный сервер при ошибке
-     */
-    const apiRequest = async <T>(
-        method: Method,
-        endpoint: string,
-        data?: any,
-        params?: any
-    ): Promise<T> => {
-      const config: AxiosRequestConfig = {
-        method,
-        url: primaryBaseURL + endpoint,
-        data,
-        params,
-        timeout: 30000,
-      };
-
-      try {
-        const response = await axios(config);
-        return response.data;
-      } catch (primaryError) {
-        console.warn(
-            `Основной сервер не доступен: ${primaryError}. Переключение на резервный сервер.`
-        );
-        const fallbackConfig: AxiosRequestConfig = {
-          method,
-          url: fallbackBaseURL + endpoint,
-          data,
-          params,
-          timeout: 5000,
-        };
-        try {
-          const response = await axios(fallbackConfig);
-          return response.data;
-        } catch (fallbackError) {
-          console.error(`Резервный сервер тоже недоступен: ${fallbackError}`);
-          throw fallbackError;
-        }
-      }
-    };
+    // Массив возможных повторений
+    const repScale = [3,4,5,6,8,10,12,15,20,24,30,45,60,75,90,105,120];
 
     const exercises = ref<Exercise[]>([]);
     const searchQuery = ref('');
     const isLoading = ref(true);
 
+    // Для Telegram отправки
+    const telegramUserId = ref<number | null>(null);
+
     const userStore = useUserStore();
     const isAdmin = computed(() => userStore.role === 'admin');
 
-    // Используем композиционный хук для фильтрации упражнений
+    // Хук для фильтрации
     const { filteredExercises, displayedExercises } = useExerciseFilter(
         exercises,
         searchQuery
     );
 
-    // Переменные для управления отображением карточки и её содержимого
+    // Состояние модалок
     const showExerciseInfo = ref(false);
     const selectedExercise = ref<Exercise | null>(null);
-
-    // Дополнительная переменная, чтобы гифка подгружалась только при открытии
     const showExerciseGif = ref(false);
 
-    // Переменные для добавления/редактирования упражнения
     const showAddExerciseDialog = ref(false);
     const newExercise = ref<Partial<Exercise>>({});
-
     const showEditExerciseDialog = ref(false);
     const editExerciseData = ref<Partial<Exercise>>({});
 
-    // Диалог удаления
     const showDeleteConfirmDialog = ref(false);
     const exerciseToDelete = ref<Exercise | null>(null);
 
-    /**
-     * Функция для получения полного URL GIF
-     */
-    const getGifUrl = (gifPath: string): string => {
-      // Убедитесь, что gifPath начинается с '/'
-      if (gifPath.startsWith('/')) {
-        return gifPath;
-      } else {
-        return '/' + gifPath;
+    // -----------------------------
+    // Массив «текущей тренировки»
+    // -----------------------------
+    const workoutResults = ref<WorkoutItem[]>([]);
+
+    // Открытие/закрытие BottomSheet
+    const showWorkoutSheet = ref(false);
+
+    // Для эффекта "mdi-check"
+    const justAdded = ref<Record<string, boolean>>({});
+
+    // -----------------------------
+    // Отправить себе
+    // -----------------------------
+    const sendWorkout = async () => {
+      if (!telegramUserId.value || !workoutResults.value.length) {
+        alert('Нет Telegram ID или пустая тренировка.');
+        return;
+      }
+      try {
+        const payload = {
+          userId: telegramUserId.value,
+          workout: workoutResults.value,
+        };
+        await apiRequest('post', 'send-workout', payload);
+        alert('Тренировка отправлена!');
+      } catch (error: any) {
+        console.error('Ошибка при отправке:', error);
+        alert('Не удалось отправить тренировку. Попробуйте позже.');
       }
     };
 
-    /**
-     * Функция для загрузки упражнений из API
-     */
+    // -----------------------------
+    // Добавление упражнения
+    // sets и reps по умолчанию
+    // reps = 10 (по условию)
+    // -----------------------------
+    const addToWorkout = (exercise: Exercise) => {
+      // Проверяем, нет ли упражнения
+      if (workoutResults.value.find(e => e._id === exercise._id)) return;
+
+      // По умолчанию reps = 10
+      const defaultReps = 10;
+      // sets рассчитываем согласно условию
+      // - меньше 5 => 5
+      // - если 6 или 8 => 4
+      // - иначе => 3
+      let sets = 3;
+      if (defaultReps < 5) {
+        sets = 5;
+      } else if (defaultReps === 6 || defaultReps === 8) {
+        sets = 4;
+      }
+      // (иначе 3)
+
+      const newItem: WorkoutItem = {
+        ...exercise,
+        sets,
+        reps: defaultReps,
+      };
+      workoutResults.value.push(newItem);
+
+      // Мигаем чекбоксом
+      justAdded.value[exercise._id] = true;
+      setTimeout(() => {
+        justAdded.value[exercise._id] = false;
+      }, 1000);
+    };
+
+    // Удаление по индексу
+    const removeExercise = (index: number) => {
+      workoutResults.value.splice(index, 1);
+    };
+
+    // Переключение BottomSheet
+    const toggleWorkoutSheet = () => {
+      showWorkoutSheet.value = !showWorkoutSheet.value;
+    };
+
+    // При окончании перетаскивания
+    const onWorkoutReorder = () => {
+      // Можно что-то сделать
+    };
+
+    // -----------------------------
+    // Логика +/− повторений
+    // -----------------------------
+    const increaseReps = (index: number) => {
+      const currentReps = workoutResults.value[index].reps;
+      const i = repScale.indexOf(currentReps);
+      if (i !== -1 && i < repScale.length - 1) {
+        const newReps = repScale[i + 1];
+        workoutResults.value[index].reps = newReps;
+        workoutResults.value[index].sets = calcSets(newReps);
+      }
+    };
+
+    const decreaseReps = (index: number) => {
+      const currentReps = workoutResults.value[index].reps;
+      const i = repScale.indexOf(currentReps);
+      if (i !== -1 && i > 0) {
+        const newReps = repScale[i - 1];
+        workoutResults.value[index].reps = newReps;
+        workoutResults.value[index].sets = calcSets(newReps);
+      }
+    };
+
+    // Функция для расчёта sets
+    const calcSets = (reps: number): number => {
+      if (reps < 5) return 5;
+      if (reps === 6 || reps === 8) return 4;
+      return 3;
+    };
+
+    // Рандомная регенерация (случайные reps из repScale)
+    // + пересчитываем sets
+    const regenerateExercise = (index: number) => {
+      const rndIndex = Math.floor(Math.random() * repScale.length);
+      const newReps = repScale[rndIndex];
+      workoutResults.value[index].reps = newReps;
+      workoutResults.value[index].sets = calcSets(newReps);
+    };
+
+    // ----------------------------------
+    // CRUD
+    // ----------------------------------
     const loadExercises = async () => {
       try {
         const data = await apiRequest<Exercise[]>('get', 'exercises');
         exercises.value = data;
       } catch (error: any) {
-        console.error('Ошибка при загрузке упражнений:', error.message);
-        alert('Не удалось загрузить упражнения. Попробуйте позже.');
+        console.error('Ошибка:', error.message);
+        alert('Не удалось загрузить. Попробуйте позже.');
       } finally {
         isLoading.value = false;
       }
     };
 
-    /**
-     * Обработчик ввода в поисковую строку
-     */
     const onSearchInput = () => {
-      // Дополнительная логика при вводе, если необходимо
+      // Логика при вводе
     };
 
-    /**
-     * Открытие информации об упражнении (ленивая загрузка GIF)
-     */
     const openExerciseInfo = (exercise: Exercise) => {
       selectedExercise.value = exercise;
       showExerciseInfo.value = true;
-
-      // Загружаем GIF только при открытии
-      if (exercise.gifImage) {
-        showExerciseGif.value = true;
-      }
+      if (exercise.gifImage) showExerciseGif.value = true;
     };
 
-    /**
-     * Закрытие информации об упражнении: сбрасываем showExerciseGif
-     */
     const closeExerciseInfo = () => {
       showExerciseInfo.value = false;
       showExerciseGif.value = false;
     };
 
-    /**
-     * Открытие диалога добавления упражнения
-     */
     const openAddExerciseDialog = () => {
       newExercise.value = {};
       showAddExerciseDialog.value = true;
     };
 
-    /**
-     * Закрытие диалога добавления упражнения
-     */
     const closeAddExerciseDialog = () => {
       showAddExerciseDialog.value = false;
     };
 
-    /**
-     * Добавление нового упражнения
-     */
     const addExercise = async () => {
       try {
-        // Валидация данных (опционально)
         if (
             !newExercise.value.name ||
             !newExercise.value.subcategory ||
             !newExercise.value.mainMuscle ||
             !newExercise.value.equipment
         ) {
-          alert('Пожалуйста, заполните все обязательные поля.');
+          alert('Заполните обязательные поля.');
           return;
         }
-
-        // Создаём новое упражнение через API
         const response = await apiRequest<Exercise>('post', 'exercises', newExercise.value);
-        exercises.value.push(response); // Добавляем новое упражнение в список
+        exercises.value.push(response);
         closeAddExerciseDialog();
-        alert('Упражнение успешно добавлено.');
+        alert('Добавлено.');
       } catch (error: any) {
-        console.error('Ошибка при добавлении упражнения:', error.message);
-        alert('Не удалось добавить упражнение. Попробуйте снова.');
+        console.error('Ошибка при добавлении:', error.message);
+        alert('Не удалось добавить.');
       }
     };
 
-    /**
-     * Открытие диалога редактирования упражнения
-     */
     const editExercise = (exercise: Exercise) => {
-      console.log('Редактирование упражнения:', exercise);
       editExerciseData.value = { ...exercise };
       showEditExerciseDialog.value = true;
     };
 
-    /**
-     * Закрытие диалога редактирования упражнения
-     */
     const closeEditExerciseDialog = () => {
       showEditExerciseDialog.value = false;
       editExerciseData.value = {};
     };
 
-    /**
-     * Сохранение изменений упражнения
-     */
     const saveExercise = async () => {
       try {
-        // Валидация данных (опционально)
         if (
             !editExerciseData.value.name ||
             !editExerciseData.value.subcategory ||
             !editExerciseData.value.mainMuscle ||
             !editExerciseData.value.equipment
         ) {
-          alert('Пожалуйста, заполните все обязательные поля.');
+          alert('Заполните обязательные поля.');
           return;
         }
-
         if (!editExerciseData.value._id) {
-          throw new Error('Идентификатор упражнения отсутствует.');
+          throw new Error('Нет _id упражнения.');
         }
-
-        console.log('Сохранение упражнения:', editExerciseData.value);
-
-        // Обновляем упражнение через API
-        const updatedExercise = await apiRequest<Exercise>(
+        const updated = await apiRequest<Exercise>(
             'put',
             `exercises/${editExerciseData.value._id}`,
             editExerciseData.value
         );
-
-        console.log('Упражнение обновлено на сервере:', updatedExercise);
-
-        // Обновляем упражнение в локальном списке
-        const index = exercises.value.findIndex(
-            (ex) => ex._id === editExerciseData.value._id
-        );
-        if (index !== -1) {
-          exercises.value[index] = { ...(exercises.value[index]), ...updatedExercise };
-          console.log('Упражнение обновлено локально:', exercises.value[index]);
+        const idx = exercises.value.findIndex(ex => ex._id === editExerciseData.value?._id);
+        if (idx !== -1) {
+          exercises.value[idx] = { ...exercises.value[idx], ...updated };
         }
-
         closeEditExerciseDialog();
-        alert('Упражнение успешно сохранено.');
+        alert('Сохранено.');
       } catch (error: any) {
-        console.error('Ошибка при сохранении упражнения:', error.message);
-        alert('Не удалось сохранить изменения. Попробуйте снова.');
+        console.error('Ошибка:', error.message);
+        alert('Не удалось сохранить.');
       }
     };
 
-    /**
-     * Открытие диалога подтверждения удаления упражнения
-     */
     const confirmDeleteExercise = (exercise: Exercise) => {
       exerciseToDelete.value = exercise;
       showDeleteConfirmDialog.value = true;
     };
 
-    /**
-     * Отмена удаления упражнения
-     */
     const cancelDelete = () => {
       exerciseToDelete.value = null;
       showDeleteConfirmDialog.value = false;
     };
 
-    /**
-     * Удаление упражнения
-     */
     const deleteExercise = async () => {
       if (!exerciseToDelete.value) return;
-
       try {
         await apiRequest('delete', `exercises/${exerciseToDelete.value._id}`);
-        // Удаляем упражнение из локального списка
-        exercises.value = exercises.value.filter(
-            (ex) => ex._id !== exerciseToDelete.value?._id
-        );
+        exercises.value = exercises.value.filter(ex => ex._id !== exerciseToDelete.value?._id);
         showDeleteConfirmDialog.value = false;
         exerciseToDelete.value = null;
-        alert('Упражнение успешно удалено.');
+        alert('Удалено.');
       } catch (error: any) {
-        console.error('Ошибка при удалении упражнения:', error.message);
-        alert('Не удалось удалить упражнение. Попробуйте снова.');
+        console.error('Ошибка при удалении:', error.message);
+        alert('Не удалось удалить.');
       }
     };
 
-    /**
-     * Закрытие диалога подтверждения удаления
-     */
     const closeDeleteConfirmDialog = () => {
       showDeleteConfirmDialog.value = false;
       exerciseToDelete.value = null;
     };
 
-    /**
-     * Загрузка упражнений при монтировании
-     */
     onMounted(() => {
+      // При желании можно получить Telegram ID из других источников
+      // telegramUserId.value = 123456;
       loadExercises();
     });
 
-    /**
-     * Метод для форматирования названия упражнения
-     * Делает первый символ заглавным, остальные остаются без изменений
-     */
     const formatExerciseName = (rawName: string): string => {
       if (!rawName) return '';
       return rawName.charAt(0).toUpperCase() + rawName.slice(1);
     };
 
     return {
+      // Основное
       searchQuery,
+      isLoading,
+      displayedExercises,
       onSearchInput,
-      showExerciseInfo,
-      selectedExercise,
-      // Методы для открытия и закрытия информации об упражнении
-      openExerciseInfo,
-      closeExerciseInfo,
-      // Флаг для отображения GIF
-      showExerciseGif,
+      formatExerciseName,
+
+      // Admin
       isAdmin,
-      // Методы и переменные для добавления упражнения
-      showAddExerciseDialog,
       openAddExerciseDialog,
+      showAddExerciseDialog,
       closeAddExerciseDialog,
       newExercise,
       addExercise,
-      // Методы и переменные для редактирования упражнения
+
       showEditExerciseDialog,
       editExerciseData,
+      editExercise,
       closeEditExerciseDialog,
       saveExercise,
-      // Методы и переменные для удаления упражнения
-      confirmDeleteExercise,
+
       showDeleteConfirmDialog,
       exerciseToDelete,
+      confirmDeleteExercise,
       cancelDelete,
       deleteExercise,
-      // Переменные состояния
-      isLoading,
-      displayedExercises,
-      editExercise,
-      getGifUrl,
+      closeDeleteConfirmDialog,
 
-      /**
-       * Метод для форматирования названия упражнения
-       */
-      formatExerciseName
+      // Info
+      showExerciseInfo,
+      selectedExercise,
+      showExerciseGif,
+      openExerciseInfo,
+      closeExerciseInfo,
+
+      // Workout
+      workoutResults,
+      showWorkoutSheet,
+      justAdded,
+
+      addToWorkout,
+      removeExercise,
+      toggleWorkoutSheet,
+      onWorkoutReorder,
+      repScale, // Можно если нужно где-то показать
+      increaseReps,
+      decreaseReps,
+      regenerateExercise,
+      calcSets,
+
+      // Отправка
+      telegramUserId,
+      sendWorkout
     };
   },
 });
 </script>
 
-
 <style scoped>
 .exercise-title {
-  white-space: normal; /* Разрешаем перенос текста */
-  word-break: break-word; /* Перенос слов при необходимости */
-  overflow-wrap: break-word; /* Перенос длинных слов */
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .dark-background {
   background-color: #f5f5f5;
-}
-
-.exercise-item {
 }
 
 .v-list {
@@ -678,11 +811,6 @@ export default defineComponent({
 
 .v-list-item-title {
   font-weight: bold;
-}
-
-.v-list-item-subtitle {
-  font-size: 0.875rem;
-  color: gray;
 }
 
 .v-divider {
@@ -711,54 +839,77 @@ export default defineComponent({
   margin: 16px 0;
 }
 
-.label-col {
-  font-size: 0.8rem;
-  color: gray;
+/* Кнопка справа (под строкой поиска) */
+.sticky-workout-btn {
+  position: fixed;
+  right: 16px;
+  top: 180px;
+  z-index: 9;
+  border-radius: 16px !important;
+}
+
+/* Для таблицы в BottomSheet */
+.rounded-bottom-sheet {
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  overflow: hidden;
+}
+
+.fixed-table-layout {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.sets-reps-column {
+  width: 116px;
   text-align: right;
 }
 
-.value-col {
-  font-size: 1rem;
-  font-weight: bold;
-  text-align: left;
-}
-
-.headline {
-  font-size: 1.2rem;
-  font-weight: bold;
-}
-
-.v-card-title {
-  padding-bottom: 8px;
-}
-
-.v-card-actions {
-  justify-content: flex-end;
-  padding-bottom: 16px;
-}
-
-.overlay-box {
-  position: absolute;
-  top: 0;
-  left: 0;
-  margin-left: 6px;
-  border-radius: 16px;
-  width: 114px;
-  height: 47px;
-  background-color: white;
-  z-index: 2; /* Чтобы элемент был поверх GIF */
-}
-
-.gif-container {
-  position: relative; /* Устанавливаем контейнер для управления вложенными элементами */
+.action-column {
+  width: 60px;
+  max-width: 60px;
   text-align: center;
-  margin-top: 20px;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
-.exercise-gif {
-  max-width: 100%;
-  height: auto;
-  border-radius: 16px;
-  z-index: 1; /* GIF должен быть под белым блоком */
+.action-handle {
+  width: 40px;
+  text-align: center;
 }
+
+.sets-reps-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sets-reps-container .v-btn {
+  min-width: 24px;
+  width: 24px;
+  height: 24px;
+  margin: 0 4px;
+}
+
+.v-btn {
+  border-radius: 14px;
+}
+
+.sets-reps-text {
+  font-weight: bold;
+  min-width: 60px;
+  text-align: center;
+  color: #ececec;
+  background-color: #444;
+  border-radius: 14px;
+  padding: 2px 6px;
+  margin: 0 4px;
+  box-shadow: inset 0 0 3px rgba(0,0,0,0.5);
+}
+
+/* При перетаскивании */
+.dragging {
+  opacity: 0.5;
+}
+
 </style>

@@ -46,7 +46,7 @@
               cols="12"
               sm="6"
               md="4"
-              class="px-2 py-1"
+              class="px-1 pt-1"
           >
             <v-btn
                 block
@@ -63,20 +63,20 @@
       </v-card-text>
     </v-card>
 
-    <!-- Выбор конкретного сплита -->
+    <!-- Выбор конкретного сплита с v-radio -->
     <v-card
         v-if="splitsToShow.length > 0"
         class="my-2 dark-background pa-2 splits"
         variant="tonal"
     >
-      <v-card-text class="pa-1">
-        <v-row>
+      <v-card-text class="pa-0">
+        <v-row class="pa-1">
           <v-col
               v-for="split in splitsToShow"
               :key="split._id"
               cols="12"
               sm="6"
-              style="border-radius: 14px"
+              class="py-2"
           >
             <v-card
                 @click="selectSplit(split)"
@@ -84,7 +84,21 @@
                 outlined
                 class="split-card"
             >
-              <v-card-text v-if="split.splitComment">{{ split.splitComment }}</v-card-text>
+              <v-card-text class="split-card-content">
+                <!-- Контейнер для v-radio с минимальной шириной -->
+                <div class="radio-container">
+                  <v-radio
+                      v-model="selectedSplitId"
+                      :value="split._id"
+                      class="split-radio"
+                      hide-details
+                  ></v-radio>
+                </div>
+                <!-- Контент сплита -->
+                <div class="split-content">
+                  <v-card-text v-if="split.splitComment">{{ split.splitComment }}</v-card-text>
+                </div>
+              </v-card-text>
             </v-card>
           </v-col>
         </v-row>
@@ -102,13 +116,14 @@
       </v-card-text>
     </v-card>
 
-    <!-- Кнопка "Сгенерировать" (с анимацией при загрузке) -->
+    <!-- Кнопка "Сгенерировать" (спрятая до выбора всех параметров) -->
     <v-btn
+        v-if="selectedSplit"
         color="success"
         class="mt-1"
         rounded="lg"
         width="100%"
-        :disabled="isGenerating || !selectedSplit"
+        :disabled="isGenerating"
         @click="generateSplitWorkout"
     >
       <!-- При загрузке: "Создаю..", иначе: "Создать" -->
@@ -191,9 +206,12 @@
                   class="mx-2"
                   size="24px"
                   @click="refreshDayExercises(idx)"
+                  :disabled="refreshingDays[idx]"
                   color="primary"
               >
-                <v-icon>mdi-refresh</v-icon>
+                <v-icon :class="{ rotatingDumbbell: refreshingDays[idx] }">
+                  mdi-refresh
+                </v-icon>
               </v-btn>
             </h3>
 
@@ -315,60 +333,13 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, onMounted } from 'vue'
-import axios, { type AxiosRequestConfig, type Method } from 'axios'
+import { defineComponent, ref, computed, onMounted, watch } from 'vue'
 import { retrieveLaunchParams } from '@telegram-apps/sdk'
 import BottomSheetWithClose from '~/components/shared/BottomSheetWithClose.vue'
-import AdminExerciseButton from '~/components/userAndAdmin/AdminExerciseButton.vue' // Импорт нового компонента
+import AdminExerciseButton from '~/components/userAndAdmin/AdminExerciseButton.vue'
 import useSplitGenerator from '~/composables/useSplitGenerator'
-import { useUserStore } from '~/stores/userStore' // Импорт Pinia Store
-
-/** Обёртка для запросов (fallback). */
-const primaryBaseURL = 'http://fitnesstgbot.ru/api/'
-const fallbackBaseURL = 'http://localhost:3001/api/'
-
-const apiRequest = async <T>(
-    method: Method,
-    endpoint: string,
-    data?: any,
-    params?: any
-): Promise<T> => {
-  const config: AxiosRequestConfig = {
-    method,
-    url: primaryBaseURL + endpoint,
-    data,
-    params,
-    timeout: 5000,
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  }
-  try {
-    const response = await axios(config)
-    return response.data
-  } catch (primaryError) {
-    console.warn(
-        `Основной сервер не доступен: ${primaryError}. Переключение на резервный сервер.`
-    )
-    const fallbackConfig: AxiosRequestConfig = {
-      method,
-      url: fallbackBaseURL + endpoint,
-      data,
-      params,
-      timeout: 5000,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    }
-    try {
-      const response = await axios(fallbackConfig)
-      return response.data
-    } catch (fallbackError) {
-      console.error(`Резервный сервер также не доступен: ${fallbackError}`)
-      throw fallbackError
-    }
-  }
-}
+import { useUserStore } from '~/stores/userStore'
+import { useApi } from '~/composables/useApi'
 
 // Типы
 interface SnackbarState {
@@ -403,6 +374,7 @@ export default defineComponent({
   components: { BottomSheetWithClose, AdminExerciseButton },
   setup() {
     const userStore = useUserStore()
+    const { apiRequest } = useApi()
 
     // Пол / сплиты
     const genders = ['Мужчина', 'Женщина']
@@ -410,11 +382,15 @@ export default defineComponent({
     const allSplits = ref<SplitItem[]>([])
     const selectedSplit = ref<SplitItem | null>(null)
 
+    // Новое состояние для выбранного split по ID
+    const selectedSplitId = ref<string | null>(null)
+
     // Состояние
     const isLoading = ref(false)     // Показывает анимацию иконки и плейсхолдер
     const isGenerating = ref(false)  // Флаг из хука, не меняем
     const showBottomSheet = ref(false)
     const errorMessages = ref<string[]>([])
+    const refreshingDays = ref<Record<number, boolean>>({})
 
     // Snackbar
     const snackbar = ref<SnackbarState>({
@@ -475,6 +451,7 @@ export default defineComponent({
       gender.value = option
       selectedSplitType.value = null
       selectedSplit.value = null
+      selectedSplitId.value = null // Сбрасываем выбранный split ID
       console.log('Выбран пол:', option)
     }
 
@@ -482,20 +459,34 @@ export default defineComponent({
     const selectSplitType = (type: string) => {
       selectedSplitType.value = type
       selectedSplit.value = null
+      selectedSplitId.value = null // Сбрасываем выбранный split ID
       console.log('Выбран тип сплита:', type)
     }
 
-    // Выбор конкретного сплита
+    // Выбор конкретного сплита через ID
     const selectSplit = (split: { _id: string, split: string, splitComment?: string }) => {
-      const chosenSplit = availableSplits.value.find(s => s._id === split._id)
-      if (chosenSplit) {
-        selectedSplit.value = chosenSplit
-        console.log('Выбран сплит:', chosenSplit)
-      } else {
-        console.warn(`Сплит с _id=${split._id} не найден.`)
-        showSnackbar('Сплит не найден.', 'error')
-      }
+      selectedSplitId.value = split._id
+      console.log('Выбран сплит:', split)
     }
+
+    // Watcher для обновления selectedSplit при изменении selectedSplitId
+    watch(selectedSplitId, (newId) => {
+      const split = availableSplits.value.find(s => s._id === newId)
+      if (split) {
+        selectedSplit.value = split
+        console.log('selectedSplit обновлён:', split)
+      } else {
+        selectedSplit.value = null
+        console.warn(`Сплит с _id=${newId} не найден.`)
+      }
+    })
+
+    // Watcher для инициализации selectedSplitId при изменении splitsToShow
+    watch(splitsToShow, (newSplits) => {
+      if (newSplits.length > 0 && !selectedSplitId.value) {
+        selectedSplitId.value = newSplits[0]._id
+      }
+    })
 
     // Подключаем хук
     const {
@@ -602,13 +593,25 @@ export default defineComponent({
     }
 
     // Добавляем кнопку обновления для всего дня (шаг №2)
-    const refreshDayExercises = (dayIndex: number) => {
-      // Проходим по всем упражнениям дня и регенерируем
+    const refreshDayExercises = async (dayIndex: number) => {
       if (!finalPlan.value[dayIndex]) return
-      finalPlan.value[dayIndex].exercises.forEach((_, exIndex) => {
-        regenerateExercise(dayIndex, exIndex, gender.value)
-      })
+
+      // Устанавливаем состояние загрузки для данного дня
+      refreshingDays.value[dayIndex] = true
+
+      // Добавляем задержку 0,6 секунды перед выполнением кода
+      await new Promise((resolve) => setTimeout(resolve, 600))
+
+      // Проходим по всем упражнениям дня и регенерируем их
+      for (let exIndex = 0; exIndex < finalPlan.value[dayIndex].exercises.length; exIndex++) {
+        await regenerateExercise(dayIndex, exIndex, gender.value)
+        console.log(`Упражнение #${exIndex} в дне #${dayIndex + 1} перегенерировано.`)
+      }
+
       console.log(`Все упражнения дня #${dayIndex + 1} перегенерированы.`)
+
+      // Сбрасываем состояние загрузки для данного дня
+      refreshingDays.value[dayIndex] = false
     }
 
     // Добавляем кнопку перегенерации всего сплита (шаг №3)
@@ -679,11 +682,7 @@ export default defineComponent({
       console.log('Отправляемые данные:', requestData)
 
       try {
-        const response = await axios.post(`${primaryBaseURL}admin/log-exercises`, requestData, {
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        })
+        const response = await apiRequest('post', 'admin/log-exercises', requestData)
 
         showSnackbar('Сообщение успешно отправлено!', 'success')
         console.log(`Сообщение "${exercise.name}" успешно отправлено админу. Ответ:`, response.data)
@@ -720,6 +719,9 @@ export default defineComponent({
       selectedSplitType,
       splitsToShow,
 
+      // Новое состояние для выбранного split по ID
+      selectedSplitId,
+
       // Флаги
       isLoading,
       isGenerating,
@@ -737,12 +739,15 @@ export default defineComponent({
       selectSplitType,
       selectSplit,
 
+      // Watchers
+      // (Определены выше)
+
       // Метод-обёртка (с задержкой)
       generateSplitWorkout,
 
       // «Реальный» метод (не вызывается из шаблона напрямую)
       realGenerateSplitWorkout,
-
+      refreshingDays,
       // Вспомогательный метод
       dayName,
 
@@ -789,6 +794,8 @@ export default defineComponent({
 .split-card {
   cursor: pointer;
   transition: background-color 0.3s, border 0.3s;
+  border-radius: 14px;
+  padding: 0;
 }
 
 .split-card:hover {
@@ -806,7 +813,6 @@ export default defineComponent({
 }
 
 .split-card .v-card-text {
-  font-style: italic;
   color: #ccc;
 }
 
@@ -913,7 +919,7 @@ export default defineComponent({
   box-shadow: inset 0 0 3px rgba(0,0,0,0.5);
 }
 
-/* Правый блок (refresh / delete / admin button) — по вертикали */
+/* Правая часть (refresh / delete / admin button) — по вертикали */
 .vertical-buttons {
   display: flex;
   flex-direction: column;
@@ -927,7 +933,21 @@ export default defineComponent({
 }
 
 .splits {
-  border-radius: 14px
+  border-radius: 14px;
+}
+
+/* Контент внутри split-card с v-radio */
+.split-card-content {
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+
+/* Новая стилизация для splitComment */
+.split-comment-area {
+  font-size: 1rem;
+  color: #ccc;
+  /* Добавьте дополнительные стили по желанию */
 }
 
 @keyframes rotate-dumbbell {
@@ -939,10 +959,35 @@ export default defineComponent({
   }
 }
 
-/* Новая стилизация для splitComment */
-.split-comment-area {
-  font-size: 1rem;
-  color: #ccc;
-  /* Добавьте дополнительные стили по желанию */
+/* Контейнер для радио-кнопки, занимает минимальное пространство */
+.radio-container {
+  flex: 0 0 auto; /* Не растягивается */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
+/* Стилизация самой радио-кнопки */
+.split-radio {
+  padding: 0; /* Убираем дополнительное пространство вокруг радио */
+}
+
+/* Контент сплита заполняет оставшуюся ширину */
+.split-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Опционально: уменьшение размеров текста и отступов для компактности */
+.split-content .v-card-title {
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.split-content .v-card-text {
+  font-size: 0.9rem;
+  color: #ccc;
+}
+
 </style>

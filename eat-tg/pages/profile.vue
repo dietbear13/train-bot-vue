@@ -67,12 +67,12 @@
 import { ref } from 'vue';
 import { useUserStore } from '~/stores/userStore';
 import AdminInfo from '~/components/userAndAdmin/AdminInfo.vue';
-import axios from 'axios';
+import { useApi } from '~/composables/useApi';
 
 const userStore = useUserStore();
+const { apiRequest } = useApi();
 
 const channelLink = 'https://t.me/training_health';
-const primaryBaseURL = 'http://fitnesstgbot.ru/api/';
 
 const goToChannel = () => {
   window.open(channelLink, '_blank');
@@ -103,7 +103,7 @@ const checkSubscription = async () => {
     }
 
     // Остальная логика проверки подписки для других ролей
-    const response = await axios.post(`${primaryBaseURL}check-subscription`, {
+    const response = await apiRequest('post', 'check-subscription', {
       telegramId: userStore.telegramId,
     });
 

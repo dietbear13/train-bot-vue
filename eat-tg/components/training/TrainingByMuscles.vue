@@ -96,27 +96,24 @@
       </v-card>
     </template>
 
-    <!-- Кнопка для генерации тренировки -->
-    <v-btn
-        :disabled="isGenerating || false"
-        @click="generateWorkout"
-        color="success"
-        class="mt-1"
-        rounded="lg"
-        width="100%"
-    >
-      <!-- Иконка, которая при загрузке вращается -->
-      <span v-if="isLoading">Создаю.. </span>
-      <span v-else>Создать </span>
-      <v-icon right :class="{ rotatingDumbbell: isLoading }">
-        mdi-dumbbell
-      </v-icon>
-    </v-btn>
-
-    <!-- Информационное сообщение -->
-    <p class="mt-2 ml-2" style="color: #858585">
-      Данные не хранятся и не используются.
-    </p>
+    <!-- Кнопка для генерации тренировки или сообщение -->
+    <template v-if="gender && muscleGroup && muscleSubgroup">
+      <v-btn
+          :disabled="isGenerating || false"
+          @click="generateWorkout"
+          color="success"
+          class="mt-1"
+          rounded="lg"
+          width="100%"
+      >
+        <!-- Иконка, которая при загрузке вращается -->
+        <span v-if="isLoading">Создаю.. </span>
+        <span v-else>Создать </span>
+        <v-icon right :class="{ rotatingDumbbell: isLoading }">
+          mdi-dumbbell
+        </v-icon>
+      </v-btn>
+    </template>
 
     <!-- Сообщение об ошибке -->
     <v-alert
@@ -311,12 +308,12 @@
 
 <script lang="ts">
 import { defineComponent, ref, onMounted } from 'vue'
-import axios, { type AxiosRequestConfig, type Method } from 'axios'
 import draggable from 'vuedraggable'
 import { retrieveLaunchParams } from '@telegram-apps/sdk'
 import AddExercise from './AddExercise.vue'
 import BottomSheetWithClose from '~/components/shared/BottomSheetWithClose.vue'
 import useWorkoutGenerator from '~/composables/useWorkoutGenerator'
+import { useApi } from '~/composables/useApi' // Импортируем apiRequest
 
 // --- Интерфейсы ---
 interface RepetitionLevels {
@@ -386,48 +383,6 @@ interface SnackbarState {
   timeout?: number
 }
 
-// Функция для запросов с fallback
-const primaryBaseURL = 'http://fitnesstgbot.ru/api/'
-const fallbackBaseURL = 'http://localhost:3001/api/'
-
-const apiRequest = async <T>(
-    method: Method,
-    endpoint: string,
-    data?: any,
-    params?: any
-): Promise<T> => {
-  const config: AxiosRequestConfig = {
-    method,
-    url: primaryBaseURL + endpoint,
-    data,
-    params,
-    timeout: 5000
-  }
-  try {
-    const response = await axios(config)
-    return response.data
-  } catch (primaryError) {
-    console.warn(
-        `Основной сервер не доступен: ${primaryError}. Переключение на резервный сервер.`
-    )
-    // Пробуем резервный сервер
-    const fallbackConfig: AxiosRequestConfig = {
-      method,
-      url: fallbackBaseURL + endpoint,
-      data,
-      params,
-      timeout: 5000
-    }
-    try {
-      const response = await axios(fallbackConfig)
-      return response.data
-    } catch (fallbackError) {
-      console.error(`Резервный сервер также не доступен: ${fallbackError}`)
-      throw fallbackError
-    }
-  }
-}
-
 export default defineComponent({
   name: 'TrainingByMuscles',
   components: {
@@ -440,7 +395,7 @@ export default defineComponent({
     const userData = ref<TelegramUserData | null>(null)
     const telegramUserId = ref<number | null>(null)
     const initData = ref<any>(null)
-
+    const { apiRequest } = useApi()
     const gender = ref<string>('')             // Пол
     const muscleGroup = ref<string>('')        // Основная группа
     const muscleSubgroup = ref<string>('')     // Подгруппа
@@ -709,7 +664,7 @@ export default defineComponent({
       const loadTime = 2000 + Math.random() * 500
       await new Promise((resolve) => setTimeout(resolve, loadTime))
 
-      realGenerateWorkout()
+      await realGenerateWorkout()
 
       // 4) Прячем "загрузку"
       isLoading.value = false

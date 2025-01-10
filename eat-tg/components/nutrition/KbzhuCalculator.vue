@@ -163,7 +163,6 @@
       </v-card-text>
     </v-card>
 
-
     <!-- Кнопка расчёта -->
     <v-btn
         :disabled="isAnimating || isGenerating"
@@ -235,20 +234,45 @@
         </div>
       </v-card-text>
     </BottomSheetWithClose>
+
+    <!-- Кнопка для тестирования КБЖУ, доступна только админам -->
+    <v-btn
+        v-if="isAdmin"
+        color="secondary"
+        @click="toggleTestComponent"
+        class="my-2"
+        rounded="lg"
+        width="100%"
+    >
+      <v-icon left>mdi-test-tube</v-icon>
+      Тестировать КБЖУ
+    </v-btn>
+
+    <!-- Компонент для тестирования КБЖУ -->
+    <KbzhuCalculatorTest
+        v-if="showTestComponent"
+        @close="toggleTestComponent"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
-import axios from 'axios';
 import { retrieveLaunchParams } from "@telegram-apps/sdk";
 import Chart from 'chart.js/auto';
+import { useApi } from '~/composables/useApi'
 
 // Импортируем наш хук
-import { useKbzhu } from '~~/composables/useKbzhu'; // подставьте нужный путь
+import { useKbzhu } from '~/composables/useKbzhu'; // подставьте нужный путь
 
 // Импортируем компонент BottomSheetWithClose
 import BottomSheetWithClose from '../shared/BottomSheetWithClose.vue'; // Убедитесь в корректности пути
+
+// Импортируем компонент для тестирования
+import KbzhuCalculatorTest from './KbzhuCalculatorTest.vue'; // Убедитесь в корректности пути
+
+// Импортируем Pinia стор
+import { useUserStore } from '@/stores/userStore' // Убедитесь в корректности пути
 
 // Интерфейсы для типов данных
 interface FormData {
@@ -279,10 +303,6 @@ interface KbzhuResult {
   carbs: number
 }
 
-// Определение базовых URL-адресов
-const primaryBaseURL = 'http://fitnesstgbot.ru/api/'
-const fallbackBaseURL = 'http://localhost:3001/api/'
-
 // Инициализация данных пользователя из Telegram
 const telegramUserId = ref<string | null>(null)
 
@@ -303,6 +323,8 @@ const goals: StringOption[] = [
   { text: 'Удержание', value: 'удержание' },
   { text: 'Набор', value: 'набор' },
 ]
+
+const { apiRequest } = useApi()
 
 const workoutsLabels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 
@@ -417,6 +439,15 @@ watch(errorMessages, (newErrors) => {
   }
 });
 
+// Подключаем Pinia стор
+const userStore = useUserStore()
+
+// Вычисляемое свойство: является ли пользователь админом
+const isAdmin = computed(() => userStore.role === 'admin')
+
+// Состояние для отображения тестового компонента
+const showTestComponent = ref(false)
+
 // Запрашиваем данные Telegram при монтировании
 onMounted(() => {
   if (process.client) {
@@ -440,7 +471,7 @@ onMounted(() => {
 // Новый ref для анимации имитации генерации
 const isAnimating = ref(false)
 
-// Эта функция теперь сначала имитирует генерацию, а затем вызывает реальную логику
+// Эта функция сначала имитирует генерацию, а затем вызывает реальную логику
 const onCalculate = async () => {
   console.log('Вызов onCalculate с formData:', JSON.stringify(formData, null, 2));
   isAnimating.value = true
@@ -546,7 +577,7 @@ const sendKbzhuResult = async () => {
   console.log('Отправка результатов для Telegram ID:', telegramUserId.value, 'kbzhuResult:', kbzhuResult.value);
 
   try {
-    await axios.post(`${primaryBaseURL}send-kbzhu`, {
+    await apiRequest('post', 'send-kbzhu', {
       userId: telegramUserId.value,
       kbzhuResult: kbzhuResult.value
     })
@@ -556,6 +587,11 @@ const sendKbzhuResult = async () => {
     console.error('Ошибка при отправке результатов:', error)
     errorMessages.value.push('Не удалось отправить результаты. Попробуйте позже.')
   }
+}
+
+// Функция для переключения видимости тестового компонента
+const toggleTestComponent = () => {
+  showTestComponent.value = !showTestComponent.value
 }
 </script>
 

@@ -1,7 +1,7 @@
-// useSplitGenerator.ts
+// ~/composables/useSplitGenerator.ts
 
 import { ref, onMounted, type Ref } from 'vue'
-import axios from 'axios'
+import { useApi } from '~/composables/useApi'
 
 // Интерфейсы
 interface FoundExercise {
@@ -374,16 +374,15 @@ function dayName(index: number): string {
 
 export default function useSplitGenerator(params: UseSplitGeneratorParams) {
     const finalPlan = ref<GeneratedDay[]>([]) // 7 дней, exercises: FoundExercise[]
-
+    const { apiRequest } = useApi()
     // Загружаем упражнения из API
     const exercises = ref<Exercise[]>([])
 
     // Функция для загрузки упражнений
     async function loadExercises() {
         try {
-            const baseURL = 'http://fitnesstgbot.ru/api'
-            console.log(`Загрузка упражнений с URL: ${baseURL}/exercises`)
-            const { data } = await axios.get<Exercise[]>(`${baseURL}/exercises`)
+            console.log('Загрузка упражнений (через useApi)')
+            const data = await apiRequest<Exercise[]>('get', 'exercises')
             exercises.value = Array.isArray(data) ? data : []
             console.log('Загружены упражнения:', exercises.value)
         } catch (err: any) {
@@ -475,7 +474,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
                             gender,
                             usedIdsInDay,
                             exercises.value,
-                            5
+                            255
                         )
                         exList.push(...generated)
                     }
@@ -521,12 +520,10 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
         console.log('Отправляемый план тренировок:', finalPlan.value)
 
         try {
-            const baseURL = 'http://fitnesstgbot.ru/api'
-            console.log(`Отправка плана тренировок на URL: ${baseURL}/send-detailed-plan`)
-            await axios.post(`${baseURL}/send-detailed-plan`, {
+            console.log('Отправка плана тренировок (через useApi)')
+            await apiRequest('post', 'send-detailed-plan', {
                 userId: params.telegramUserId.value,
                 plan: finalPlan.value,
-                // Новые поля:
                 splitName: params.selectedSplitRef.value?.split || '',
                 splitComment: params.selectedSplitRef.value?.splitComment || ''
             })
@@ -584,7 +581,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
             gender,
             usedIdsInDay,
             exercises.value,
-            10
+            255
         )
 
         if (newExList.length > 0) {
@@ -623,7 +620,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
                 gender,
                 usedIdsInDay,
                 exercises.value,
-                5
+                255
             )
             exList.push(...generated)
         }

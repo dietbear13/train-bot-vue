@@ -132,14 +132,14 @@ export function useKbzhu() {
             // Коэффициенты для белков и жиров в зависимости от пола и телосложения
             const proteinFatCoefficients: Record<string, Record<string, { protein: number; fat: number }>> = {
                 'мужчина': {
-                    'худощавое': { protein: 1.8, fat: 1.05 },
+                    'худощавое': { protein: 1.9, fat: 1.03 },
                     'среднее': { protein: 2.0, fat: 1.0 },
-                    'плотное': { protein: 2.2, fat: 0.95 },
+                    'плотное': { protein: 2.1, fat: 0.97 },
                 },
                 'женщина': {
-                    'худощавое': { protein: 1.6, fat: 1.15 },
-                    'среднее': { protein: 1.7, fat: 1.1 },
-                    'плотное': { protein: 1.9, fat: 1.05 },
+                    'худощавое': { protein: 1.7, fat: 1.13 },
+                    'среднее': { protein: 1.8, fat: 1.1 },
+                    'плотное': { protein: 1.9, fat: 1.07 },
                 },
             }
 
