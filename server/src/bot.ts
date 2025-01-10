@@ -27,6 +27,7 @@ const bot = new TelegramBot(botToken, {
     }
 });
 
+console.log('Бот запущен')
 /**
  * Функция для создания кнопки Telegram Mini App
  * @param text Текст кнопки

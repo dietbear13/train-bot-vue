@@ -394,12 +394,37 @@
         </draggable>
       </v-data-table>
 
+      <!-- Диалог для ввода названия и комментария сплита -->
+      <v-dialog v-model="showSendWorkoutDialog">
+        <v-card>
+          <v-card-title class="headline">Отправить тренировку</v-card-title>
+          <v-card-text>
+            <v-text-field
+                label="Название тренировки"
+                v-model="sendWorkoutData.splitName"
+                required
+                variant="plain"
+            ></v-text-field>
+            <v-textarea
+                label="Описание и комментарии к тренировке"
+                v-model="sendWorkoutData.splitComment"
+                variant="plain"
+            ></v-textarea>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer></v-spacer>
+            <v-btn text @click="closeSendWorkoutDialog">Вернуться к упражнениям</v-btn>
+            <v-btn color="primary" @click="confirmSendWorkout">Отправить</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+
       <!-- Кнопка "Отправить себе" -->
       <div class="text-center mt-3 mb-2">
         <v-btn
             color="primary"
             rounded="lg"
-            @click="sendWorkout"
+            @click="openSendWorkoutDialog"
             :disabled="!telegramUserId"
         >
           <v-icon left>mdi-send</v-icon>
@@ -419,6 +444,7 @@ import ExerciseInfo from '~/components/training/ExerciseInfo.vue';
 import { useApi } from '~/composables/useApi';
 import draggable from 'vuedraggable';
 import BottomSheetWithClose from '~/components/shared/BottomSheetWithClose.vue';
+import { retrieveLaunchParams } from '@telegram-apps/sdk';
 
 interface WorkoutItem extends Exercise {
   sets: number;
@@ -435,17 +461,21 @@ export default defineComponent({
   setup() {
     const { apiRequest } = useApi();
 
+    // Инициализация данных из родительского компонента
+    const initData = ref<any>(null);
+    const userData = ref<any>(null); // Добавлено объявление userData
+
     // Массив возможных повторений
-    const repScale = [3,4,5,6,8,10,12,15,20,24,30,45,60,75,90,105,120];
+    const repScale = [3, 4, 5, 6, 8, 10, 12, 15, 20, 24, 30, 45, 60, 75, 90, 105, 120];
 
     const exercises = ref<Exercise[]>([]);
     const searchQuery = ref('');
     const isLoading = ref(true);
 
     // Для Telegram отправки
-    const telegramUserId = ref<number | null>(null);
-
     const userStore = useUserStore();
+    const telegramUserId = ref<number | null>(null); // Изменено с computed на ref
+
     const isAdmin = computed(() => userStore.role === 'admin');
 
     // Хук для фильтрации
@@ -467,6 +497,36 @@ export default defineComponent({
     const showDeleteConfirmDialog = ref(false);
     const exerciseToDelete = ref<Exercise | null>(null);
 
+    const showSendWorkoutDialog = ref(false);
+    const sendWorkoutData = ref({
+      splitName: '',
+      splitComment: '',
+    });
+
+    // Метод для открытия диалога отправки
+    const openSendWorkoutDialog = () => {
+      sendWorkoutData.value = {
+        splitName: '',
+        splitComment: '',
+      };
+      showSendWorkoutDialog.value = true;
+    };
+
+    // Метод для закрытия диалога отправки
+    const closeSendWorkoutDialog = () => {
+      showSendWorkoutDialog.value = false;
+    };
+
+    // Метод для подтверждения отправки тренировки
+    const confirmSendWorkout = () => {
+      if (!sendWorkoutData.value.splitName.trim()) {
+        alert('Пожалуйста, введите название сплита.');
+        return;
+      }
+      sendWorkout();
+      closeSendWorkoutDialog();
+    };
+
     // -----------------------------
     // Массив «текущей тренировки»
     // -----------------------------
@@ -487,15 +547,27 @@ export default defineComponent({
         return;
       }
       try {
+        // Формирование плана в формате, ожидаемом сервером
+        const plan = [
+          {
+            dayName: '',
+            exercises: workoutResults.value.map(ex => ({
+              name: ex.name,
+              sets: ex.sets,
+              reps: ex.reps,
+            })),
+          },
+        ];
+
         const payload = {
           userId: telegramUserId.value,
-          workout: workoutResults.value,
+          splitName: sendWorkoutData.value.splitName,
+          splitComment: sendWorkoutData.value.splitComment,
+          plan,
         };
         await apiRequest('post', 'send-workout', payload);
-        alert('Тренировка отправлена!');
       } catch (error: any) {
         console.error('Ошибка при отправке:', error);
-        alert('Не удалось отправить тренировку. Попробуйте позже.');
       }
     };
 
@@ -721,8 +793,20 @@ export default defineComponent({
     };
 
     onMounted(() => {
-      // При желании можно получить Telegram ID из других источников
-      // telegramUserId.value = 123456;
+      // Инициализация Telegram ID из родительского компонента
+      if (process.client) {
+        const launchParams = retrieveLaunchParams();
+        initData.value = launchParams.initData;
+        if (initData.value && initData.value.user) {
+          userData.value = initData.value.user;
+          telegramUserId.value = userData.value.id; // Установка Telegram ID
+          // Также можно обновить userStore, если необходимо
+          // userStore.setTelegramId(userData.value.id);
+        } else {
+          console.error('Не удалось получить данные пользователя.');
+        }
+      }
+      console.log('!!! Telegram User ID:', telegramUserId.value);
       loadExercises();
     });
 
@@ -784,6 +868,11 @@ export default defineComponent({
 
       // Отправка
       telegramUserId,
+      showSendWorkoutDialog,
+      sendWorkoutData,
+      openSendWorkoutDialog,
+      closeSendWorkoutDialog,
+      confirmSendWorkout,
       sendWorkout
     };
   },
@@ -911,5 +1000,4 @@ export default defineComponent({
 .dragging {
   opacity: 0.5;
 }
-
 </style>
