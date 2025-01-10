@@ -396,24 +396,24 @@
 
       <!-- Диалог для ввода названия и комментария сплита -->
       <v-dialog v-model="showSendWorkoutDialog">
-        <v-card>
+        <v-card style="border-radius: 16px;">
           <v-card-title class="headline">Отправить тренировку</v-card-title>
           <v-card-text>
             <v-text-field
-                label="Название тренировки"
+                label="Название тренировки обязательно"
                 v-model="sendWorkoutData.splitName"
                 required
-                variant="plain"
+                variant="outlined"
             ></v-text-field>
             <v-textarea
-                label="Описание и комментарии к тренировке"
+                label="Описание и комментарии к тренировке опционально"
                 v-model="sendWorkoutData.splitComment"
-                variant="plain"
+                variant="outlined"
             ></v-textarea>
           </v-card-text>
           <v-card-actions>
             <v-spacer></v-spacer>
-            <v-btn text @click="closeSendWorkoutDialog">Вернуться к упражнениям</v-btn>
+            <v-btn text @click="closeSendWorkoutDialog">Назад</v-btn>
             <v-btn color="primary" @click="confirmSendWorkout">Отправить</v-btn>
           </v-card-actions>
         </v-card>
@@ -432,6 +432,17 @@
         </v-btn>
       </div>
     </BottomSheetWithClose>
+
+    <!-- Добавленный Snackbar -->
+    <v-snackbar
+        v-model="showSnackbar"
+        :color="snackbarColor"
+        timeout="1500"
+        top
+        right
+    >
+      {{ snackbarMessage }}
+    </v-snackbar>
   </div>
 </template>
 
@@ -503,6 +514,11 @@ export default defineComponent({
       splitComment: '',
     });
 
+    // Добавленные переменные для Snackbar
+    const showSnackbar = ref(false);
+    const snackbarMessage = ref('');
+    const snackbarColor = ref('success');
+
     // Метод для открытия диалога отправки
     const openSendWorkoutDialog = () => {
       sendWorkoutData.value = {
@@ -566,8 +582,17 @@ export default defineComponent({
           plan,
         };
         await apiRequest('post', 'send-workout', payload);
+
+        // Установка сообщения и отображение Snackbar
+        snackbarMessage.value = 'Тренировка успешно отправлена!';
+        snackbarColor.value = 'success'; // Можно использовать 'error' для ошибок
+        showSnackbar.value = true;
       } catch (error: any) {
         console.error('Ошибка при отправке:', error);
+        // Установка сообщения об ошибке и отображение Snackbar
+        snackbarMessage.value = 'Не удалось отправить тренировку. Попробуйте позже.';
+        snackbarColor.value = 'error';
+        showSnackbar.value = true;
       }
     };
 
@@ -873,7 +898,12 @@ export default defineComponent({
       openSendWorkoutDialog,
       closeSendWorkoutDialog,
       confirmSendWorkout,
-      sendWorkout
+      sendWorkout,
+
+      // Добавленные переменные для Snackbar
+      showSnackbar,
+      snackbarMessage,
+      snackbarColor,
     };
   },
 });
@@ -993,7 +1023,7 @@ export default defineComponent({
   border-radius: 14px;
   padding: 2px 6px;
   margin: 0 4px;
-  box-shadow: inset 0 0 3px rgba(0,0,0,0.5);
+  box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.5);
 }
 
 /* При перетаскивании */
