@@ -8,12 +8,11 @@
 import { onMounted } from 'vue';
 import { useUserStore } from '~/stores/userStore';
 import { useApi } from '~/composables/useApi';
-
-
-const ensureTrailingSlash = (url: string) =>
-    url.endsWith('/') ? url : `${url}/`;
+import { useSubscription } from '~/composables/useSubscription';
 
 const { apiRequest } = useApi();
+const { checkSubscription } = useSubscription();
+const userStore = useUserStore();
 
 interface TelegramUserData {
   id: number;
@@ -23,30 +22,28 @@ interface TelegramUserData {
   language_code?: string;
 }
 
-const userStore = useUserStore();
-
 onMounted(async () => {
   const tg = (window as any).Telegram?.WebApp;
 
   // Расширяем веб-приложение
-  tg.expand();
-  tg.disableVerticalSwipes();
+  if (tg) {
+    tg.expand();
+    tg.disableVerticalSwipes();
+  }
 
-  // Запрос на переход в полноэкранный режим (если доступно)
-  // if (typeof tg.requestFullscreen === 'function') {
-  //   tg.requestFullscreen();
-  // }
-
-  if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+  // Проверяем, есть ли данные о пользователе в tg.initDataUnsafe
+  if (tg?.initDataUnsafe?.user) {
     const userData: TelegramUserData = tg.initDataUnsafe.user;
     const telegramUserId = userData.id;
 
     console.log('NEW Telegram User ID:', telegramUserId);
 
     if (telegramUserId) {
+      // Сохраняем Telegram ID в Pinia
       userStore.setTelegramId(telegramUserId);
 
       try {
+        // Сначала получаем роль пользователя из базы
         const result = await apiRequest<{
           role?: string;
           error?: string;
@@ -54,49 +51,15 @@ onMounted(async () => {
           telegramId: telegramUserId,
         });
 
+        // Если с сервера вернулась роль
         if (result.role) {
+          // Устанавливаем её в Pinia
           userStore.setRole(result.role as 'admin' | 'freeUser' | 'paidUser');
 
-          // Проверяем подписку на канал, если пользователь не админ
+          // Если роль не админ, делаем автоматическую проверку фактической подписки
+          // — особенно важно для paidUser, чтобы поймать отписку.
           if (result.role !== 'admin') {
-            const subscriptionResult = await apiRequest<{
-              isSubscribed: boolean;
-              message?: string;
-            }>('post', 'check-subscription', {
-              telegramId: telegramUserId,
-            });
-
-            console.log('Результат проверки подписки:', subscriptionResult);
-
-            if (subscriptionResult.isSubscribed) {
-              if (userStore.role !== 'paidUser') {
-                userStore.setRole('paidUser');
-                console.log(
-                    'Пользователь подписан на канал. Роль обновлена на paidUser.'
-                );
-              }
-            } else {
-              console.log('Пользователь не подписан на канал.');
-              if (userStore.role === 'paidUser') {
-                userStore.setRole('freeUser');
-                console.log(
-                    'Роль пользователя изменена на freeUser из-за отсутствия подписки.'
-                );
-
-                try {
-                  await apiRequest('post', 'update-userAndAdmin-role', {
-                    telegramId: telegramUserId,
-                    role: 'freeUser',
-                  });
-                  console.log('Роль пользователя обновлена на сервере.');
-                } catch (error) {
-                  console.error(
-                      'Ошибка при обновлении роли пользователя на сервере:',
-                      error
-                  );
-                }
-              }
-            }
+            await checkSubscription();
           }
         } else if (result.error) {
           console.error('Ошибка сервера:', result.error);
@@ -107,10 +70,14 @@ onMounted(async () => {
         console.error('Ошибка при отправке запроса на сервер:', error);
       }
     } else {
-      console.error('Данные пользователя не найдены.');
+      console.error('Данные пользователя не найдены в tg.initDataUnsafe.');
     }
   } else {
     console.error('Не удалось получить данные пользователя из Telegram.');
   }
 });
 </script>
+
+<style scoped>
+/* Компонент не имеет визуального отображения */
+</style>

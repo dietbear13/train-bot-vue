@@ -1,4 +1,4 @@
-<!-- components/AdminPanel.vue -->
+<!-- components/AdminInfo.vue -->
 
 <template>
     <v-tabs

@@ -190,6 +190,19 @@
             пересоздать весь сплит
           </v-btn>
 
+          <!-- Кнопка "Отправить себе" -->
+          <v-btn
+              block
+              color="primary"
+              rounded="lg"
+              icon
+              :disabled="!telegramUserId"
+              @click="sendWorkoutPlan"
+          >
+            <v-icon>mdi-send</v-icon>
+            Отправить себе
+          </v-btn>
+
           <!-- Выводим 7 "блоков" -->
           <div
               v-for="(day, idx) in finalPlan"
@@ -298,19 +311,6 @@
         </div>
       </v-card-text>
 
-      <!-- Кнопка "Отправить себе" -->
-      <div class="text-center mt-2">
-        <v-btn
-            color="primary"
-            rounded="lg"
-            icon
-            :disabled="!telegramUserId"
-            @click="sendWorkoutPlan"
-        >
-          <!-- Только иконка -->
-          <v-icon>mdi-send</v-icon>
-        </v-btn>
-      </div>
     </BottomSheetWithClose>
 
     <!-- Snackbar -->
@@ -583,8 +583,6 @@ export default defineComponent({
       exercisesArr.splice(index, 1)
     }
 
-    // Оживляем кнопку refresh у каждого упражнения (шаг №1)
-    // Передаём dayIndex третьим параметром
     const regenerateExerciseSplit = (exercisesArr: any, index: number, dayIndex: number) => {
       // Вызываем метод из хука для ре-логики
       // Важно: regenerateExercise ожидает (dayIndex, exerciseIndex, gender)
@@ -592,17 +590,13 @@ export default defineComponent({
       console.log(`Упражнение #${index} в дне #${dayIndex} перегенерировано.`)
     }
 
-    // Добавляем кнопку обновления для всего дня (шаг №2)
     const refreshDayExercises = async (dayIndex: number) => {
       if (!finalPlan.value[dayIndex]) return
 
-      // Устанавливаем состояние загрузки для данного дня
       refreshingDays.value[dayIndex] = true
 
-      // Добавляем задержку 0,6 секунды перед выполнением кода
       await new Promise((resolve) => setTimeout(resolve, 600))
 
-      // Проходим по всем упражнениям дня и регенерируем их
       for (let exIndex = 0; exIndex < finalPlan.value[dayIndex].exercises.length; exIndex++) {
         await regenerateExercise(dayIndex, exIndex, gender.value)
         console.log(`Упражнение #${exIndex} в дне #${dayIndex + 1} перегенерировано.`)

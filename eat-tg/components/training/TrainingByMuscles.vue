@@ -80,7 +80,7 @@
             >
               <v-btn
                   :value="option"
-                  class="group-button mx-auto my-1 py-1 px-2"
+                  class="group-button wrap-text mx-auto my-1 py-1 px-2"
                   style="min-width: 100%;"
                   :class="{ 'selected-button': muscleSubgroup === option }"
                   @click="selectMuscleSubgroup(option)"
@@ -833,9 +833,14 @@ export default defineComponent({
   margin: 0 4px;
 }
 
-.v-btn {
+v-btn {
   border-radius: 14px;
 }
+
+.wrap-text {
+  white-space: normal !important;
+}
+
 
 .sets-reps-container span {
   font-weight: bold;

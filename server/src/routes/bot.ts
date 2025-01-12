@@ -9,7 +9,10 @@ dotenv.config();
 const router = Router();
 
 const botToken = process.env.TELEGRAM_BOT_TOKEN as string;
-const bot = new TelegramBot(botToken, { polling: false });
+
+// ВАЖНО: Экспортируем экземпляр бота,
+// чтобы использовать его в других модулях (например, routes/users.ts)
+export const bot = new TelegramBot(botToken, { polling: false });
 
 /**
  * Интерфейс для упражнения.
@@ -26,7 +29,7 @@ interface Exercise {
 interface GeneratedDay {
     dayName: string;
     exercises: Exercise[];
-    patternOrExercise?: string[]; // Опциональное поле, если используется
+    patternOrExercise?: string[];
 }
 
 /**
@@ -42,8 +45,7 @@ const escapeHTML = (text: string): string => {
 
 /**
  * Функция для форматирования недельного тренировочного плана в HTML-сообщение.
- * Теперь принимает splitName и splitComment.
- * **Исключает** из сообщения дни отдыха (где exercises пусты).
+ * Исключает дни отдыха (где exercises пусты).
  */
 const formatWeeklyWorkoutMessageHTML = (
     plan: GeneratedDay[],
@@ -52,11 +54,10 @@ const formatWeeklyWorkoutMessageHTML = (
 ): string => {
     let message = `<b>${escapeHTML(splitName)}</b>\n`;
 
-    // Добавляем splitComment, если он есть
     if (splitComment && splitComment.trim() !== '') {
         message += `<i>${escapeHTML(splitComment)}</i>\n\n`;
     } else {
-        message += `\n`; // Добавляем пустую строку для разделения
+        message += `\n`;
     }
 
     plan.forEach(day => {
@@ -67,10 +68,8 @@ const formatWeeklyWorkoutMessageHTML = (
             });
             message += `\n`;
         }
-        // **Исключаем** дни отдыха, то есть не добавляем их в сообщение
     });
 
-    // Добавляем ссылки
     message += `<a href="https://t.me/freeload_top_bot">бот с тренировками</a>\n`;
     message += `<a href="https://t.me/training_health">тг-канал «кОчалка»</a>\n`;
 
@@ -78,40 +77,29 @@ const formatWeeklyWorkoutMessageHTML = (
 };
 
 /**
- * Функция для экранирования специальных символов MarkdownV2,
- * но не URL в ссылках.
+ * Функция для экранирования специальных символов MarkdownV2, но не URL в ссылках.
  */
 const escapeMarkdownV2 = (text: string): string => {
-    // Список специальных символов для MarkdownV2
     const specialChars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'];
     const escapeRegex = new RegExp(`([${specialChars.map(char => '\\' + char).join('')}])`, 'g');
-
-    // Заменяем каждый специальный символ на экранированный
-    let escapedText = text.replace(escapeRegex, '\\$1');
-
-    return escapedText;
+    return text.replace(escapeRegex, '\\$1');
 };
 
 /**
- * Функция для отправки поста в канал с MarkdownV2
+ * Отправка поста (текст/фото) в канал с парсингом MarkdownV2
  */
 const sendPost = async (channelId: string, content: string, imageUrl?: string) => {
     try {
-        // Экранируем текст контента
         const escapedContent = escapeMarkdownV2(content);
-
-        // Логирование сообщения для отладки
         console.log('Сообщение для отправки:', escapedContent);
 
         if (imageUrl) {
-            // Отправляем фото с подписью
             await bot.sendPhoto(channelId, imageUrl, {
                 caption: escapedContent,
                 parse_mode: 'MarkdownV2',
             });
             console.log(`Фото с подписью отправлено в канал ${channelId}`);
         } else {
-            // Отправляем текстовое сообщение
             await bot.sendMessage(channelId, escapedContent, {
                 parse_mode: 'MarkdownV2',
                 disable_web_page_preview: true,
@@ -125,46 +113,42 @@ const sendPost = async (channelId: string, content: string, imageUrl?: string) =
 };
 
 /**
- * Функция для планирования публикации поста
+ * Планирование отложенной публикации поста
  */
-const schedulePost = (channelId: string, content: string, imageUrl: string | undefined, time: string) => {
-    // Используем библиотеку node-cron для планирования задач
+const schedulePost = (
+    channelId: string,
+    content: string,
+    imageUrl: string | undefined,
+    time: string
+) => {
     const cron = require('node-cron');
     const moment = require('moment-timezone');
-
-    // Парсим время публикации
     const scheduledDate = moment(time);
 
-    // Проверяем, корректно ли распарсено время
     if (!scheduledDate.isValid()) {
         throw new Error('Некорректное время публикации');
     }
 
-    // Создаём строку cron-формата
+    // Пример: "0 10 23 3 *" => 23 марта 10:00
     const cronTime = `${scheduledDate.minute()} ${scheduledDate.hour()} ${scheduledDate.date()} ${scheduledDate.month() + 1} *`;
-
     cron.schedule(cronTime, () => {
-        sendPost(channelId, content, imageUrl);
+        sendPost(channelId, content, imageUrl).catch((err) => console.error(err));
     });
 
     console.log(`Пост запланирован на ${scheduledDate.format('YYYY-MM-DD HH:mm')}`);
 };
 
 /**
- * Маршрут для проверки доступа бота к каналу
+ * Маршрут: проверка доступа бота к каналу
  */
 router.post('/check-bot-access', async (req: Request, res: Response) => {
     const { channelId } = req.body;
-
     if (!channelId) {
         return res.status(400).json({ message: 'Необходимо указать channelId' });
     }
 
     try {
-        // Получаем информацию о боте
         const botInfo = await bot.getMe();
-
-        // Проверяем, является ли бот администратором
         const chatMember = await bot.getChatMember(channelId, botInfo.id);
         const hasAccess = ['administrator', 'creator'].includes(chatMember.status);
 
@@ -176,17 +160,15 @@ router.post('/check-bot-access', async (req: Request, res: Response) => {
 });
 
 /**
- * Маршрут для получения списка каналов, к которым бот имеет доступ
+ * Маршрут: получение списка каналов, к которым бот имеет доступ
  */
 router.get('/get-channels', async (req: Request, res: Response) => {
     try {
-        // Здесь вы должны реализовать логику получения каналов, к которым бот имеет доступ.
-        // Например, если у вас есть база данных с каналами:
+        // Пример: здесь вы можете вернуть список каналов из БД или констант
         const channels = [
             { id: '@training_health', title: 'Тренировки & Здоровье' },
-            // Добавьте другие каналы
+            // ...
         ];
-
         res.json({ channels });
     } catch (error: any) {
         console.error('Ошибка при получении списка каналов:', error.message);
@@ -195,7 +177,7 @@ router.get('/get-channels', async (req: Request, res: Response) => {
 });
 
 /**
- * Маршрут для публикации поста
+ * Маршрут: публикация (или планирование) поста
  */
 router.post('/publish-post', async (req: Request, res: Response) => {
     const { channelId, postContent, imageUrl, publishNow, scheduledTime } = req.body;
@@ -209,7 +191,6 @@ router.post('/publish-post', async (req: Request, res: Response) => {
             await sendPost(channelId, postContent, imageUrl);
             res.json({ success: true, message: 'Пост опубликован' });
         } else {
-            // Планируем отложенную публикацию
             schedulePost(channelId, postContent, imageUrl, scheduledTime);
             res.json({ success: true, message: 'Пост запланирован' });
         }
@@ -220,7 +201,7 @@ router.post('/publish-post', async (req: Request, res: Response) => {
 });
 
 /**
- * Функция для отправки тренировки пользователю
+ * Функция для отправки плана тренировок пользователю
  */
 const sendWorkoutToUser = (
     chatId: number,
@@ -228,16 +209,13 @@ const sendWorkoutToUser = (
     splitComment: string | undefined,
     plan: GeneratedDay[]
 ) => {
-    let message = formatWeeklyWorkoutMessageHTML(plan, splitName, splitComment);
-
-    // Логирование для отладки
+    const message = formatWeeklyWorkoutMessageHTML(plan, splitName, splitComment);
     console.log('Сообщение для отправки:', message);
 
-    bot
-        .sendMessage(chatId, message, {
-            parse_mode: 'HTML',
-            disable_web_page_preview: true,
-        })
+    bot.sendMessage(chatId, message, {
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+    })
         .then(() => {
             console.log(`План тренировок отправлен пользователю ${chatId}`);
         })
@@ -247,14 +225,12 @@ const sendWorkoutToUser = (
 };
 
 /**
- * Маршрут для отправки тренировки
- * Теперь принимает splitName и splitComment
+ * Маршрут: отправка плана тренировок
  */
 router.post('/send-workout', async (req: Request, res: Response) => {
     const { userId, splitName, splitComment, plan } = req.body;
-
     if (!userId || !splitName || !plan || !Array.isArray(plan)) {
-        return res.status(400).json({ message: 'Необходимо указать userId, splitName и plan (array of days).' });
+        return res.status(400).json({ message: 'Необходимо указать userId, splitName и plan[]' });
     }
 
     try {
@@ -279,16 +255,12 @@ const sendKbzhuResultToUser = (
     message += `Жиры: ${kbzhuResult.fats} г\n`;
     message += `Углеводы: ${kbzhuResult.carbs} г\n`;
 
-    console.log(`KbzhuResult sent to user ${chatId}`);
-
-    // Экранирование только динамических частей
     const escapedMessage = escapeMarkdownV2(message);
 
-    bot
-        .sendMessage(chatId, escapedMessage, {
-            parse_mode: 'MarkdownV2',
-            disable_web_page_preview: true,
-        })
+    bot.sendMessage(chatId, escapedMessage, {
+        parse_mode: 'MarkdownV2',
+        disable_web_page_preview: true,
+    })
         .then(() => {
             console.log(`KbzhuResult sent to user ${chatId}`);
         })
@@ -298,11 +270,10 @@ const sendKbzhuResultToUser = (
 };
 
 /**
- * Маршрут для отправки результатов КБЖУ
+ * Маршрут: отправка результатов КБЖУ
  */
 router.post('/send-kbzhu', async (req: Request, res: Response) => {
     const { userId, kbzhuResult } = req.body;
-
     if (!userId || !kbzhuResult) {
         return res.status(400).json({ message: 'Необходимо указать userId и kbzhuResult' });
     }
@@ -317,93 +288,70 @@ router.post('/send-kbzhu', async (req: Request, res: Response) => {
 });
 
 /**
- * Маршрут для логирования характеристик упражнений (только для администраторов)
+ * Маршрут (только для админов) для логирования характеристик упражнений.
  */
 router.post('/admin/log-exercises', async (req: Request, res: Response) => {
     const { userId, exercise } = req.body;
-    console.log("userId exercise", userId, exercise);
-
     if (!userId || !exercise) {
         return res.status(400).json({ message: 'Необходимо указать userId и exercise' });
     }
 
     try {
-        // Получаем информацию о пользователе (при необходимости)
         const user = await User.findOne({ telegramId: userId });
         if (!user) {
             return res.status(404).json({ message: 'Пользователь не найден' });
         }
 
-        // Формируем сообщение для администратора
         let message = `🔧 Лог упражнения\n\n`;
         message += `Упражнение: ${escapeMarkdownV2(exercise.name)}\n`;
 
-        // Если есть дополнительные данные
         if (exercise.dataUsed && Object.keys(exercise.dataUsed).length > 0) {
-            message += `*Дополнительные данные:* ${escapeMarkdownV2(JSON.stringify(exercise.dataUsed))}\n`;
+            message += `*Доп. данные:* ${escapeMarkdownV2(JSON.stringify(exercise.dataUsed))}\n`;
         }
 
-        // Логирование сообщения для отладки
-        console.log('Сообщение для отправки администратору:', message);
-
-        // Отправляем сообщение администратору
-        const adminChatId = 327844310; // Telegram ID администратора
+        // ID вашего администратора
+        const adminChatId = 327844310;
         await bot.sendMessage(adminChatId, message, {
             parse_mode: 'MarkdownV2',
             disable_web_page_preview: true,
         });
 
-        console.log(`Характеристика упражнения ${exercise.name} от пользователя ${userId} успешно отправлена админу.`);
+        console.log(`Упражнение "${exercise.name}" от пользователя ${userId} отправлено админу.`);
         res.json({ message: 'Характеристика упражнения успешно отправлена администратору.' });
     } catch (error: any) {
         console.error('Ошибка при отправке характеристики упражнения админу:', error.message);
-        res.status(500).json({ message: 'Ошибка при отправке характеристики упражнения админу' });
+        res.status(500).json({ message: 'Ошибка при отправке характеристики упражнения админу.' });
     }
 });
 
 /**
- * Маршрут для отправки недельного (или любого другого) плана
- * с полями userId, plan[] (массив дней), splitName и splitComment.
+ * Маршрут для отправки детального плана (c splitName, splitComment, plan[])
  */
 router.post('/send-detailed-plan', async (req: Request, res: Response) => {
     const { userId, plan, splitName, splitComment } = req.body;
 
-    // Валидация входных данных
     if (!userId || !plan || !Array.isArray(plan)) {
-        return res
-            .status(400)
-            .json({ message: 'Нужно передать userId, plan (array of days), splitName и splitComment.' });
+        return res.status(400).json({ message: 'Нужно передать userId, plan (array of days), splitName и splitComment.' });
     }
 
-    // Валидация splitName
     if (!splitName || typeof splitName !== 'string') {
         return res.status(400).json({ message: 'Нужно передать splitName (строка).' });
     }
 
-    // splitComment может быть опциональным
     const validSplitComment = splitComment && typeof splitComment === 'string' ? splitComment : '';
 
     try {
-        // Форматируем план в HTML с использованием splitName и splitComment
         const formattedMessage = formatWeeklyWorkoutMessageHTML(plan, splitName, validSplitComment);
-
-        // Логирование полученных данных
-        console.log('Полученный план тренировок:', plan);
-        console.log('Отформатированное сообщение для отправки:', formattedMessage);
-
-        // Отправляем сообщение пользователю
         await bot.sendMessage(userId, formattedMessage, {
             parse_mode: 'HTML',
             disable_web_page_preview: true,
         });
 
-        console.log(`План успешно отправлен пользователю: ${userId}`);
+        console.log(`План отправлен пользователю: ${userId}`);
         res.json({ message: 'План отправлен в Telegram.' });
     } catch (error: any) {
         console.error('Ошибка при отправке плана в Telegram:', error.message);
-        res
-            .status(500)
-            .json({ message: 'Ошибка при отправке плана в Telegram.', error: error.message });
+        res.status(500).json({ message: 'Ошибка при отправке плана в Telegram.', error: error.message });
     }
 });
 

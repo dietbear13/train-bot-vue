@@ -4,40 +4,45 @@
 
     <div v-if="userStore.role">
       <p>Ваш Telegram ID: {{ userStore.telegramId }}</p>
-      <p>Ваша роль: {{ userStore.role }}</p>
+      <p>{{ roleDisplay }}</p>
     </div>
 
-    <!-- Секция для апгрейда до paidUser -->
-    <div v-if="userStore.role === 'freeUser'" class="upgrade-section">
-      <!-- Контент для freeUser -->
-    </div>
     <!-- Компонент AdminInfo для администраторов -->
-    <AdminInfo v-else-if="userStore.role === 'admin'" />
-    <!-- Другие роли или отсутствие роли -->
-    <div v-else>
-      <p>Неизвестная роль пользователя.</p>
+    <AdminInfo v-if="userStore.role === 'admin'" />
+
+    <!-- Секция для paidUser -->
+    <div v-else-if="userStore.role === 'paidUser'" class="paid-user-section">
+      <v-card class="mb-4">
+        <v-card-text>
+          <p>Ты уже подписан на канал. Спасибо за вашу поддержку!</p>
+          <p>
+            Читай наш канал <a :href="channelLink" target="_blank">кОчалка</a>.
+          </p>
+          <v-btn color="primary" @click="goToChannel" class="my-2">
+            Перейти в канал
+          </v-btn>
+        </v-card-text>
+      </v-card>
     </div>
 
-    <v-card class="mb-4">
-      <v-card-text>
-        <p>
-          Перейдите в наш канал <a :href="channelLink" target="_blank">@training_health</a> и подпишитесь.
-        </p>
-        <v-btn color="primary" @click="goToChannel" class="my-2">
-          Перейти в канал
-        </v-btn>
-      </v-card-text>
-    </v-card>
+    <!-- Секция для freeUser -->
+    <div v-else-if="userStore.role === 'freeUser'" class="upgrade-section">
+      <v-card class="mb-4">
+        <v-card-text>
+          <p>
+            Подпишись на мой канал <a :href="channelLink" target="_blank">@training_health</a>, чтобы получить полный функционал бота.
+          </p>
+          <v-btn color="primary" @click="goToChannel" class="my-2">
+            Перейти в канал
+          </v-btn>
+        </v-card-text>
+      </v-card>
 
-    <v-btn color="success" @click="checkSubscription">
-      Проверить подписку
-    </v-btn>
-
-    <v-btn text @click="goBack" class="ml-2">
-      Назад
-    </v-btn>
-
-    <!-- Удален дублирующий AdminInfo -->
+      <!-- Кнопка "Проверить подписку" -->
+      <v-btn color="success" @click="checkSubscription">
+        Проверить подписку
+      </v-btn>
+    </div>
 
     <!-- Snackbar для уведомлений -->
     <v-snackbar
@@ -62,75 +67,118 @@
   </v-container>
 </template>
 
-
 <script setup lang="ts">
-import { ref } from 'vue';
+import { reactive, computed } from 'vue';
 import { useUserStore } from '~/stores/userStore';
 import AdminInfo from '~/components/userAndAdmin/AdminInfo.vue';
 import { useApi } from '~/composables/useApi';
 
+/**
+ * Хранилище пользователя
+ */
 const userStore = useUserStore();
+
+/**
+ * Простой пример локального Snackbar:
+ * (Можно вынести в свой composable, если хотите переиспользовать)
+ */
+const snackbar = reactive({
+  show: false,
+  message: '',
+  color: 'info',
+  timeout: 1500,
+});
+
+/**
+ * Вызов метода API.
+ * Предполагаем, что у вас есть useApi с методом apiRequest
+ */
 const { apiRequest } = useApi();
 
+/**
+ * Ссылка на ваш канал
+ */
 const channelLink = 'https://t.me/training_health';
 
+/**
+ * Открыть канал в новой вкладке
+ */
 const goToChannel = () => {
   window.open(channelLink, '_blank');
 };
 
-const snackbar = ref({
-  show: false,
-  message: '',
-  color: 'info', // Цвет уведомления: 'success', 'error', 'info', 'warning'
-  timeout: 1500, // Время отображения в миллисекундах
-});
 
-const showSnackbar = (message: string, color: string = 'info') => {
-  snackbar.value.message = message;
-  snackbar.value.color = color;
-  snackbar.value.show = true;
-};
-
-// ~/pages/profile.vue
-
+/**
+ * Ручная проверка подписки (по кнопке):
+ * Делает POST на /check-user, передаёт { telegramId }, сервер возвращает { role }.
+ */
 const checkSubscription = async () => {
   try {
-    // Проверяем, не является ли пользователь администратором
+    // Если админ, ничего не меняем
     if (userStore.role === 'admin') {
-      // Если пользователь администратор, не изменяем его статус
-      showSnackbar('Вы являетесь администратором. Ваш статус не может быть изменен.', 'warning');
+      showSnackbar('Вы администратор, статус не меняется.', 'warning');
       return;
     }
 
-    // Остальная логика проверки подписки для других ролей
-    const response = await apiRequest('post', 'check-subscription', {
-      telegramId: userStore.telegramId,
-    });
+    // Запрос к вашему маршруту /check-user
+    const result = await apiRequest<{ role?: string; error?: string }>(
+        'post',
+        'check-user',
+        { telegramId: userStore.telegramId }
+    );
 
-    if (response.data.isSubscribed) {
-      // Обновляем роль пользователя в хранилище
-      userStore.role = 'paidUser';
+    // Если вернулась роль
+    if (result.role) {
+      userStore.setRole(result.role as 'admin' | 'freeUser' | 'paidUser');
 
-      // Показываем сообщение об успехе
-      showSnackbar('Вижу твою подписку! Пользуйся полным функционалом и не отписывайся', 'success');
-    } else {
-      // Показываем сообщение об ошибке
-      showSnackbar('Ты не подписался на канал или отписался от него', 'error');
+      if (result.role === 'paidUser') {
+        showSnackbar('Подтверждаю подписку! У тебя полный доступ.', 'success');
+      } else if (result.role === 'freeUser') {
+        showSnackbar('Похоже, вы не подписаны на канал.', 'error');
+      } else {
+        showSnackbar('Роль: администратор.', 'info');
+      }
+    } else if (result.error) {
+      console.error('Ошибка сервера:', result.error);
+      showSnackbar('Ошибка сервера: ' + result.error, 'error');
     }
   } catch (error: any) {
     console.error('Ошибка при проверке подписки:', error);
-    showSnackbar('Произошла ошибка при проверке подписки, передайте ошибку разработчику', 'error');
+    showSnackbar('Ошибка при проверке подписки, обратитесь к разработчику.', 'error');
   }
 };
 
-const goBack = () => {
-  // Логика для возврата в приложении
-  window.history.back();
-};
+/**
+ * Удобная функция для отображения сообщений в Snackbar
+ */
+function showSnackbar(message: string, color: 'success' | 'error' | 'info' | 'warning' = 'info') {
+  snackbar.message = message;
+  snackbar.color = color;
+  snackbar.show = true;
+}
+
+/**
+ * Роль пользователя в читабельном виде
+ */
+const roleDisplay = computed(() => {
+  switch (userStore.role) {
+    case 'admin':
+      return 'Администратор';
+    case 'paidUser':
+      return 'Подписка на канал активна';
+    case 'freeUser':
+      return 'Без подписки на канал';
+    default:
+      return 'Неизвестно';
+  }
+});
 </script>
 
 <style scoped>
 .upgrade-section {
+  margin-top: 20px;
+}
+.paid-user-section {
   margin-top: 20px;
 }
 </style>
