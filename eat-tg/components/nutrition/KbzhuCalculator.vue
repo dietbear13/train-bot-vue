@@ -1,6 +1,6 @@
 <!-- components/KbzhuCalculator.vue -->
 <template>
-  <div class="py-1">
+  <div class="py-0">
     <!-- Выбор пола -->
     <v-card class="my-2 dark-background pa-1" variant="tonal">
       <v-card-text class="pa-1">
@@ -184,7 +184,6 @@
         mdi-calculator
       </v-icon>
     </v-btn>
-    <p style="color:gray">Вводимые данные не сохраняются и не используются.</p>
 
     <!-- Сообщение об ошибке -->
     <v-alert
@@ -261,17 +260,9 @@ import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
 import { retrieveLaunchParams } from "@telegram-apps/sdk";
 import Chart from 'chart.js/auto';
 import { useApi } from '~/composables/useApi'
-
-// Импортируем наш хук
 import { useKbzhu } from '~/composables/useKbzhu'; // подставьте нужный путь
-
-// Импортируем компонент BottomSheetWithClose
 import BottomSheetWithClose from '../shared/BottomSheetWithClose.vue'; // Убедитесь в корректности пути
-
-// Импортируем компонент для тестирования
 import KbzhuCalculatorTest from './KbzhuCalculatorTest.vue'; // Убедитесь в корректности пути
-
-// Импортируем Pinia стор
 import { useUserStore } from '@/stores/userStore' // Убедитесь в корректности пути
 
 // Интерфейсы для типов данных

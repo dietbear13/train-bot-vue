@@ -1,319 +1,42 @@
-<!-- TrainingOnWeek.vue -->
-
 <template>
-  <v-form @submit.prevent="generateSplitWorkout">
-    <!-- Выбор пола -->
-    <v-card class="mb-2 dark-background" variant="tonal">
-      <v-card-text class="pa-1">
-        <v-slide-group
-            v-model="gender"
-            show-arrows
-            class="flex-nowrap"
-            center-active
-            mandatory
-        >
-          <v-slide-group-item
-              v-for="option in genders"
-              :key="option"
-              :value="option"
-          >
-            <v-btn
-                variant="text"
-                outlined
-                class="group-button mx-auto"
-                :class="{ 'selected-button': gender === option }"
-                @click="selectGender(option)"
-                rounded="lg"
-            >
-              {{ option }}
-            </v-btn>
-          </v-slide-group-item>
-        </v-slide-group>
-      </v-card-text>
-    </v-card>
+  <div>
+    <!-- Компонент полей ввода (выбор пола, типа сплита, конкретного сплита, кнопка «Создать») -->
+    <TrainingOnWeekInputs
+        :genders="genders"
+        :gender="gender"
+        :uniqueSplitTypes="uniqueSplitTypes"
+        :selectedSplitType="selectedSplitType"
+        :splitsToShow="splitsToShow"
+        :selectedSplitId="selectedSplitId"
+        :selectedSplit="selectedSplit"
+        :isLoading="isLoading"
+        :isGenerating="isGenerating"
+        :errorMessages="errorMessages"
+        @update:gender="gender = $event"
+        @update:selectedSplitType="selectedSplitType = $event"
+        @update:selectedSplitId="onSelectSplitId"
+        @generateSplitWorkout="generateSplitWorkout"
+    />
 
-    <!-- Выбор типа сплита -->
-    <v-card
-        v-if="uniqueSplitTypes.length > 0"
-        class="my-2 dark-background pa-3"
-        variant="tonal"
-    >
-      <v-card-text class="pa-1">
-        <v-row>
-          <v-col
-              v-for="type in uniqueSplitTypes"
-              :key="type"
-              cols="12"
-              sm="6"
-              md="4"
-              class="px-1 pt-1"
-          >
-            <v-btn
-                block
-                :value="type"
-                :class="{ 'selected-button': selectedSplitType === type }"
-                @click="selectSplitType(type)"
-                rounded="lg"
-                variant="text"
-            >
-              <strong>{{ type }}</strong>
-            </v-btn>
-          </v-col>
-        </v-row>
-      </v-card-text>
-    </v-card>
+    <!-- Компонент результата: BottomSheetWithClose со сплитом на неделю, управлением упражнениями и т.п. -->
+    <TrainingOnWeekResult
+        v-model:showBottomSheet="showBottomSheet"
+        :selectedSplit="selectedSplit"
+        :finalPlan="finalPlan"
+        :isLoading="isLoading"
+        :telegramUserId="telegramUserId"
+        :refreshingDays="refreshingDays"
+        @sendWorkoutPlan="sendWorkoutPlan"
+        @regenerateWholeSplit="regenerateWholeSplit"
+        @refreshDayExercises="refreshDayExercises"
+        @increaseRepsSplit="increaseRepsSplit"
+        @decreaseRepsSplit="decreaseRepsSplit"
+        @removeExerciseSplit="removeExerciseSplit"
+        @regenerateExerciseSplit="regenerateExerciseSplit"
+        @logExercises="logExercises"
+    />
 
-    <!-- Выбор конкретного сплита с v-radio -->
-    <v-card
-        v-if="splitsToShow.length > 0"
-        class="my-2 dark-background pa-2 splits"
-        variant="tonal"
-    >
-      <v-card-text class="pa-0">
-        <v-row class="pa-1">
-          <v-col
-              v-for="split in splitsToShow"
-              :key="split._id"
-              cols="12"
-              sm="6"
-              class="py-2"
-          >
-            <v-card
-                @click="selectSplit(split)"
-                :class="{ 'selected-split-card': selectedSplit?._id === split._id }"
-                outlined
-                class="split-card"
-            >
-              <v-card-text class="split-card-content">
-                <!-- Контейнер для v-radio с минимальной шириной -->
-                <div class="radio-container">
-                  <v-radio
-                      v-model="selectedSplitId"
-                      :value="split._id"
-                      class="split-radio"
-                      hide-details
-                  ></v-radio>
-                </div>
-                <!-- Контент сплита -->
-                <div class="split-content">
-                  <v-card-text v-if="split.splitComment">{{ split.splitComment }}</v-card-text>
-                </div>
-              </v-card-text>
-            </v-card>
-          </v-col>
-        </v-row>
-      </v-card-text>
-    </v-card>
-
-    <!-- Если нет доступных сплитов -->
-    <v-card
-        v-else-if="gender && uniqueSplitTypes.length === 0"
-        class="my-2 dark-background pa-2"
-        variant="tonal"
-    >
-      <v-card-text>
-        <p>Нет доступных сплитов для выбранного пола.</p>
-      </v-card-text>
-    </v-card>
-
-    <!-- Кнопка "Сгенерировать" (спрятая до выбора всех параметров) -->
-    <v-btn
-        v-if="selectedSplit"
-        color="success"
-        class="mt-1"
-        rounded="lg"
-        width="100%"
-        :disabled="isGenerating"
-        @click="generateSplitWorkout"
-    >
-      <!-- При загрузке: "Создаю..", иначе: "Создать" -->
-      <span v-if="isLoading">Создаю.. </span>
-      <span v-else>Создать </span>
-      <!-- Иконка справа, вращается, если isLoading === true -->
-      <v-icon
-          right
-          :class="{ rotatingDumbbell: isLoading }"
-      >
-        mdi-dumbbell
-      </v-icon>
-    </v-btn>
-
-    <!-- Ошибки -->
-    <v-alert
-        v-if="errorMessages.length > 0"
-        type="error"
-        class="mt-2"
-        dismissible
-        @input="errorMessages = []"
-    >
-      <ul>
-        <li v-for="(msg, index) in errorMessages" :key="index">
-          {{ msg }}
-        </li>
-      </ul>
-    </v-alert>
-
-    <!-- BottomSheetWithClose для отображения результата -->
-    <BottomSheetWithClose
-        v-model="showBottomSheet"
-        :title="selectedSplit ? `${selectedSplit.split} на неделю` : 'Программа на неделю'"
-    >
-      <v-card-text class="ma-0">
-        <!-- Если идёт загрузка - показываем рыбное содержимое -->
-        <div v-if="isLoading" class="mb-2" style="text-align:center;">
-          <p>Пересоздаю тренировку..</p>
-          <v-progress-linear
-              color="primary"
-              indeterminate
-              height="4"
-              class="mt-3"
-          ></v-progress-linear>
-        </div>
-
-        <!-- Если НЕ идёт загрузка - показываем реальный результат (7 дней) -->
-        <div v-else>
-          <!-- Новая секция для комментария -->
-          <div v-if="selectedSplit?.splitComment" class="split-comment-area mb-3">
-            <strong>{{ selectedSplit.splitComment }}</strong>
-          </div>
-
-          <!-- Кнопка для перегенерации всего сплита сразу, с уже выбранными параметрами -->
-          <v-btn
-              block
-              color="success"
-              class="mb-3"
-              rounded="lg"
-              :disabled="isLoading"
-              @click="regenerateWholeSplit"
-          >
-            <v-icon left>mdi-refresh</v-icon>
-            пересоздать весь сплит
-          </v-btn>
-
-          <!-- Кнопка "Отправить себе" -->
-          <v-btn
-              block
-              color="primary"
-              rounded="lg"
-              icon
-              :disabled="!telegramUserId"
-              @click="sendWorkoutPlan"
-          >
-            <v-icon>mdi-send</v-icon>
-            Отправить себе
-          </v-btn>
-
-          <!-- Выводим 7 "блоков" -->
-          <div
-              v-for="(day, idx) in finalPlan"
-              :key="idx"
-              class="day-block mb-3"
-          >
-            <!-- Заголовок дня + кнопка для обновления упражнений дня (если не "отдых") -->
-            <h3 class="day-heading">
-              День {{ idx + 1 }} ({{ dayName(idx) }})
-              <v-btn
-                  v-if="day.exercises.length > 0"
-                  icon
-                  variant="text"
-                  class="mx-2"
-                  size="24px"
-                  @click="refreshDayExercises(idx)"
-                  :disabled="refreshingDays[idx]"
-                  color="primary"
-              >
-                <v-icon :class="{ rotatingDumbbell: refreshingDays[idx] }">
-                  mdi-refresh
-                </v-icon>
-              </v-btn>
-            </h3>
-
-            <!-- Если нет упражнений => отдых -->
-            <div v-if="day.exercises.length === 0" class="rest-label">
-              отдых
-            </div>
-
-            <!-- Иначе => список упражнений -->
-            <div v-else class="day-exercises-table">
-              <div
-                  v-for="(ex, i2) in day.exercises"
-                  :key="i2"
-                  class="exercise-row"
-              >
-                <!-- Название упражнения (используем formatExerciseName) -->
-                <div class="exercise-name">
-                  {{ formatExerciseName(ex.name) }}
-                </div>
-
-                <!-- Управляющий блок -->
-                <div class="row-controls">
-                  <!-- Левая часть: - reps + -->
-                  <div class="sets-reps-row">
-                    <v-btn
-                        icon
-                        small
-                        variant="text"
-                        class="mx-0"
-                        size="24px"
-                        @click="decreaseRepsSplit(day.exercises, i2)"
-                        color="#db5856"
-                    >
-                      <v-icon small>mdi-minus</v-icon>
-                    </v-btn>
-
-                    <span class="sets-reps-text">
-                      {{ ex.sets }} × {{ ex.reps }}
-                    </span>
-
-                    <v-btn
-                        icon
-                        variant="text"
-                        class="mx-0"
-                        size="24px"
-                        @click="increaseRepsSplit(day.exercises, i2)"
-                        color="#77dd77"
-                    >
-                      <v-icon small>mdi-plus</v-icon>
-                    </v-btn>
-                  </div>
-
-                  <!-- Правая часть: refresh / delete / admin button (вертикально) -->
-                  <div class="vertical-buttons">
-                    <!-- refresh -->
-                    <v-btn
-                        icon
-                        variant="text"
-                        class="mx-0"
-                        size="24px"
-                        @click="regenerateExerciseSplit(day.exercises, i2, idx)"
-                        color="primary"
-                    >
-                      <v-icon>mdi-refresh</v-icon>
-                    </v-btn>
-                    <!-- delete -->
-                    <v-btn
-                        icon
-                        variant="text"
-                        class="mx-0"
-                        size="24px"
-                        @click="removeExerciseSplit(day.exercises, i2)"
-                        color="#db5856"
-                    >
-                      <v-icon>mdi-delete</v-icon>
-                    </v-btn>
-                    <!-- Кнопка "!" для админа -->
-                    <AdminExerciseButton :onLog="() => logExercises(ex)" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </v-card-text>
-
-    </BottomSheetWithClose>
-
-    <!-- Snackbar -->
+    <!-- Глобальный Snackbar (для вывода сообщений) -->
     <v-snackbar
         v-model="snackbar.show"
         :color="snackbar.color"
@@ -329,17 +52,19 @@
         </v-btn>
       </template>
     </v-snackbar>
-  </v-form>
+  </div>
 </template>
 
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted, watch } from 'vue'
 import { retrieveLaunchParams } from '@telegram-apps/sdk'
-import BottomSheetWithClose from '~/components/shared/BottomSheetWithClose.vue'
-import AdminExerciseButton from '~/components/userAndAdmin/AdminExerciseButton.vue'
-import useSplitGenerator from '~/composables/useSplitGenerator'
 import { useUserStore } from '~/stores/userStore'
 import { useApi } from '~/composables/useApi'
+import useSplitGenerator from '~/composables/useSplitGenerator'
+
+// Дочерние компоненты
+import TrainingOnWeekInputs from '~/components/training/week/TrainingOnWeekInputs.vue'
+import TrainingOnWeekResult from '~/components/training/week/TrainingOnWeekResult.vue'
 
 // Типы
 interface SnackbarState {
@@ -355,7 +80,7 @@ interface SplitDay {
 interface SplitItem {
   _id: string
   split: string
-  splitComment?: string  // <--- добавляем поле, чтобы TypeScript не ругался
+  splitComment?: string
   splitId: number
   gender: string
   splitDays: string
@@ -371,23 +96,24 @@ interface TelegramUserData {
 
 export default defineComponent({
   name: 'TrainingOnWeek',
-  components: { BottomSheetWithClose, AdminExerciseButton },
+  components: { TrainingOnWeekInputs, TrainingOnWeekResult },
   setup() {
     const userStore = useUserStore()
     const { apiRequest } = useApi()
 
     // Пол / сплиты
     const genders = ['Мужчина', 'Женщина']
-    const gender = ref<string>('')
-    const allSplits = ref<SplitItem[]>([])
+    const gender = ref<string>('')                // Выбранный пол
+    const allSplits = ref<SplitItem[]>([])        // Все сплиты (из API)
     const selectedSplit = ref<SplitItem | null>(null)
+    const selectedSplitId = ref<string | null>(null) // ID выбранного сплита
 
-    // Новое состояние для выбранного split по ID
-    const selectedSplitId = ref<string | null>(null)
+    // Тип сплита
+    const selectedSplitType = ref<string | null>(null)
 
-    // Состояние
-    const isLoading = ref(false)     // Показывает анимацию иконки и плейсхолдер
-    const isGenerating = ref(false)  // Флаг из хука, не меняем
+    // Состояния загрузки/ошибок
+    const isLoading = ref(false)     // Показывает анимацию иконки
+    const isGenerating = ref(false)  // Флаг из хука
     const showBottomSheet = ref(false)
     const errorMessages = ref<string[]>([])
     const refreshingDays = ref<Record<number, boolean>>({})
@@ -419,57 +145,32 @@ export default defineComponent({
       )
     })
 
-    // Вычисляем уникальные типы сплитов
+    // Уникальные типы сплитов
     const uniqueSplitTypes = computed(() => {
       const types = availableSplits.value.map(split => split.split)
       return Array.from(new Set(types))
     })
 
-    // Выбранный тип сплита
-    const selectedSplitType = ref<string | null>(null)
-
-    // Сплиты, соответствующие выбранному типу, с уникальными splitComment и случайным splitId
+    // Сплиты, соответствующие выбранному типу
     const splitsToShow = computed(() => {
       if (!selectedSplitType.value) return []
       const splits = availableSplits.value.filter(
           split => split.split === selectedSplitType.value && split.splitComment
       )
+      // Для каждой уникальной splitComment — берём 1 случайный сплит
       const uniqueComments = Array.from(new Set(splits.map(s => s.splitComment)))
       return uniqueComments.map(comment => {
         const eligibleSplits = splits.filter(s => s.splitComment === comment)
         const randomSplit = eligibleSplits[Math.floor(Math.random() * eligibleSplits.length)]
         return {
-          _id: randomSplit._id, // Используем _id случайного сплита для правильного выделения
-          split: randomSplit.split, // Добавляем тип сплита
+          _id: randomSplit._id,
+          split: randomSplit.split,
           splitComment: randomSplit.splitComment,
         }
       })
     })
 
-    // Выбор пола
-    const selectGender = (option: string) => {
-      gender.value = option
-      selectedSplitType.value = null
-      selectedSplit.value = null
-      selectedSplitId.value = null // Сбрасываем выбранный split ID
-      console.log('Выбран пол:', option)
-    }
-
-    // Выбор типа сплита
-    const selectSplitType = (type: string) => {
-      selectedSplitType.value = type
-      selectedSplit.value = null
-      selectedSplitId.value = null // Сбрасываем выбранный split ID
-      console.log('Выбран тип сплита:', type)
-    }
-
-    // Выбор конкретного сплита через ID
-    const selectSplit = (split: { _id: string, split: string, splitComment?: string }) => {
-      selectedSplitId.value = split._id
-      console.log('Выбран сплит:', split)
-    }
-
-    // Watcher для обновления selectedSplit при изменении selectedSplitId
+    // Следим за изменением selectedSplitId -> обновляем selectedSplit
     watch(selectedSplitId, (newId) => {
       const split = availableSplits.value.find(s => s._id === newId)
       if (split) {
@@ -477,23 +178,25 @@ export default defineComponent({
         console.log('selectedSplit обновлён:', split)
       } else {
         selectedSplit.value = null
-        console.warn(`Сплит с _id=${newId} не найден.`)
+        if (newId) {
+          console.warn(`Сплит с _id=${newId} не найден среди доступных.`)
+        }
       }
     })
 
-    // Watcher для инициализации selectedSplitId при изменении splitsToShow
+    // Если массив splitsToShow изменился, а selectedSplitId ещё пуст — выберем первый
     watch(splitsToShow, (newSplits) => {
       if (newSplits.length > 0 && !selectedSplitId.value) {
         selectedSplitId.value = newSplits[0]._id
       }
     })
 
-    // Подключаем хук
+    // Подключаем хук генерации
     const {
       finalPlan,
       generateSplitPlan,
       sendWorkoutPlan,
-      regenerateExercise,
+      regenerateExercise
     } = useSplitGenerator({
       isLoading,
       isGenerating,
@@ -504,7 +207,7 @@ export default defineComponent({
       selectedSplitRef: selectedSplit
     })
 
-    // «Реальный» метод генерации (не меняем логику внутри)
+    // «Реальный» метод генерации
     async function realGenerateSplitWorkout() {
       if (!selectedSplit.value || !gender.value) {
         errorMessages.value.push('Выберите пол и сплит.')
@@ -517,31 +220,111 @@ export default defineComponent({
       console.log('Генерация сплита (реальный вызов) завершена.')
     }
 
-    // Метод-обёртка с задержкой 1.5–2.5 сек
+    // Обёртка с задержкой 1.5–2.5 сек
     async function generateSplitWorkout() {
-      // Включаем флаг загрузки
       isLoading.value = true
-
-      // Задержка 1.5–2.5 сек
       const delayTime = 1500 + Math.random() * 1000
       await new Promise((resolve) => setTimeout(resolve, delayTime))
 
-      // Вызываем «реальный» метод
       await realGenerateSplitWorkout()
 
-      // Отключаем флаг загрузки
       isLoading.value = false
     }
 
-    // Функция для названия дня (0..6)
-    const dayName = (index: number) => {
-      const days = [
-        'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'
-      ]
-      return days[index % 7]
+    // Загрузка сплитов из API
+    const loadSplits = async () => {
+      try {
+        console.log('Запрос к API для загрузки сплитов.')
+        const data = await apiRequest<SplitItem[]>('get', 'splits')
+        allSplits.value = Array.isArray(data) ? data : []
+        console.log('Загруженные сплиты:', data)
+      } catch (error: any) {
+        console.error('Ошибка при загрузке сплитов:', error)
+        showSnackbar('Ошибка при загрузке сплитов.', 'error')
+      }
     }
 
-    // Методы изменения повторений / удаления / перегенерации (локальные)
+    // При монтировании
+    onMounted(async () => {
+      console.log('Компонент TrainingOnWeek.vue смонтирован.')
+      await loadSplits()
+
+      // Инициализация Telegram
+      if (process.client) {
+        console.log('Инициализация Telegram SDK.')
+        const launchParams = retrieveLaunchParams()
+        initData.value = launchParams.initData
+        if (initData.value && initData.value.user) {
+          userData.value = initData.value.user
+          telegramUserId.value = userData.value.id
+          console.log('Telegram userAndAdmin ID:', telegramUserId.value)
+        } else {
+          console.error('Нет данных пользователя (Telegram).')
+          showSnackbar('Нет данных пользователя (Telegram).', 'error')
+        }
+      }
+    })
+
+    // Обновление упражнений одного дня
+    const refreshDayExercises = async (dayIndex: number) => {
+      if (!finalPlan.value[dayIndex]) return
+      refreshingDays.value[dayIndex] = true
+
+      await new Promise((resolve) => setTimeout(resolve, 600))
+
+      for (let exIndex = 0; exIndex < finalPlan.value[dayIndex].exercises.length; exIndex++) {
+        await regenerateExercise(dayIndex, exIndex, gender.value)
+        console.log(`Упражнение #${exIndex} в дне #${dayIndex + 1} перегенерировано.`)
+      }
+
+      refreshingDays.value[dayIndex] = false
+      console.log(`Все упражнения дня #${dayIndex + 1} перегенерированы.`)
+    }
+
+    // Перегенерация всего сплита
+    const regenerateWholeSplit = async () => {
+      await generateSplitWorkout()
+      console.log('Весь сплит был перегенерирован заново.')
+    }
+
+    // Логирование упражнения (кнопка «!»)
+    const logExercises = async (exercise: any) => {
+      if (userStore.role !== 'admin') {
+        console.warn('Только администратор может отправлять логи.')
+        showSnackbar('Доступ запрещён.', 'error')
+        return
+      }
+
+      console.log('Получено упражнение для логирования:', exercise)
+      console.log('telegramUserId:', userStore.telegramId)
+
+      const requestData = {
+        userId: userStore.telegramId,
+        exercise: {
+          name: exercise.name,
+          sets: exercise.sets,
+          reps: exercise.reps
+        }
+      }
+
+      console.log('Отправляемые данные:', requestData)
+
+      try {
+        const response = await apiRequest('post', 'admin/log-exercises', requestData)
+        showSnackbar('Сообщение успешно отправлено!', 'success')
+        console.log(`Сообщение "${exercise.name}" отправлено админу. Ответ:`, response.data)
+      } catch (err: any) {
+        if (err.response) {
+          console.error('Ошибка при отправке сообщения:', err.response.data)
+          showSnackbar(`Ошибка: ${err.response.data.message || 'Не удалось отправить сообщение.'}`, 'error')
+        } else {
+          console.error('Ошибка при отправке сообщения:', err.message)
+          showSnackbar('Не удалось отправить сообщение.', 'error')
+        }
+      }
+    }
+
+    // Стандартные диапазоны повторений
     const standardRepsValues = [5, 6, 8, 10, 12, 15, 20, 24, 30, 45, 60, 75, 90, 105, 120]
     function getSets(reps: number): number {
       if (reps === 5) return 5
@@ -549,6 +332,8 @@ export default defineComponent({
       if (reps === 10 || reps === 12 || reps === 15 || reps === 20) return 3
       return 3
     }
+
+    // Увеличить/уменьшить количество повторений
     const increaseRepsSplit = (exercisesArr: any, index: number) => {
       const ex = exercisesArr[index]
       const current = ex.reps
@@ -579,125 +364,21 @@ export default defineComponent({
         ex.sets = getSets(ex.reps)
       }
     }
+
+    // Удалить упражнение
     const removeExerciseSplit = (exercisesArr: any, index: number) => {
       exercisesArr.splice(index, 1)
     }
 
+    // Перегенерировать одно упражнение
     const regenerateExerciseSplit = (exercisesArr: any, index: number, dayIndex: number) => {
-      // Вызываем метод из хука для ре-логики
-      // Важно: regenerateExercise ожидает (dayIndex, exerciseIndex, gender)
       regenerateExercise(dayIndex, index, gender.value)
-      console.log(`Упражнение #${index} в дне #${dayIndex} перегенерировано.`)
+      console.log(`Упражнение #${index} в дне #${dayIndex + 1} перегенерировано.`)
     }
 
-    const refreshDayExercises = async (dayIndex: number) => {
-      if (!finalPlan.value[dayIndex]) return
-
-      refreshingDays.value[dayIndex] = true
-
-      await new Promise((resolve) => setTimeout(resolve, 600))
-
-      for (let exIndex = 0; exIndex < finalPlan.value[dayIndex].exercises.length; exIndex++) {
-        await regenerateExercise(dayIndex, exIndex, gender.value)
-        console.log(`Упражнение #${exIndex} в дне #${dayIndex + 1} перегенерировано.`)
-      }
-
-      console.log(`Все упражнения дня #${dayIndex + 1} перегенерированы.`)
-
-      // Сбрасываем состояние загрузки для данного дня
-      refreshingDays.value[dayIndex] = false
-    }
-
-    // Добавляем кнопку перегенерации всего сплита (шаг №3)
-    const regenerateWholeSplit = async () => {
-      // Повторно вызываем уже существующий процесс генерации
-      await generateSplitWorkout()
-      console.log('Весь сплит был перегенерирован.')
-    }
-
-    // Загрузка сплитов при монтировании
-    const loadSplits = async () => {
-      try {
-        console.log('Запрос к API для загрузки сплитов.')
-        const data = await apiRequest<SplitItem[]>('get', 'splits')
-        allSplits.value = Array.isArray(data) ? data : []
-        console.log('Загруженные сплиты:', data)
-      } catch (error: any) {
-        console.error('Ошибка при загрузке сплитов:', error)
-        showSnackbar('Ошибка при загрузке сплитов.', 'error')
-      }
-    }
-
-    onMounted(async () => {
-      console.log('Компонент TrainingOnWeek.vue смонтирован.')
-      await loadSplits()
-
-      // Инициализация Telegram
-      if (process.client) {
-        console.log('Инициализация Telegram.')
-        const launchParams = retrieveLaunchParams()
-        initData.value = launchParams.initData
-        if (initData.value && initData.value.user) {
-          userData.value = initData.value.user
-          telegramUserId.value = userData.value.id
-          console.log('Telegram userAndAdmin ID:', telegramUserId.value)
-        } else {
-          console.error('Нет данных пользователя (Telegram).')
-          showSnackbar('Нет данных пользователя (Telegram).', 'error')
-        }
-      }
-    })
-
-    // Функция для логирования конкретного упражнения (для админа)
-    const logExercises = async (exercise: any) => {
-      if (userStore.role !== 'admin') { // Проверка роли
-        console.warn('Только администратор может отправлять логи.')
-        showSnackbar('Доступ запрещён.', 'error')
-        return
-      }
-
-      // Добавляем логирование полученного упражнения для отладки
-      console.log('Получено упражнение для логирования:', exercise)
-
-      // Проверка telegramUserId
-      console.log('telegramUserId:', userStore.telegramId)
-
-      // Подготовка данных для отправки
-      const requestData = {
-        userId: userStore.telegramId,
-        exercise: {
-          name: exercise.name,
-          sets: exercise.sets,
-          reps: exercise.reps
-        }
-      }
-
-      // Логирование данных, которые будут отправлены
-      console.log('Отправляемые данные:', requestData)
-
-      try {
-        const response = await apiRequest('post', 'admin/log-exercises', requestData)
-
-        showSnackbar('Сообщение успешно отправлено!', 'success')
-        console.log(`Сообщение "${exercise.name}" успешно отправлено админу. Ответ:`, response.data)
-      } catch (err: any) {
-        if (err.response) {
-          console.error('Ошибка при отправке сообщения:', err.response.data)
-          showSnackbar(`Ошибка: ${err.response.data.message || 'Не удалось отправить сообщение.'}`, 'error')
-        } else {
-          console.error('Ошибка при отправке сообщения:', err.message)
-          showSnackbar('Не удалось отправить сообщение.', 'error')
-        }
-      }
-    }
-
-    /**
-     * Новый метод: делает первый символ заглавным,
-     * остальные символы остаются в исходном регистре.
-     */
-    const formatExerciseName = (rawName: string): string => {
-      if (!rawName) return ''
-      return rawName.charAt(0).toUpperCase() + rawName.slice(1)
+    // Обёртка для изменения selectedSplitId (вызывается из дочернего компонента)
+    const onSelectSplitId = (newVal: string) => {
+      selectedSplitId.value = newVal
     }
 
     return {
@@ -706,242 +387,61 @@ export default defineComponent({
       gender,
       allSplits,
       selectedSplit,
-      availableSplits,
-
-      // Уникальные типы сплитов и выбранный тип
-      uniqueSplitTypes,
+      selectedSplitId,
       selectedSplitType,
+      uniqueSplitTypes,
       splitsToShow,
 
-      // Новое состояние для выбранного split по ID
-      selectedSplitId,
-
-      // Флаги
+      // Состояния
       isLoading,
       isGenerating,
       showBottomSheet,
       errorMessages,
       snackbar,
+      refreshingDays,
 
       // Telegram
       userData,
       telegramUserId,
       initData,
 
-      // Методы выбора
-      selectGender,
-      selectSplitType,
-      selectSplit,
-
-      // Watchers
-      // (Определены выше)
-
-      // Метод-обёртка (с задержкой)
+      // Методы
       generateSplitWorkout,
-
-      // «Реальный» метод (не вызывается из шаблона напрямую)
       realGenerateSplitWorkout,
-      refreshingDays,
-      // Вспомогательный метод
-      dayName,
-
-      // Из хука
-      finalPlan,
-      generateSplitPlan,
-      sendWorkoutPlan, // Используем sendWorkoutPlan вместо sendDetailedWorkoutPlan
-
-      // Методы по работе с упражнениями (reps, remove, regenerate)
+      loadSplits,
+      refreshDayExercises,
+      regenerateWholeSplit,
       increaseRepsSplit,
       decreaseRepsSplit,
       removeExerciseSplit,
       regenerateExerciseSplit,
-
-      // Новые методы для обновления дней и всего сплита
-      refreshDayExercises,
-      regenerateWholeSplit,
-
-      // Метод для логирования упражнений
       logExercises,
+      showSnackbar,
 
-      // Метод для вывода упражнения с заглавной буквы
-      formatExerciseName
+      // Из хука
+      finalPlan,
+      sendWorkoutPlan,
+
+      // Смена ID (при выборе сплита)
+      onSelectSplitId
     }
   }
 })
 </script>
 
+<!--
+  Здесь в родительском компоненте мы можем оставить некоторые глобальные стили (если нужно).
+  Но поскольку мы вынесли часть верстки в дочерние компоненты, основные стили тоже переедут туда.
+-->
 <style scoped>
-.dark-background {
-  background-color: #1E1E1E !important;
-  color: #FFF;
-}
+/* Можем оставить что-то, если требуется глобально для родителя.
+   Но в оригинальном коде большинство стилей относилось к элементам внутри шаблона,
+   которые теперь находятся в дочерних компонентах.
+*/
 
-.group-button {
-  min-width: 45%;
-}
-
-.selected-button {
-  background-color: var(--v-primary-base);
-  color: white;
-}
-
-.split-card {
-  cursor: pointer;
-  transition: background-color 0.3s, border 0.3s;
-  border-radius: 14px;
-  padding: 0;
-}
-
-.split-card:hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.split-card.selected-split-card {
-  background-color: rgba(33, 150, 243, 1); /* Полупрозрачный синий фон */
-  border: 2px solid var(--v-primary-base);
-  color: white;
-}
-
-.split-card .v-card-title {
-  font-weight: bold;
-}
-
-.split-card .v-card-text {
-  color: #ccc;
-}
-
-.split-card.selected-split-card .v-card-text {
-  color: #fff;
-}
-
-.split-card.selected-split-card .v-card-title {
-  color: #fff;
-}
-
-.split-card:not(.selected-split-card) {
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-.split-card:not(.selected-split-card):hover {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-/* Блок под каждый день (7 штук). */
-.day-block {
-  margin-bottom: 16px; /* Сохраняем заданный отступ между днями */
-  background-color: rgba(55, 55, 55, 0.15);
-  border-radius: 8px;
-  padding: 8px;
-}
-
-/* Заголовок дня */
-.day-heading {
-  font-size: 1.1rem;
-  color: #fff;
-  margin-bottom: 4px;
-  text-shadow: 0 0 3px #111;
-  border-bottom: 1px solid #444;
-  padding-bottom: 2px;
-}
-
-/* Подпись дня недели */
-.day-name {
-  color: #ccc;
-  font-size: 0.9rem;
-  margin-top: 2px;
-}
-
-/* «Отдых» */
-.rest-label {
-  color: #f2f2f2;
-  font-style: italic;
-  margin-left: 4px;
-}
-
-/* «Таблица» (список) упражнений */
-.day-exercises-table {
-  padding-left: 8px;
-  margin-top: 4px;
-  border-left: 2px dashed #666;
-}
-
-/* Каждая строка упражнения */
-.exercise-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
-  background-color: rgba(68,68,68,0.2);
-  border-radius: 6px;
-  padding: 4px;
-  margin-left: 4px;
-}
-
-/* Название упражнения */
-.exercise-name {
-  flex: 1;
-  font-weight: 600;
-  color: #fafafa;
-  margin-right: 4px;
-  text-shadow: 0 0 2px #000;
-}
-
-/* Общий контейнер для +/- и refresh/delete */
-.row-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Левая часть (минус, reps, плюс) */
-.sets-reps-row {
-  display: flex;
-  align-items: center;
-  gap: 0;
-}
-
-/* sets×reps */
-.sets-reps-text {
-  font-weight: bold;
-  min-width: 50px;
-  text-align: center;
-  color: #ececec;
-  background-color: #444;
-  border-radius: 14px;
-  padding: 2px 6px;
-  margin: 0 4px;
-  box-shadow: inset 0 0 3px rgba(0,0,0,0.5);
-}
-
-/* Правая часть (refresh / delete / admin button) — по вертикали */
-.vertical-buttons {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-/* Вращение иконки */
+/* Оставим, например, анимацию вращения - может использоваться где угодно */
 .rotatingDumbbell {
   animation: rotate-dumbbell 1s linear infinite;
-}
-
-.splits {
-  border-radius: 14px;
-}
-
-/* Контент внутри split-card с v-radio */
-.split-card-content {
-  display: flex;
-  align-items: center;
-  padding: 0;
-}
-
-/* Новая стилизация для splitComment */
-.split-comment-area {
-  font-size: 1rem;
-  color: #ccc;
-  /* Добавьте дополнительные стили по желанию */
 }
 
 @keyframes rotate-dumbbell {
@@ -952,36 +452,4 @@ export default defineComponent({
     transform: rotate(360deg);
   }
 }
-
-/* Контейнер для радио-кнопки, занимает минимальное пространство */
-.radio-container {
-  flex: 0 0 auto; /* Не растягивается */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Стилизация самой радио-кнопки */
-.split-radio {
-  padding: 0; /* Убираем дополнительное пространство вокруг радио */
-}
-
-/* Контент сплита заполняет оставшуюся ширину */
-.split-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Опционально: уменьшение размеров текста и отступов для компактности */
-.split-content .v-card-title {
-  font-size: 1rem;
-  margin-bottom: 4px;
-}
-
-.split-content .v-card-text {
-  font-size: 0.9rem;
-  color: #ccc;
-}
-
 </style>

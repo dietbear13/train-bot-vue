@@ -32,7 +32,7 @@
     </v-tabs>
 
     <v-tabs-window v-model="activeTab">
-      <v-tabs-window-item class="px-3">
+      <v-tabs-window-item class="px-3 py-1">
         <KbzhuCalculator />
       </v-tabs-window-item>
 
