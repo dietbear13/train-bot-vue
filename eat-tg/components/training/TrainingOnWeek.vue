@@ -118,6 +118,8 @@ export default defineComponent({
     const errorMessages = ref<string[]>([])
     const refreshingDays = ref<Record<number, boolean>>({})
 
+    // Новое состояние для сохранения выбранного комментария
+    const selectedSplitComment = ref<string | null>(null)
     // Snackbar
     const snackbar = ref<SnackbarState>({
       show: false,
@@ -151,13 +153,12 @@ export default defineComponent({
       return Array.from(new Set(types))
     })
 
-    // Сплиты, соответствующие выбранному типу
+// возвращаем массив уникальных splitComment, и для каждого берем рандомный _id
     const splitsToShow = computed(() => {
       if (!selectedSplitType.value) return []
       const splits = availableSplits.value.filter(
           split => split.split === selectedSplitType.value && split.splitComment
       )
-      // Для каждой уникальной splitComment — берём 1 случайный сплит
       const uniqueComments = Array.from(new Set(splits.map(s => s.splitComment)))
       return uniqueComments.map(comment => {
         const eligibleSplits = splits.filter(s => s.splitComment === comment)
@@ -175,6 +176,7 @@ export default defineComponent({
       const split = availableSplits.value.find(s => s._id === newId)
       if (split) {
         selectedSplit.value = split
+        selectedSplitComment.value = split.splitComment ?? null
         console.log('selectedSplit обновлён:', split)
       } else {
         selectedSplit.value = null
@@ -283,8 +285,33 @@ export default defineComponent({
 
     // Перегенерация всего сплита
     const regenerateWholeSplit = async () => {
+      if (!selectedSplitType.value || !selectedSplitComment.value) {
+        console.warn('Нет типа или комментария, нечего перегенерировать.')
+        return
+      }
+
+      // Находим все сплиты, у которых split совпадает
+      // и splitComment совпадает
+      const matching = availableSplits.value.filter(s =>
+          s.split === selectedSplitType.value &&
+          s.splitComment === selectedSplitComment.value
+      )
+      if (matching.length === 0) {
+        console.warn('Не найдено сплитов для выбранного типа/комментария.')
+        return
+      }
+
+      // Случайно выбираем из matching
+      const randomIndex = Math.floor(Math.random() * matching.length)
+      const randomSplit = matching[randomIndex]
+
+      // Присваиваем новый selectedSplitId, чтобы дальше generateSplitWorkout заново взял это
+      selectedSplitId.value = randomSplit._id
+
+      // А теперь реально генерируем
       await generateSplitWorkout()
-      console.log('Весь сплит был перегенерирован заново.')
+
+      console.log('Весь сплит был перегенерирован заново с новым случайным splitId.')
     }
 
     // Логирование упражнения (кнопка «!»)

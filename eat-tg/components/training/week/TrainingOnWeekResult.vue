@@ -27,21 +27,23 @@
         <v-btn
             block
             color="success"
-            class="mb-3"
-            rounded="lg"
+            class="mb-2"
+            rounded="pill"
+            height="36px"
             :disabled="isLoading"
             @click="emitRegenerateWholeSplit"
         >
           <v-icon left>mdi-refresh</v-icon>
-          пересоздать весь сплит
+          пересоздать всю неделю
         </v-btn>
 
         <!-- Кнопка "Отправить себе" -->
         <v-btn
             block
             color="primary"
-            rounded="lg"
+            rounded="pill"
             icon
+            height="36px"
             :disabled="!telegramUserId"
             @click="emitSendWorkoutPlan"
         >
