@@ -1,3 +1,4 @@
+<!-- /training/week/TrainingOnWeekResult.vue -->
 <template>
   <!-- BottomSheetWithClose для отображения результата -->
   <BottomSheetWithClose
@@ -5,167 +6,177 @@
       :title="selectedSplit ? `${selectedSplit.split} на неделю` : 'Программа на неделю'"
   >
     <v-card-text class="ma-0">
-      <!-- Если идёт загрузка - показываем рыбное содержимое -->
-      <div v-if="isLoading" class="mb-2" style="text-align:center;">
-        <p>Пересоздаю тренировку..</p>
-        <v-progress-linear
-            color="primary"
-            indeterminate
-            height="4"
-            class="mt-3"
-        ></v-progress-linear>
+      <!-- Комментарий к сплиту (если есть) -->
+      <div v-if="selectedSplit?.splitComment" class="split-comment-area mb-3">
+        <strong>{{ selectedSplit.splitComment }}</strong>
       </div>
 
-      <!-- Если НЕ идёт загрузка - показываем реальный результат (7 дней) -->
-      <div v-else>
-        <!-- Комментарий к сплиту (если есть) -->
-        <div v-if="selectedSplit?.splitComment" class="split-comment-area mb-3">
-          <strong>{{ selectedSplit.splitComment }}</strong>
+      <!-- Кнопка для перегенерации всего сплита -->
+      <v-btn
+          block
+          color="success"
+          class="mb-2"
+          rounded="xl"
+          height="36px"
+          :disabled="isLoading"
+          @click="emitRegenerateWholeSplit"
+      >
+        <v-icon left :class="{ rotatingDumbbell: isLoading }">mdi-refresh</v-icon>
+        пересоздать всю неделю
+      </v-btn>
+
+      <!-- Кнопка "Отправить себе" -->
+      <v-btn
+          block
+          color="primary"
+          rounded="xl"
+          height="36px"
+          :disabled="!telegramUserId"
+          @click="emitSendWorkoutPlan"
+      >
+        <v-icon>mdi-send</v-icon>
+        Отправить сообщением
+      </v-btn>
+
+      <!-- Выводим 7 «блоков» (дней) -->
+      <div
+          v-for="(day, idx) in finalPlan"
+          :key="idx"
+          class="day-block mt-2"
+      >
+        <!-- Заголовок дня + кнопка для обновления упражнений дня -->
+        <h3 class="day-heading">
+          День {{ idx + 1 }} ({{ dayName(idx) }})
+          <v-btn
+              v-if="day.exercises.length > 0"
+              icon
+              variant="text"
+              class="mx-2"
+              size="24px"
+              @click="emitRefreshDayExercises(idx)"
+              :disabled="refreshingDays[idx]"
+              color="primary"
+          >
+            <v-icon :class="{ rotatingDumbbell: refreshingDays[idx] }">
+              mdi-refresh
+            </v-icon>
+          </v-btn>
+        </h3>
+
+        <!-- Если нет упражнений => отдых -->
+        <div v-if="day.exercises.length === 0" class="rest-label">
+          отдых
         </div>
 
-        <!-- Кнопка для перегенерации всего сплита сразу -->
-        <v-btn
-            block
-            color="success"
-            class="mb-2"
-            rounded="pill"
-            height="36px"
-            :disabled="isLoading"
-            @click="emitRegenerateWholeSplit"
-        >
-          <v-icon left>mdi-refresh</v-icon>
-          пересоздать всю неделю
-        </v-btn>
-
-        <!-- Кнопка "Отправить себе" -->
-        <v-btn
-            block
-            color="primary"
-            rounded="pill"
-            icon
-            height="36px"
-            :disabled="!telegramUserId"
-            @click="emitSendWorkoutPlan"
-        >
-          <v-icon>mdi-send</v-icon>
-          Отправить себе
-        </v-btn>
-
-        <!-- Выводим 7 «блоков» (дней) -->
-        <div
-            v-for="(day, idx) in finalPlan"
-            :key="idx"
-            class="day-block mb-3"
-        >
-          <!-- Заголовок дня + кнопка для обновления упражнений дня (если не "отдых") -->
-          <h3 class="day-heading">
-            День {{ idx + 1 }} ({{ dayName(idx) }})
-            <v-btn
-                v-if="day.exercises.length > 0"
-                icon
-                variant="text"
-                class="mx-2"
-                size="24px"
-                @click="emitRefreshDayExercises(idx)"
-                :disabled="refreshingDays[idx]"
-                color="primary"
-            >
-              <v-icon :class="{ rotatingDumbbell: refreshingDays[idx] }">
-                mdi-refresh
-              </v-icon>
-            </v-btn>
-          </h3>
-
-          <!-- Если нет упражнений => отдых -->
-          <div v-if="day.exercises.length === 0" class="rest-label">
-            отдых
-          </div>
-
-          <!-- Иначе => список упражнений -->
-          <div v-else class="day-exercises-table">
+        <!-- Иначе => список упражнений -->
+        <div v-else class="day-exercises-table">
+          <div
+              v-for="(ex, i2) in day.exercises"
+              :key="i2"
+              class="exercise-row"
+          >
+            <!-- Название упражнения (делаем кликабельным!) -->
             <div
-                v-for="(ex, i2) in day.exercises"
-                :key="i2"
-                class="exercise-row"
+                class="exercise-name"
+                @click="openExerciseInfo(ex)"
+                style="cursor: pointer; text-decoration: underline;"
             >
-              <!-- Название упражнения -->
-              <div class="exercise-name">
-                {{ formatExerciseName(ex.name) }}
+              {{ formatExerciseName(ex.name) }}
+            </div>
+
+            <!-- Блок с кнопками +/- и т.д. -->
+            <div class="row-controls" style="display: flex; align-items: center; gap: 8px;">
+              <!-- - reps + -->
+              <div class="sets-reps-row">
+                <v-btn
+                    icon
+                    small
+                    variant="text"
+                    class="mx-0"
+                    size="24px"
+                    @click="emitDecreaseRepsSplit(day.exercises, i2)"
+                    color="#db5856"
+                >
+                  <v-icon small>mdi-minus</v-icon>
+                </v-btn>
+
+                <span class="sets-reps-text">
+                  {{ ex.sets }} × {{ ex.reps }}
+                </span>
+
+                <v-btn
+                    icon
+                    variant="text"
+                    class="mx-0"
+                    size="24px"
+                    @click="emitIncreaseRepsSplit(day.exercises, i2)"
+                    color="#77dd77"
+                >
+                  <v-icon small>mdi-plus</v-icon>
+                </v-btn>
               </div>
 
-              <!-- Блок с кнопками +/- и т.д. -->
-              <div class="row-controls" style="display: flex; align-items: center; gap: 8px;">
-                <!-- Левая часть: - reps + -->
-                <div class="sets-reps-row">
-                  <v-btn
-                      icon
-                      small
-                      variant="text"
-                      class="mx-0"
-                      size="24px"
-                      @click="emitDecreaseRepsSplit(day.exercises, i2)"
-                      color="#db5856"
-                  >
-                    <v-icon small>mdi-minus</v-icon>
-                  </v-btn>
+              <!-- refresh / delete -->
+              <div class="vertical-buttons">
+                <v-btn
+                    icon
+                    variant="text"
+                    class="mx-0"
+                    size="24px"
+                    @click="emitRegenerateExerciseSplit(day.exercises, i2, idx)"
+                    color="primary"
+                >
+                  <v-icon>mdi-refresh</v-icon>
+                </v-btn>
 
-                  <span class="sets-reps-text">
-                    {{ ex.sets }} × {{ ex.reps }}
-                  </span>
-
-                  <v-btn
-                      icon
-                      variant="text"
-                      class="mx-0"
-                      size="24px"
-                      @click="emitIncreaseRepsSplit(day.exercises, i2)"
-                      color="#77dd77"
-                  >
-                    <v-icon small>mdi-plus</v-icon>
-                  </v-btn>
-                </div>
-
-                <!-- Правая часть: refresh / delete / admin button -->
-                <div class="vertical-buttons">
-                  <!-- refresh -->
-                  <v-btn
-                      icon
-                      variant="text"
-                      class="mx-0"
-                      size="24px"
-                      @click="emitRegenerateExerciseSplit(day.exercises, i2, idx)"
-                      color="primary"
-                  >
-                    <v-icon>mdi-refresh</v-icon>
-                  </v-btn>
-                  <!-- delete -->
-                  <v-btn
-                      icon
-                      variant="text"
-                      class="mx-0"
-                      size="24px"
-                      @click="emitRemoveExerciseSplit(day.exercises, i2)"
-                      color="#db5856"
-                  >
-                    <v-icon>mdi-delete</v-icon>
-                  </v-btn>
-                  <!-- Кнопка "!" (admin) -->
-                  <AdminExerciseButton :onLog="() => emitLogExercises(ex)" />
-                </div>
+                <v-btn
+                    icon
+                    variant="text"
+                    class="mx-0"
+                    size="24px"
+                    @click="emitRemoveExerciseSplit(day.exercises, i2)"
+                    color="#db5856"
+                >
+                  <v-icon>mdi-delete</v-icon>
+                </v-btn>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      <!-- Кнопка "Отправить себе" -->
+      <v-btn
+          block
+          color="primary"
+          rounded="xl"
+          icon
+          height="36px"
+          :disabled="!telegramUserId"
+          @click="emitSendWorkoutPlan"
+      >
+        <v-icon>mdi-send</v-icon>
+        Отправить сообщением
+      </v-btn>
+
     </v-card-text>
   </BottomSheetWithClose>
+
+  <!-- ВОТ ЭТО ДОБАВЛЯЕМ: сам диалог/попап ExerciseGifViewer -->
+  <ExerciseInfo
+      v-model="showExerciseInfo"
+      :exercise="selectedExerciseForGif"
+  />
 </template>
 
 <script lang="ts">
 import { defineComponent, ref, PropType } from 'vue'
 import BottomSheetWithClose from '~/components/shared/BottomSheetWithClose.vue'
 import AdminExerciseButton from '~/components/userAndAdmin/AdminExerciseButton.vue'
+import ExerciseInfo from '~/components/training/ExerciseInfo.vue';
 
+
+// Типы упражнений и плана
 interface Exercise {
   _id: string
   name: string
@@ -181,7 +192,11 @@ interface DayPlan {
 
 export default defineComponent({
   name: 'TrainingOnWeekResult',
-  components: { BottomSheetWithClose, AdminExerciseButton },
+  components: {
+    BottomSheetWithClose,
+    AdminExerciseButton,
+    ExerciseInfo,
+  },
   props: {
     showBottomSheet: {
       type: Boolean,
@@ -216,23 +231,32 @@ export default defineComponent({
     'increaseRepsSplit',
     'decreaseRepsSplit',
     'removeExerciseSplit',
-    'regenerateExerciseSplit',
-    'logExercises'
+    'regenerateExerciseSplit'
   ],
   setup(props, { emit }) {
     // Локальное showBottomSheet, чтобы работал v-model
     const localShowBottomSheet = ref(props.showBottomSheet)
 
-    // Следим за изменением localShowBottomSheet -> отдаем наверх
+    // При изменении localShowBottomSheet => отправляем наверх
     const syncShowBottomSheet = () => {
       emit('update:showBottomSheet', localShowBottomSheet.value)
+    }
+
+    // Локальные стейты для открытия ExerciseGifViewer
+    const showExerciseInfo = ref(false)
+    const selectedExerciseForGif = ref<Exercise | null>(null)
+
+    // Функция, вызываемая при клике на название упражнения
+    const openExerciseInfo = (exercise: Exercise) => {
+      selectedExerciseForGif.value = exercise
+      showExerciseInfo.value = true
     }
 
     // dayName — название дня недели
     const dayName = (index: number) => {
       const days = [
-        'Понедельник', 'Вторник', 'Среда', 'Четверг',
-        'Пятница', 'Суббота', 'Воскресенье'
+        'Понедельник', 'Вторник', 'Среда',
+        'Четверг', 'Пятница', 'Суббота', 'Воскресенье'
       ]
       return days[index % 7]
     }
@@ -243,42 +267,44 @@ export default defineComponent({
       return rawName.charAt(0).toUpperCase() + rawName.slice(1)
     }
 
-    // Эмиты для кнопок
+    // Эмиты
     const emitRegenerateWholeSplit = () => emit('regenerateWholeSplit')
     const emitSendWorkoutPlan = () => emit('sendWorkoutPlan')
     const emitRefreshDayExercises = (dayIndex: number) => {
       emit('refreshDayExercises', dayIndex)
     }
-    const emitIncreaseRepsSplit = (exercisesArr: any, index: number) => {
+    const emitIncreaseRepsSplit = (exercisesArr: Exercise[], index: number) => {
       emit('increaseRepsSplit', exercisesArr, index)
     }
-    const emitDecreaseRepsSplit = (exercisesArr: any, index: number) => {
+    const emitDecreaseRepsSplit = (exercisesArr: Exercise[], index: number) => {
       emit('decreaseRepsSplit', exercisesArr, index)
     }
-    const emitRemoveExerciseSplit = (exercisesArr: any, index: number) => {
+    const emitRemoveExerciseSplit = (exercisesArr: Exercise[], index: number) => {
       emit('removeExerciseSplit', exercisesArr, index)
     }
-    const emitRegenerateExerciseSplit = (exercisesArr: any, index: number, dayIndex: number) => {
+    const emitRegenerateExerciseSplit = (exercisesArr: Exercise[], index: number, dayIndex: number) => {
       emit('regenerateExerciseSplit', exercisesArr, index, dayIndex)
-    }
-    const emitLogExercises = (exercise: any) => {
-      emit('logExercises', exercise)
     }
 
     return {
       localShowBottomSheet,
+      syncShowBottomSheet,
+
+      // новые reactive-поля и метод
+      showExerciseInfo,
+      selectedExerciseForGif,
+      openExerciseInfo,
+
       dayName,
       formatExerciseName,
 
-      syncShowBottomSheet,
       emitRegenerateWholeSplit,
       emitSendWorkoutPlan,
       emitRefreshDayExercises,
       emitIncreaseRepsSplit,
       emitDecreaseRepsSplit,
       emitRemoveExerciseSplit,
-      emitRegenerateExerciseSplit,
-      emitLogExercises
+      emitRegenerateExerciseSplit
     }
   },
   watch: {
@@ -293,8 +319,6 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* Здесь стили для отображения результатов (дни, упражнения и т.п.) */
-
 /* Блок под каждый день */
 .day-block {
   margin-bottom: 16px;
@@ -322,7 +346,7 @@ export default defineComponent({
 
 /* Список упражнений (таблица) */
 .day-exercises-table {
-  padding-left: 8px;
+  padding-left: 4px;
   margin-top: 4px;
   border-left: 2px dashed #666;
 }
@@ -334,9 +358,8 @@ export default defineComponent({
   justify-content: space-between;
   margin-bottom: 6px;
   background-color: rgba(68,68,68,0.2);
-  border-radius: 6px;
+  border-radius: 14px;
   padding: 4px;
-  margin-left: 4px;
 }
 
 /* Название упражнения */
@@ -344,7 +367,7 @@ export default defineComponent({
   flex: 1;
   font-weight: 600;
   color: #fafafa;
-  margin-right: 4px;
+  margin-left: 4px;
   text-shadow: 0 0 2px #000;
 }
 
@@ -375,7 +398,7 @@ export default defineComponent({
   color: #ccc;
 }
 
-/* Анимация вращения иконки (при refreshDayExercises) */
+/* Анимация вращения иконки (при refreshDayExercises или при isLoading) */
 .rotatingDumbbell {
   animation: rotate-dumbbell 1s linear infinite;
 }

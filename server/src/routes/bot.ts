@@ -226,17 +226,18 @@ const sendWorkoutToUser = (
 };
 
 /**
- * Маршрут: отправка плана тренировок
+ * Маршрут: отправка плана тренировок на неделю
  */
 router.post('/send-workout', async (req: Request, res: Response) => {
     const { userId, splitName, splitComment, plan } = req.body;
     if (!userId || !splitName || !plan || !Array.isArray(plan)) {
+        console.log('userId, splitName, plan:', userId, splitName, plan)
         return res.status(400).json({ message: 'Необходимо указать userId, splitName и plan[]' });
     }
 
     try {
         sendWorkoutToUser(userId, splitName, splitComment, plan);
-        res.json({ message: 'Тренировка отправлена в Telegram' });
+        res.json({ message: 'Тренировка отправлена в сообщением в чат' });
     } catch (error: any) {
         console.error('Ошибка при отправке сообщения в Telegram:', error.message);
         res.status(500).json({ message: 'Ошибка при отправке сообщения в Telegram', error: error.message });
@@ -250,7 +251,7 @@ const sendKbzhuResultToUser = (
     chatId: number,
     kbzhuResult: { calories: number; proteins: number; fats: number; carbs: number }
 ) => {
-    let message = 'Ваши результаты расчёта КБЖУ:\n\n';
+    let message = 'Примерный суточный расчёт КБЖУ:\n\n';
     message += `Калории: ${kbzhuResult.calories} ккал\n`;
     message += `Белки: ${kbzhuResult.proteins} г\n`;
     message += `Жиры: ${kbzhuResult.fats} г\n`;
@@ -281,7 +282,7 @@ router.post('/send-kbzhu', async (req: Request, res: Response) => {
 
     try {
         sendKbzhuResultToUser(userId, kbzhuResult);
-        res.json({ message: 'Результаты отправлены в Telegram' });
+        res.json({ message: 'КБЖУ отправлены в сообщением в чат' });
     } catch (error: any) {
         console.error('Ошибка при отправке сообщения в Telegram:', error.message);
         res.status(500).json({ message: 'Ошибка при отправке сообщения в Telegram', error: error.message });

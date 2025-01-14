@@ -53,6 +53,11 @@
       </template>
     </v-snackbar>
   </div>
+  <ExerciseInfo
+      v-model="showExerciseInfo"
+      :exercise="selectedExercise"
+  />
+
 </template>
 
 <script lang="ts">
@@ -61,6 +66,7 @@ import { retrieveLaunchParams } from '@telegram-apps/sdk'
 import { useUserStore } from '~/stores/userStore'
 import { useApi } from '~/composables/useApi'
 import useSplitGenerator from '~/composables/useSplitGenerator'
+import ExerciseInfo from '~/components/training/ExerciseInfo.vue'
 
 // Дочерние компоненты
 import TrainingOnWeekInputs from '~/components/training/week/TrainingOnWeekInputs.vue'
@@ -248,7 +254,6 @@ export default defineComponent({
 
     // При монтировании
     onMounted(async () => {
-      console.log('Компонент TrainingOnWeek.vue смонтирован.')
       await loadSplits()
 
       // Инициализация Telegram
@@ -456,10 +461,6 @@ export default defineComponent({
 })
 </script>
 
-<!--
-  Здесь в родительском компоненте мы можем оставить некоторые глобальные стили (если нужно).
-  Но поскольку мы вынесли часть верстки в дочерние компоненты, основные стили тоже переедут туда.
--->
 <style scoped>
 /* Можем оставить что-то, если требуется глобально для родителя.
    Но в оригинальном коде большинство стилей относилось к элементам внутри шаблона,

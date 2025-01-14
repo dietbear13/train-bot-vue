@@ -1,4 +1,4 @@
-<!-- components/ExerciseInfo.vue -->
+<!-- components/training/ExerciseInfo.vue -->
 <template>
   <BottomSheetWithClose
       v-model="modelValueLocal"
