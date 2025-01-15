@@ -1,3 +1,6 @@
+<!--training/week/TrainingOnInputs.vue-->
+
+
 <template>
   <!-- Форма с выбором пола, типа сплита, конкретного сплита, кнопкой "Создать" -->
   <v-form @submit.prevent="emitGenerateSplit">
@@ -65,17 +68,17 @@
     <!-- Выбор конкретного сплита (v-radio) -->
     <v-card
         v-if="splitsToShow.length > 0"
-        class="my-2 dark-background pa-2 splits"
+        class="my-2 dark-background px-1 py-3 splits"
         variant="tonal"
     >
-      <v-card-text class="pa-0">
-        <v-row class="pa-1">
+      <v-card-text class="px-2 py-1">
+        <v-row class="pa-0">
           <v-col
               v-for="split in splitsToShow"
               :key="split._id"
               cols="12"
               sm="6"
-              class="py-2"
+              class="py-1"
           >
             <v-card
                 @click="onSelectSplit(split)"
@@ -94,8 +97,8 @@
                   ></v-radio>
                 </div>
                 <!-- Контент сплита (комментарий) -->
-                <div class="split-content">
-                  <v-card-text v-if="split.splitComment">{{ split.splitComment }}</v-card-text>
+                <div :class="['split-content', { 'truncate': localSelectedSplitId !== split._id }]">
+                  <v-card-text style="padding: 4px" v-if="split.splitComment">{{ split.splitComment }}</v-card-text>
                 </div>
               </v-card-text>
             </v-card>
@@ -353,6 +356,18 @@ export default defineComponent({
 .split-content .v-card-text {
   font-size: 0.9rem;
   color: #ccc;
+}
+
+/* Добавляем класс для обрезки текста до 2 строк с многоточием */
+.truncate {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2; /* Количество отображаемых строк */
+  -webkit-box-orient: vertical;
+}
+
+.split-content .v-card-text.truncate {
+  /* Дополнительные стили, если необходимо */
 }
 
 /* Обёртка для списка доступных сплитов */

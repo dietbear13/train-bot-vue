@@ -38,7 +38,7 @@
       </v-tab>
     </v-tabs>
 
-    <v-tabs-window v-model="activeTab">
+    <v-tabs-window class="mt-2" v-model="activeTab">
       <v-tabs-window-item>
         <TrainingOnWeek />
       </v-tabs-window-item>
@@ -50,8 +50,6 @@
       </v-tabs-window-item>
     </v-tabs-window>
 
-    <!-- Подключение компонента HowToUse -->
-    <HowToUse />
   </v-container>
 </template>
 
@@ -60,7 +58,6 @@ import { ref } from 'vue'
 import TrainingOnWeek from '~/components/training/TrainingOnWeek.vue'
 import TrainingByMuscles from '~/components/training/TrainingByMuscles.vue'
 import ExerciseSearch from "~/components/training/ExerciseSearch.vue"
-import HowToUse from '~/components/training/HowToUseGenerator.vue' // Импортируем компонент HowToUse
 
 // Инициализация активной вкладки с типизацией
 const activeTab = ref<number>(0)
@@ -83,5 +80,9 @@ const activeTab = ref<number>(0)
 
 .custom-tab {
   border-radius: 16px;
+}
+
+.training-container {
+
 }
 </style>

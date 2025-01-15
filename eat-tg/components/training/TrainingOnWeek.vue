@@ -1,40 +1,65 @@
+<!-- training/TrainingOnWeek.vue -->
 <template>
   <div>
-    <!-- Компонент полей ввода (выбор пола, типа сплита, конкретного сплита, кнопка «Создать») -->
-    <TrainingOnWeekInputs
-        :genders="genders"
-        :gender="gender"
-        :uniqueSplitTypes="uniqueSplitTypes"
-        :selectedSplitType="selectedSplitType"
-        :splitsToShow="splitsToShow"
-        :selectedSplitId="selectedSplitId"
-        :selectedSplit="selectedSplit"
-        :isLoading="isLoading"
-        :isGenerating="isGenerating"
-        :errorMessages="errorMessages"
-        @update:gender="gender = $event"
-        @update:selectedSplitType="selectedSplitType = $event"
-        @update:selectedSplitId="onSelectSplitId"
-        @generateSplitWorkout="generateSplitWorkout"
-    />
+    <!-- Пока идёт проверка роли (roleLoading) — показываем skeleton -->
+    <div v-if="roleLoading">
+      <v-skeleton-loader type="ossein" height="80px" class="mx-auto mt-2" />
+    </div>
 
-    <!-- Компонент результата: BottomSheetWithClose со сплитом на неделю, управлением упражнениями и т.п. -->
-    <TrainingOnWeekResult
-        v-model:showBottomSheet="showBottomSheet"
-        :selectedSplit="selectedSplit"
-        :finalPlan="finalPlan"
-        :isLoading="isLoading"
-        :telegramUserId="telegramUserId"
-        :refreshingDays="refreshingDays"
-        @sendWorkoutPlan="sendWorkoutPlan"
-        @regenerateWholeSplit="regenerateWholeSplit"
-        @refreshDayExercises="refreshDayExercises"
-        @increaseRepsSplit="increaseRepsSplit"
-        @decreaseRepsSplit="decreaseRepsSplit"
-        @removeExerciseSplit="removeExerciseSplit"
-        @regenerateExerciseSplit="regenerateExerciseSplit"
-        @logExercises="logExercises"
-    />
+    <!-- Когда проверка роли закончена — рендерим "реальный" контент -->
+    <div v-else>
+      <!-- Если пользователь freeUser: показываем карточку с сообщением -->
+      <div v-if="!canCreateTraining">
+        <v-card class="mb-2 dark-background" variant="tonal">
+          <v-card-text>
+            Создание программ доступно только для подписанных на телеграм-канал.
+            Перейдите на
+            <nuxt-link to="/profile">страницу профиля<v-icon size="18px">mdi-account</v-icon>
+            </nuxt-link> и подпишитесь.
+          </v-card-text>
+        </v-card>
+      </div>
+
+      <!-- Если пользователь admin или paidUser: показываем форму выбора и кнопку "Создать" -->
+      <div v-else>
+        <!-- Компонент полей ввода (выбор пола, типа сплита и т.д.) -->
+        <TrainingOnWeekInputs
+            :genders="genders"
+            :gender="gender"
+            :uniqueSplitTypes="uniqueSplitTypes"
+            :selectedSplitType="selectedSplitType"
+            :splitsToShow="splitsToShow"
+            :selectedSplitId="selectedSplitId"
+            :selectedSplit="selectedSplit"
+            :isLoading="isLoading"
+            :isGenerating="isGenerating"
+            :errorMessages="errorMessages"
+            @update:gender="gender = $event"
+            @update:selectedSplitType="selectedSplitType = $event"
+            @update:selectedSplitId="onSelectSplitId"
+            @generateSplitWorkout="generateSplitWorkout"
+        />
+
+        <!-- Компонент результата (сплит на неделю) -->
+        <TrainingOnWeekResult
+            v-model:showBottomSheet="showBottomSheet"
+            :selectedSplit="selectedSplit"
+            :finalPlan="finalPlan"
+            :isLoading="isLoading"
+            :telegramUserId="telegramUserId"
+            :refreshingDays="refreshingDays"
+            @sendWorkoutPlan="sendWorkoutPlan"
+            @regenerateWholeSplit="regenerateWholeSplit"
+            @refreshDayExercises="refreshDayExercises"
+            @increaseRepsSplit="increaseRepsSplit"
+            @decreaseRepsSplit="decreaseRepsSplit"
+            @removeExerciseSplit="removeExerciseSplit"
+            @regenerateExerciseSplit="regenerateExerciseSplit"
+            @logExercises="logExercises"
+            :openExerciseInfo="openExerciseInfo"
+        />
+      </div>
+    </div>
 
     <!-- Глобальный Snackbar (для вывода сообщений) -->
     <v-snackbar
@@ -52,12 +77,13 @@
         </v-btn>
       </template>
     </v-snackbar>
-  </div>
-  <ExerciseInfo
-      v-model="showExerciseInfo"
-      :exercise="selectedExercise"
-  />
 
+    <!-- Компонент ExerciseInfo (BottomSheetWithClose) для показа подробностей упражнения -->
+    <ExerciseInfo
+        v-model="showExerciseInfo"
+        :exercise="selectedExercise"
+    />
+  </div>
 </template>
 
 <script lang="ts">
@@ -66,11 +92,11 @@ import { retrieveLaunchParams } from '@telegram-apps/sdk'
 import { useUserStore } from '~/stores/userStore'
 import { useApi } from '~/composables/useApi'
 import useSplitGenerator from '~/composables/useSplitGenerator'
-import ExerciseInfo from '~/components/training/ExerciseInfo.vue'
 
 // Дочерние компоненты
 import TrainingOnWeekInputs from '~/components/training/week/TrainingOnWeekInputs.vue'
 import TrainingOnWeekResult from '~/components/training/week/TrainingOnWeekResult.vue'
+import ExerciseInfo from '~/components/training/ExerciseInfo.vue'
 
 // Типы
 interface SnackbarState {
@@ -102,30 +128,45 @@ interface TelegramUserData {
 
 export default defineComponent({
   name: 'TrainingOnWeek',
-  components: { TrainingOnWeekInputs, TrainingOnWeekResult },
+  components: {
+    TrainingOnWeekInputs,
+    TrainingOnWeekResult,
+    ExerciseInfo
+  },
   setup() {
+    // ========== Pinia: проверяем роль пользователя ==========
     const userStore = useUserStore()
+    // Флаг, указывающий, что роль ещё не загружена
+    const roleLoading = ref(true)
+
+    // Можно ли создавать тренировку
+    const canCreateTraining = computed(
+        () => userStore.role === 'admin' || userStore.role === 'paidUser'
+    )
+
     const { apiRequest } = useApi()
 
     // Пол / сплиты
     const genders = ['Мужчина', 'Женщина']
-    const gender = ref<string>('')                // Выбранный пол
-    const allSplits = ref<SplitItem[]>([])        // Все сплиты (из API)
-    const selectedSplit = ref<SplitItem | null>(null)
-    const selectedSplitId = ref<string | null>(null) // ID выбранного сплита
+    const gender = ref<string>('')
 
-    // Тип сплита
+    const allSplits = ref<SplitItem[]>([])
+    const selectedSplit = ref<SplitItem | null>(null)
+    const selectedSplitId = ref<string | null>(null)
     const selectedSplitType = ref<string | null>(null)
 
     // Состояния загрузки/ошибок
-    const isLoading = ref(false)     // Показывает анимацию иконки
-    const isGenerating = ref(false)  // Флаг из хука
+    const isLoading = ref(false)
+    const isGenerating = ref(false)
     const showBottomSheet = ref(false)
     const errorMessages = ref<string[]>([])
     const refreshingDays = ref<Record<number, boolean>>({})
 
-    // Новое состояние для сохранения выбранного комментария
-    const selectedSplitComment = ref<string | null>(null)
+    // Telegram
+    const userData = ref<TelegramUserData | null>(null)
+    const telegramUserId = ref<number | null>(null)
+    const initData = ref<any>(null)
+
     // Snackbar
     const snackbar = ref<SnackbarState>({
       show: false,
@@ -140,26 +181,20 @@ export default defineComponent({
       console.log(`Snackbar: ${msg} (color: ${color})`)
     }
 
-    // Telegram
-    const userData = ref<TelegramUserData | null>(null)
-    const telegramUserId = ref<number | null>(null)
-    const initData = ref<any>(null)
+    // Выбранный комментарий сплита (при необходимости)
+    const selectedSplitComment = ref<string | null>(null)
 
-    // Фильтруем сплиты по выбранному полу
+    // Вычисляемые списки
     const availableSplits = computed(() => {
       if (!gender.value) return []
       return allSplits.value.filter(split =>
           split.gender.toLowerCase().includes(gender.value.toLowerCase())
       )
     })
-
-    // Уникальные типы сплитов
     const uniqueSplitTypes = computed(() => {
       const types = availableSplits.value.map(split => split.split)
       return Array.from(new Set(types))
     })
-
-// возвращаем массив уникальных splitComment, и для каждого берем рандомный _id
     const splitsToShow = computed(() => {
       if (!selectedSplitType.value) return []
       const splits = availableSplits.value.filter(
@@ -172,12 +207,12 @@ export default defineComponent({
         return {
           _id: randomSplit._id,
           split: randomSplit.split,
-          splitComment: randomSplit.splitComment,
+          splitComment: randomSplit.splitComment
         }
       })
     })
 
-    // Следим за изменением selectedSplitId -> обновляем selectedSplit
+    // Следим за изменением выбранных значений
     watch(selectedSplitId, (newId) => {
       const split = availableSplits.value.find(s => s._id === newId)
       if (split) {
@@ -191,15 +226,13 @@ export default defineComponent({
         }
       }
     })
-
-    // Если массив splitsToShow изменился, а selectedSplitId ещё пуст — выберем первый
     watch(splitsToShow, (newSplits) => {
       if (newSplits.length > 0 && !selectedSplitId.value) {
         selectedSplitId.value = newSplits[0]._id
       }
     })
 
-    // Подключаем хук генерации
+    // Логика генерации
     const {
       finalPlan,
       generateSplitPlan,
@@ -215,7 +248,7 @@ export default defineComponent({
       selectedSplitRef: selectedSplit
     })
 
-    // «Реальный» метод генерации
+    // Методы
     async function realGenerateSplitWorkout() {
       if (!selectedSplit.value || !gender.value) {
         errorMessages.value.push('Выберите пол и сплит.')
@@ -228,7 +261,6 @@ export default defineComponent({
       console.log('Генерация сплита (реальный вызов) завершена.')
     }
 
-    // Обёртка с задержкой 1.5–2.5 сек
     async function generateSplitWorkout() {
       isLoading.value = true
       const delayTime = 1500 + Math.random() * 1000
@@ -239,7 +271,7 @@ export default defineComponent({
       isLoading.value = false
     }
 
-    // Загрузка сплитов из API
+    // Загрузка сплитов
     const loadSplits = async () => {
       try {
         console.log('Запрос к API для загрузки сплитов.')
@@ -252,11 +284,14 @@ export default defineComponent({
       }
     }
 
-    // При монтировании
+    // onMounted
     onMounted(async () => {
+      // 1. Эмулируем получение роли (или делаем реальный запрос)
+      //    Если роль изначально уже доступна, можно снять комментарий
+      //    и сразу установить roleLoading.value = false.
+      //    Либо, если есть реальный запрос, делаем await userStore.fetchRole() и т.п.
       await loadSplits()
 
-      // Инициализация Telegram
       if (process.client) {
         console.log('Инициализация Telegram SDK.')
         const launchParams = retrieveLaunchParams()
@@ -270,6 +305,14 @@ export default defineComponent({
           showSnackbar('Нет данных пользователя (Telegram).', 'error')
         }
       }
+
+      // Допустим, тут ваша логика определения userStore.role
+      // Для демонстрации — просто делаем небольшую паузу
+      // (уберите, если не нужно)
+      await new Promise((resolve) => setTimeout(resolve, 800))
+
+      // 2. Когда мы точно знаем, что role уже определена, снимаем "loading"
+      roleLoading.value = false
     })
 
     // Обновление упражнений одного дня
@@ -294,9 +337,6 @@ export default defineComponent({
         console.warn('Нет типа или комментария, нечего перегенерировать.')
         return
       }
-
-      // Находим все сплиты, у которых split совпадает
-      // и splitComment совпадает
       const matching = availableSplits.value.filter(s =>
           s.split === selectedSplitType.value &&
           s.splitComment === selectedSplitComment.value
@@ -305,28 +345,21 @@ export default defineComponent({
         console.warn('Не найдено сплитов для выбранного типа/комментария.')
         return
       }
-
-      // Случайно выбираем из matching
       const randomIndex = Math.floor(Math.random() * matching.length)
       const randomSplit = matching[randomIndex]
 
-      // Присваиваем новый selectedSplitId, чтобы дальше generateSplitWorkout заново взял это
       selectedSplitId.value = randomSplit._id
-
-      // А теперь реально генерируем
       await generateSplitWorkout()
-
       console.log('Весь сплит был перегенерирован заново с новым случайным splitId.')
     }
 
-    // Логирование упражнения (кнопка «!»)
+    // Логирование упражнения (только для admin)
     const logExercises = async (exercise: any) => {
       if (userStore.role !== 'admin') {
         console.warn('Только администратор может отправлять логи.')
         showSnackbar('Доступ запрещён.', 'error')
         return
       }
-
       console.log('Получено упражнение для логирования:', exercise)
       console.log('telegramUserId:', userStore.telegramId)
 
@@ -338,9 +371,6 @@ export default defineComponent({
           reps: exercise.reps
         }
       }
-
-      console.log('Отправляемые данные:', requestData)
-
       try {
         const response = await apiRequest('post', 'admin/log-exercises', requestData)
         showSnackbar('Сообщение успешно отправлено!', 'success')
@@ -348,7 +378,10 @@ export default defineComponent({
       } catch (err: any) {
         if (err.response) {
           console.error('Ошибка при отправке сообщения:', err.response.data)
-          showSnackbar(`Ошибка: ${err.response.data.message || 'Не удалось отправить сообщение.'}`, 'error')
+          showSnackbar(
+              `Ошибка: ${err.response.data.message || 'Не удалось отправить сообщение.'}`,
+              'error'
+          )
         } else {
           console.error('Ошибка при отправке сообщения:', err.message)
           showSnackbar('Не удалось отправить сообщение.', 'error')
@@ -356,7 +389,7 @@ export default defineComponent({
       }
     }
 
-    // Стандартные диапазоны повторений
+    // Логика изменения повторений
     const standardRepsValues = [5, 6, 8, 10, 12, 15, 20, 24, 30, 45, 60, 75, 90, 105, 120]
     function getSets(reps: number): number {
       if (reps === 5) return 5
@@ -365,7 +398,6 @@ export default defineComponent({
       return 3
     }
 
-    // Увеличить/уменьшить количество повторений
     const increaseRepsSplit = (exercisesArr: any, index: number) => {
       const ex = exercisesArr[index]
       const current = ex.reps
@@ -408,13 +440,21 @@ export default defineComponent({
       console.log(`Упражнение #${index} в дне #${dayIndex + 1} перегенерировано.`)
     }
 
-    // Обёртка для изменения selectedSplitId (вызывается из дочернего компонента)
+    // Обёртка для изменения selectedSplitId (из TrainingOnWeekInputs)
     const onSelectSplitId = (newVal: string) => {
       selectedSplitId.value = newVal
     }
 
+    // Модалка с подробностями упражнения
+    const showExerciseInfo = ref(false)
+    const selectedExercise = ref<any>(null)
+    const openExerciseInfo = (exercise: any) => {
+      selectedExercise.value = exercise
+      showExerciseInfo.value = true
+    }
+
     return {
-      // Пол и массивы
+      // Данные
       genders,
       gender,
       allSplits,
@@ -424,7 +464,6 @@ export default defineComponent({
       uniqueSplitTypes,
       splitsToShow,
 
-      // Состояния
       isLoading,
       isGenerating,
       showBottomSheet,
@@ -432,7 +471,6 @@ export default defineComponent({
       snackbar,
       refreshingDays,
 
-      // Telegram
       userData,
       telegramUserId,
       initData,
@@ -449,29 +487,34 @@ export default defineComponent({
       regenerateExerciseSplit,
       logExercises,
       showSnackbar,
+      onSelectSplitId,
 
-      // Из хука
       finalPlan,
       sendWorkoutPlan,
 
-      // Смена ID (при выборе сплита)
-      onSelectSplitId
+      showExerciseInfo,
+      selectedExercise,
+      openExerciseInfo,
+
+      // Роль из Pinia и флаг загрузки
+      userStore,
+      canCreateTraining,
+      roleLoading
     }
   }
 })
 </script>
 
 <style scoped>
-/* Можем оставить что-то, если требуется глобально для родителя.
-   Но в оригинальном коде большинство стилей относилось к элементам внутри шаблона,
-   которые теперь находятся в дочерних компонентах.
-*/
+.dark-background {
+  background-color: #1E1E1E !important;
+  color: #FFF;
+}
 
-/* Оставим, например, анимацию вращения - может использоваться где угодно */
+/* Пример анимации при ожидании */
 .rotatingDumbbell {
   animation: rotate-dumbbell 1s linear infinite;
 }
-
 @keyframes rotate-dumbbell {
   0% {
     transform: rotate(0deg);

@@ -30,7 +30,7 @@
       <v-card class="mb-4">
         <v-card-text>
           <p>
-            Подпишись на мой канал <a :href="channelLink" target="_blank">@training_health</a>, чтобы получить полный функционал бота.
+            Подпишись на мой канал <a :href="channelLink" target="_blank">кОчалка</a>, чтобы получить полный функционал.
           </p>
           <v-btn color="primary" @click="goToChannel" class="my-2">
             Перейти в канал
