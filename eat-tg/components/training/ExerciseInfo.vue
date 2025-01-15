@@ -6,7 +6,16 @@
   >
   <v-card-text v-if="exercise">
     <!-- Переносим заголовок в тело нижнего листа -->
-    <div class="headline mb-4">{{ exercise.name || 'Информация об упражнении' }}</div>
+    <div class="headline mb-4">{{ exercise.name || 'Об упражнении' }}</div>
+
+    <!-- Отображение GIF-картинки -->
+    <div v-if="exercise.gifImage" class="gif-container">
+      <img
+          :src="getGifUrl(exercise.gifImage)"
+          alt="GIF упражнения"
+          class="exercise-gif"
+      />
+    </div>
 
     <v-row dense>
       <v-col cols="6" class="label-col">Подгруппа:</v-col>
@@ -59,14 +68,6 @@
       <p style="color: gray">Не является медицинской рекомендацией, при травмах стоит обратиться к врачу, чтобы травма не переходила из острой фазы в хроническую.</p>
     </v-row>
 
-    <!-- Отображение GIF-картинки -->
-    <div v-if="exercise.gifImage" class="gif-container">
-      <img
-          :src="getGifUrl(exercise.gifImage)"
-          alt="GIF упражнения"
-          class="exercise-gif"
-      />
-    </div>
   </v-card-text>
   </BottomSheetWithClose>
 </template>

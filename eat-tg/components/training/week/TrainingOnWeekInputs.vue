@@ -1,5 +1,4 @@
-<!--training/week/TrainingOnInputs.vue-->
-
+<!-- training/week/TrainingOnWeekInputs.vue -->
 
 <template>
   <!-- Форма с выбором пола, типа сплита, конкретного сплита, кнопкой "Создать" -->
@@ -71,7 +70,7 @@
         class="my-2 dark-background px-1 py-3 splits"
         variant="tonal"
     >
-      <v-card-text class="px-2 py-1">
+      <v-card-text class="px-2 pt-4 pb-1">
         <v-row class="pa-0">
           <v-col
               v-for="split in splitsToShow"
@@ -97,9 +96,25 @@
                   ></v-radio>
                 </div>
                 <!-- Контент сплита (комментарий) -->
-                <div :class="['split-content', { 'truncate': localSelectedSplitId !== split._id }]">
+                <div
+                    :class="['split-content', { 'truncate': localSelectedSplitId !== split._id }]"
+                    class="mb-4"
+                >
                   <v-card-text style="padding: 4px" v-if="split.splitComment">{{ split.splitComment }}</v-card-text>
                 </div>
+                <!-- Чип с уровнем сложности -->
+                <v-chip
+                    :color="getDifficultyColor(Number(split.difficultyLevelSplit || 0))"
+                    text-color="white"
+                    x-small
+                    class="difficulty-chip"
+                    variant="elevated"
+                >
+                  <!-- Отображаем уровень сложности только если сплит выбран -->
+                  <span v-if="localSelectedSplitId === split._id">
+                    {{ getDifficultyLabel(Number(split.difficultyLevelSplit || 0)) }}
+                  </span>
+                </v-chip>
               </v-card-text>
             </v-card>
           </v-col>
@@ -155,6 +170,13 @@
 <script lang="ts">
 import { defineComponent, ref, watch, PropType } from 'vue'
 
+interface Split {
+  _id: string;
+  split: string;
+  splitComment?: string;
+  difficultyLevelSplit: number | string; // Обновлено для поддержки строк и чисел
+}
+
 export default defineComponent({
   name: 'TrainingOnWeekInputs',
   props: {
@@ -176,7 +198,7 @@ export default defineComponent({
       default: null
     },
     splitsToShow: {
-      type: Array as PropType<Array<{ _id: string; split: string; splitComment?: string }>>,
+      type: Array as PropType<Split[]>,
       default: () => []
     },
     selectedSplitId: {
@@ -184,7 +206,7 @@ export default defineComponent({
       default: null
     },
     selectedSplit: {
-      type: Object as PropType<any>,
+      type: Object as PropType<Split | null>,
       default: null
     },
     isLoading: {
@@ -214,44 +236,95 @@ export default defineComponent({
 
     // Следим за входящим gender -> обновляем localGender
     watch(() => props.gender, (newVal) => {
+      console.log('gender prop changed:', newVal)
       localGender.value = newVal
     })
     // Следим за входящим selectedSplitType
     watch(() => props.selectedSplitType, (newVal) => {
+      console.log('selectedSplitType prop changed:', newVal)
       localSelectedSplitType.value = newVal
     })
     // Следим за входящим selectedSplitId
     watch(() => props.selectedSplitId, (newVal) => {
+      console.log('selectedSplitId prop changed:', newVal)
       localSelectedSplitId.value = newVal
     })
 
     // Метод при выборе пола
     const onSelectGender = (option: string) => {
+      console.log('Selected gender:', option)
       localGender.value = option
       emit('update:gender', option)
     }
 
     // Метод при выборе типа сплита
     const onSelectSplitType = (type: string) => {
+      console.log('Selected split type:', type)
       localSelectedSplitType.value = type
       emit('update:selectedSplitType', type)
     }
 
     // Метод при выборе конкретного сплита
-    const onSelectSplit = (split: { _id: string; split: string; splitComment?: string }) => {
+    const onSelectSplit = (split: Split) => {
+      console.log('Selected split:', split)
       localSelectedSplitId.value = split._id
       emit('update:selectedSplitId', split._id)
     }
 
     // При клике на кнопку «Создать»
     const emitGenerateSplit = () => {
+      console.log('Emit generateSplitWorkout')
       emit('generateSplitWorkout')
     }
 
     // Удалить все ошибки (здесь пустая, если хотим прокидывать наверх — делаем emit)
     const clearErrors = () => {
+      console.log('Clearing errors')
       // emit('clearErrors') — если бы хотели сбрасывать ошибки в родителе
     }
+
+    // Метод для получения цвета чипа по уровню сложности
+    const getDifficultyColor = (level: number | string): string => {
+      const numericLevel = Number(level)
+      console.log('getDifficultyColor called with level:', numericLevel)
+      switch (numericLevel) {
+        case 1:
+          return '#33cc99' // Пастельный зеленый
+        case 2:
+          return '#FFCC33' // Пастельный желтый
+        case 3:
+          return '#FF6666' // Пастельный красный
+        default:
+          console.warn('Unknown difficulty level:', numericLevel)
+          return 'grey'
+      }
+    }
+
+    // Метод для получения текстовой метки по уровню сложности
+    const getDifficultyLabel = (level: number | string): string => {
+      const numericLevel = Number(level)
+      console.log('getDifficultyLabel called with level:', numericLevel)
+      switch (numericLevel) {
+        case 1:
+          return 'начальный'
+        case 2:
+          return 'средний'
+        case 3:
+          return 'профи'
+        default:
+          console.warn('Unknown difficulty level:', numericLevel)
+          return 'Неизвестно'
+      }
+    }
+
+    // Дополнительный лог для проверки данных сплитов при их изменении
+    watch(() => props.splitsToShow, (newSplits) => {
+      console.log('splitsToShow updated:', newSplits)
+      newSplits.forEach(split => {
+        console.log('Full Split Object:', split)
+        console.log(`Split ID: ${split._id}, Difficulty Level: ${split.difficultyLevelSplit}`)
+      })
+    }, { immediate: true, deep: true })
 
     return {
       localGender,
@@ -261,7 +334,9 @@ export default defineComponent({
       onSelectSplitType,
       onSelectSplit,
       emitGenerateSplit,
-      clearErrors
+      clearErrors,
+      getDifficultyColor,
+      getDifficultyLabel
     }
   }
 })
@@ -284,6 +359,7 @@ export default defineComponent({
 
 /* Общая стилизация для блоков со сплитами */
 .split-card {
+  position: relative; /* Для позиционирования чипа */
   cursor: pointer;
   transition: background-color 0.3s, border 0.3s;
   border-radius: 14px;
@@ -387,5 +463,12 @@ export default defineComponent({
   100% {
     transform: rotate(360deg);
   }
+}
+
+/* Стиль для чипа сложности */
+.difficulty-chip {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
 }
 </style>

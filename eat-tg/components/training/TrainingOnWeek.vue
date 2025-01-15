@@ -3,7 +3,7 @@
   <div>
     <!-- Пока идёт проверка роли (roleLoading) — показываем skeleton -->
     <div v-if="roleLoading">
-      <v-skeleton-loader type="ossein" height="80px" class="mx-auto mt-2" />
+      <v-skeleton-loader type="ossein" height="60px" class="mx-auto" />
     </div>
 
     <!-- Когда проверка роли закончена — рендерим "реальный" контент -->
@@ -117,6 +117,7 @@ interface SplitItem {
   gender: string
   splitDays: string
   days: SplitDay[]
+  difficultyLevelSplit: number // Убедитесь, что это поле присутствует
 }
 interface TelegramUserData {
   id: number
@@ -207,7 +208,8 @@ export default defineComponent({
         return {
           _id: randomSplit._id,
           split: randomSplit.split,
-          splitComment: randomSplit.splitComment
+          splitComment: randomSplit.splitComment,
+          difficultyLevelSplit: randomSplit.difficultyLevelSplit // Добавлено
         }
       })
     })

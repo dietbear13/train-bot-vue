@@ -18,6 +18,7 @@ export interface ISplit {
     gender: string;            // пол ("мужской", "женский" или "мужчина,женщина")
     splitDays: string;         // например "2(пн,ср,пт)"
     days: IDay[];              // массив дней, внутри — упражнения/паттерны
+    difficultyLevelSplit?: number;
 }
 
 /**
@@ -55,6 +56,7 @@ const splitSchema = new Schema<ISplitDocument>({
         type: [daySchema],
         default: [],
     },
+    difficultyLevelSplit: { type: Number },
 });
 
 /**

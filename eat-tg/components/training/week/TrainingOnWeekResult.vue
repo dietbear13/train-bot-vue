@@ -162,7 +162,7 @@
     </v-card-text>
   </BottomSheetWithClose>
 
-  <!-- ВОТ ЭТО ДОБАВЛЯЕМ: сам диалог/попап ExerciseGifViewer -->
+  <!-- Показываем ExerciseInfo -->
   <ExerciseInfo
       v-model="showExerciseInfo"
       :exercise="selectedExerciseForGif"
@@ -173,8 +173,8 @@
 import { defineComponent, ref, PropType } from 'vue'
 import BottomSheetWithClose from '~/components/shared/BottomSheetWithClose.vue'
 import AdminExerciseButton from '~/components/userAndAdmin/AdminExerciseButton.vue'
-import ExerciseInfo from '~/components/training/ExerciseInfo.vue';
-
+import ExerciseInfo from '~/components/training/ExerciseInfo.vue'
+import { useApi } from '~/composables/useApi'
 
 // Типы упражнений и плана
 interface Exercise {
@@ -183,6 +183,7 @@ interface Exercise {
   sets: number
   reps: number
   originalPattern?: string
+  // Допустим, у нас могут быть и другие поля, включая gifImage и т.п.
 }
 interface DayPlan {
   dayName: string
@@ -234,34 +235,39 @@ export default defineComponent({
     'regenerateExerciseSplit'
   ],
   setup(props, { emit }) {
-    // Локальное showBottomSheet, чтобы работал v-model
+    // =========== v-model для BottomSheetWithClose ===============
     const localShowBottomSheet = ref(props.showBottomSheet)
-
-    // При изменении localShowBottomSheet => отправляем наверх
     const syncShowBottomSheet = () => {
       emit('update:showBottomSheet', localShowBottomSheet.value)
     }
 
-    // Локальные стейты для открытия ExerciseGifViewer
+    // =========== Для загрузки полного упражнения из /exercises/{_id} =========
+    const { apiRequest } = useApi()
+
+    // =========== Состояния для ExerciseInfo ===============
     const showExerciseInfo = ref(false)
     const selectedExerciseForGif = ref<Exercise | null>(null)
 
-    // Функция, вызываемая при клике на название упражнения
-    const openExerciseInfo = (exercise: Exercise) => {
-      selectedExerciseForGif.value = exercise
-      showExerciseInfo.value = true
+    // При клике на упражнение — запросим с сервера полные данные:
+    const openExerciseInfo = async (exercise: Exercise) => {
+      try {
+        // Например, делаем GET /exercises/:id
+        // где exercise._id — идентификатор упражнения
+        const fullExercise = await apiRequest<Exercise>('get', `exercises/${exercise._id}`)
+        selectedExerciseForGif.value = fullExercise
+        showExerciseInfo.value = true
+      } catch (err) {
+        console.error('Ошибка при загрузке упражнения:', err)
+      }
     }
 
-    // dayName — название дня недели
+    // Название дня недели
     const dayName = (index: number) => {
-      const days = [
-        'Понедельник', 'Вторник', 'Среда',
-        'Четверг', 'Пятница', 'Суббота', 'Воскресенье'
-      ]
+      const days = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье']
       return days[index % 7]
     }
 
-    // Форматирование имени упражнения
+    // Форматируем имя упражнения
     const formatExerciseName = (rawName: string): string => {
       if (!rawName) return ''
       return rawName.charAt(0).toUpperCase() + rawName.slice(1)
@@ -290,7 +296,7 @@ export default defineComponent({
       localShowBottomSheet,
       syncShowBottomSheet,
 
-      // новые reactive-поля и метод
+      // Для ExerciseInfo
       showExerciseInfo,
       selectedExerciseForGif,
       openExerciseInfo,
@@ -319,7 +325,6 @@ export default defineComponent({
 </script>
 
 <style scoped>
-/* Блок под каждый день */
 .day-block {
   margin-bottom: 16px;
   background-color: rgba(55, 55, 55, 0.15);
@@ -327,7 +332,6 @@ export default defineComponent({
   padding: 8px;
 }
 
-/* Заголовок дня */
 .day-heading {
   font-size: 1.1rem;
   color: #fff;
@@ -337,21 +341,18 @@ export default defineComponent({
   padding-bottom: 2px;
 }
 
-/* «Отдых» */
 .rest-label {
   color: #f2f2f2;
   font-style: italic;
   margin-left: 4px;
 }
 
-/* Список упражнений (таблица) */
 .day-exercises-table {
   padding-left: 4px;
   margin-top: 4px;
   border-left: 2px dashed #666;
 }
 
-/* Каждая строка упражнения */
 .exercise-row {
   display: flex;
   align-items: center;
@@ -362,7 +363,6 @@ export default defineComponent({
   padding: 4px;
 }
 
-/* Название упражнения */
 .exercise-name {
   flex: 1;
   font-weight: 600;
@@ -371,7 +371,6 @@ export default defineComponent({
   text-shadow: 0 0 2px #000;
 }
 
-/* Надпись «sets × reps» */
 .sets-reps-text {
   font-weight: bold;
   min-width: 50px;
@@ -384,7 +383,6 @@ export default defineComponent({
   box-shadow: inset 0 0 3px rgba(0,0,0,0.5);
 }
 
-/* Блок с кнопками refresh/delete/admin (вертикально) */
 .vertical-buttons {
   display: flex;
   flex-direction: column;
@@ -392,13 +390,11 @@ export default defineComponent({
   gap: 4px;
 }
 
-/* Комментарий сплита */
 .split-comment-area {
   font-size: 1rem;
   color: #ccc;
 }
 
-/* Анимация вращения иконки (при refreshDayExercises или при isLoading) */
 .rotatingDumbbell {
   animation: rotate-dumbbell 1s linear infinite;
 }

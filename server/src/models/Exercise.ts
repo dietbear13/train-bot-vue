@@ -14,7 +14,7 @@ export interface IExercise extends Document {
     equipment: string;
     isWarnGif?: boolean;
     technique?: string;
-    gifImage?: string; // Добавлено поле для пути к GIF
+    gifImage?: string;
     maleRepsLight?: string;
     maleRepsMedium?: string;
     maleRepsHeavy?: string;

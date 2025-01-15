@@ -1,7 +1,7 @@
 <!-- FreeUserInfo.vue -->
 <template>
   <div class="upgrade-section">
-    <p>Вы используете бесплатную версию. <a href="#" @click.prevent="upgrade">Обновить до платной версии</a>.</p>
+    <p><v-icon color="#B32821">mdi-warning</v-icon> используете бесплатную версию. <a href="#" @click.prevent="upgrade">Обновить до платной версии</a>.</p>
     <!-- Добавьте дополнительный контент для freeUser -->
   </div>
 </template>
