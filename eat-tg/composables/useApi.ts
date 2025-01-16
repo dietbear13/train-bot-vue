@@ -1,5 +1,5 @@
 // ~/composables/useApi.ts
-import axios, { AxiosInstance, AxiosRequestConfig, Method } from 'axios'
+import axios, { type AxiosInstance, type AxiosRequestConfig, type Method } from 'axios'
 
 // Базовые URL для основных и резервных серверов
 const primaryBaseURL = 'https://fit-server-bot.ru.tuna.am/api/'

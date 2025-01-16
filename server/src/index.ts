@@ -12,6 +12,7 @@ import splitsRoutes from './routes/splits';
 import botRoutes from './routes/bot';
 import usersRoutes from './routes/users';
 import exercisesRoutes from './routes/exercises';
+import exerciseRoutes from './routes/exercise';
 import patternsRoutes from './routes/patterns';
 
 dotenv.config();
@@ -55,6 +56,7 @@ app.use('/api', botRoutes);
 app.use('/api', usersRoutes);
 app.use('/api', exercisesRoutes);
 app.use('/api', patternsRoutes);
+app.use('/api', exerciseRoutes);
 
 // Запускаем сервер
 app.listen(port, () => {

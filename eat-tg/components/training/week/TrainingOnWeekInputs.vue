@@ -70,7 +70,7 @@
         class="my-2 dark-background px-1 py-3 splits"
         variant="tonal"
     >
-      <v-card-text class="px-2 pt-4 pb-1">
+      <v-card-text class="px-2 py-2">
         <v-row class="pa-0">
           <v-col
               v-for="split in splitsToShow"

@@ -1,7 +1,7 @@
 // routes/bot.ts
 
 import { Router, Request, Response } from 'express';
-import TelegramBot from 'node-telegram-bot-api';
+import TelegramBot, { InlineKeyboardMarkup, InlineKeyboardButton } from 'node-telegram-bot-api';
 import User from '../models/User';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -9,10 +9,13 @@ dotenv.config();
 const router = Router();
 
 const botToken = process.env.TELEGRAM_BOT_TOKEN as string;
-
-// ВАЖНО: Экспортируем экземпляр бота,
-// чтобы использовать его в других модулях (например, routes/users.ts)
 export const bot = new TelegramBot(botToken, { polling: false });
+
+// IMPORTANT: URL вашего мини-приложения (из .env)
+const appUrl = process.env.APP_URL;
+if (!appUrl) {
+    throw new Error('APP_URL не задан в файле .env');
+}
 
 /**
  * Интерфейс для упражнения.
@@ -33,16 +36,35 @@ interface GeneratedDay {
 }
 
 /**
+ * Интерфейс для тела запроса в маршруте /send-workout.
+ */
+interface SendWorkoutRequestBody {
+    userId: number;
+    splitName: string;
+    splitComment?: string;
+    plan: GeneratedDay[];
+}
+
+/**
  * Функция для экранирования специальных символов HTML.
  */
 const escapeHTML = (text: string): string => {
-    return text.replace(/&/g, '&amp;')
+    return text
+        .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
 };
 
+/**
+ * Функция для экранирования специальных символов MarkdownV2, но не URL в ссылках.
+ */
+const escapeMarkdownV2 = (text: string): string => {
+    const specialChars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'];
+    const escapeRegex = new RegExp(`([${specialChars.map(char => '\\' + char).join('')}])`, 'g');
+    return text.replace(escapeRegex, '\\$1');
+};
 
 /**
  * Функция для форматирования недельного тренировочного плана в HTML-сообщение.
@@ -65,7 +87,7 @@ const formatWeeklyWorkoutMessageHTML = (
         if (day.exercises && day.exercises.length > 0) {
             message += `<u>${escapeHTML(day.dayName)}</u>\n`;
             day.exercises.forEach((exercise, index) => {
-                message += `${index + 1}. ${escapeHTML(exercise.name)} — ${exercise.sets}×${exercise.reps}\n`;
+                message += `${index + 1}. ${escapeHTML(exercise.name)} — ${exercise.sets}×${exercise.reps} 🔗\n`;
             });
             message += `\n`;
         }
@@ -75,15 +97,6 @@ const formatWeeklyWorkoutMessageHTML = (
     message += `<a href="https://t.me/training_health">тг-канал «кОчалка»</a>\n`;
 
     return message;
-};
-
-/**
- * Функция для экранирования специальных символов MarkdownV2, но не URL в ссылках.
- */
-const escapeMarkdownV2 = (text: string): string => {
-    const specialChars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'];
-    const escapeRegex = new RegExp(`([${specialChars.map(char => '\\' + char).join('')}])`, 'g');
-    return text.replace(escapeRegex, '\\$1');
 };
 
 /**
@@ -133,7 +146,7 @@ const schedulePost = (
     // Пример: "0 10 23 3 *" => 23 марта 10:00
     const cronTime = `${scheduledDate.minute()} ${scheduledDate.hour()} ${scheduledDate.date()} ${scheduledDate.month() + 1} *`;
     cron.schedule(cronTime, () => {
-        sendPost(channelId, content, imageUrl).catch((err) => console.error(err));
+        sendPost(channelId, content, imageUrl).catch((err: any) => console.error(err));
     });
 
     console.log(`Пост запланирован на ${scheduledDate.format('YYYY-MM-DD HH:mm')}`);
@@ -168,7 +181,7 @@ router.get('/get-channels', async (req: Request, res: Response) => {
         // Пример: здесь вы можете вернуть список каналов из БД или констант
         const channels = [
             { id: '@training_health', title: 'Тренировки & Здоровье' },
-            // ...
+            // Добавьте другие каналы по необходимости
         ];
         res.json({ channels });
     } catch (error: any) {
@@ -220,18 +233,20 @@ const sendWorkoutToUser = (
         .then(() => {
             console.log(`План тренировок отправлен пользователю ${chatId}`);
         })
-        .catch((error) => {
+        .catch((error: any) => {
             console.error('Error sending message to user:', error.response?.body || error.message);
         });
 };
 
 /**
  * Маршрут: отправка плана тренировок на неделю
+ * (Остаётся без изменений)
  */
-router.post('/send-workout', async (req: Request, res: Response) => {
+router.post('/send-workout', async (req: Request<{}, {}, SendWorkoutRequestBody>, res: Response) => {
     const { userId, splitName, splitComment, plan } = req.body;
+
     if (!userId || !splitName || !plan || !Array.isArray(plan)) {
-        console.log('userId, splitName, plan:', userId, splitName, plan)
+        console.log('userId, splitName, plan:', userId, splitName, plan);
         return res.status(400).json({ message: 'Необходимо указать userId, splitName и plan[]' });
     }
 
@@ -266,7 +281,7 @@ const sendKbzhuResultToUser = (
         .then(() => {
             console.log(`KbzhuResult sent to user ${chatId}`);
         })
-        .catch((error) => {
+        .catch((error: any) => {
             console.error('Error sending KbzhuResult to user:', error.response?.body || error.message);
         });
 };
@@ -343,18 +358,40 @@ router.post('/send-detailed-plan', async (req: Request, res: Response) => {
     const validSplitComment = splitComment && typeof splitComment === 'string' ? splitComment : '';
 
     try {
-        const formattedMessage = formatWeeklyWorkoutMessageHTML(plan, splitName, validSplitComment);
-        await bot.sendMessage(userId, formattedMessage, {
+        // Формируем HTML-сообщение с ссылками-иконками для каждого упражнения
+        const messageHTML = formatWeeklyWorkoutMessageHTML(plan, splitName, splitComment);
+
+        // Добавляем иконку-ссылку к каждому упражнению
+        // Используем схему tg://open-web-app для открытия Mini App внутри Telegram
+        let detailedMessage = '';
+        plan.forEach(day => {
+            if (day.exercises && day.exercises.length > 0) {
+                detailedMessage += `<u>${escapeHTML(day.dayName)}</u>\n`;
+                day.exercises.forEach((exercise: Exercise, index: number) => {
+                    const externalUrl = `${appUrl}/exerciseInChat?name=${encodeURIComponent(exercise.name)}`;
+                    detailedMessage += `${index + 1}. ${escapeHTML(exercise.name)} — ${exercise.sets}×${exercise.reps} <a href="${externalUrl}">🔗</a>\n`;
+                });
+                detailedMessage += `\n`;
+            }
+        });
+
+        // Добавляем ссылки на бота и канал в конце сообщения
+        detailedMessage += `<a href="https://t.me/freeload_top_bot">бот с тренировками</a>\n`;
+        detailedMessage += `<a href="https://t.me/training_health">тг-канал «кОчалка»</a>\n`;
+
+        // Отправляем сообщение пользователю
+        await bot.sendMessage(userId, detailedMessage, {
             parse_mode: 'HTML',
             disable_web_page_preview: true,
         });
 
-        console.log(`План отправлен пользователю: ${userId}`);
-        res.json({ message: 'План отправлен в Telegram.' });
+        console.log(`Детальный план тренировок отправлен пользователю ${userId}`);
+        res.json({ message: 'Детальный план отправлен в чат' });
     } catch (error: any) {
-        console.error('Ошибка при отправке плана в Telegram:', error.message);
-        res.status(500).json({ message: 'Ошибка при отправке плана в Telegram.', error: error.message });
+        console.error('Ошибка при отправке детального плана в Telegram:', error.message);
+        res.status(500).json({ message: 'Ошибка при отправке детального плана в Telegram.', error: error.message });
     }
 });
+
 
 export default router;

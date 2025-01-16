@@ -17,6 +17,25 @@ router.get('/exercises', async (req: Request, res: Response) => {
 });
 
 /**
+ * Маршрут для получения упражнения по ID
+ */
+router.get('/exercises/:id', async (req: Request, res: Response) => {
+    const { id } = req.params;
+    try {
+        const exercise = await Exercise.findById(id);
+        if (!exercise) {
+            return res.status(404).json({ message: 'Упражнение не найдено' });
+        }
+        res.json(exercise);
+    } catch (error: any) {
+        console.error('Ошибка при получении упражнения:', error.message);
+        res.status(500).json({ message: 'Ошибка при получении упражнения' });
+    }
+});
+
+
+
+/**
  * Маршрут для создания нового упражнения
  */
 router.post('/exercises', async (req: Request, res: Response) => {

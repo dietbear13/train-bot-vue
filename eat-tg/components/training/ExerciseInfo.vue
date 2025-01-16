@@ -18,9 +18,6 @@
     </div>
 
     <v-row dense>
-      <v-col cols="6" class="label-col">Подгруппа:</v-col>
-      <v-col cols="6" class="value-col">{{ exercise.subcategory }}</v-col>
-
       <v-col cols="6" class="label-col">Основная мышца:</v-col>
       <v-col cols="6" class="value-col">{{ exercise.mainMuscle }}</v-col>
 
