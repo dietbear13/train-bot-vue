@@ -173,8 +173,8 @@
         width="100%"
     >
       <!-- Текст кнопки в зависимости от состояния -->
-      <span v-if="isAnimating">создаю.. </span>
-      <span v-else-if="isGenerating">Рассчитываю.. </span>
+      <span v-if="isAnimating">создаю..</span>
+      <span v-else-if="isGenerating">Рассчитываю..</span>
       <span v-else>Рассчитать</span>
       <!-- Иконка, которая при загрузке вращается -->
       <v-icon
@@ -198,7 +198,7 @@
       </ul>
     </v-alert>
 
-    <!-- Используем компонент BottomSheetWithClose для отображения результатов расчёта -->
+    <!-- BottomSheetWithClose для результатов расчёта -->
     <BottomSheetWithClose
         v-model="showBottomSheet"
         title="Результаты расчёта"
@@ -214,7 +214,7 @@
           <div>Углеводы: <strong>{{ kbzhuResult.carbs }} г</strong></div>
         </div>
 
-        <!-- Добавляем canvas для диаграммы -->
+        <!-- Canvas для диаграммы -->
         <div class="chart-container">
           <canvas id="macroChart"></canvas>
         </div>
@@ -234,7 +234,7 @@
       </v-card-text>
     </BottomSheetWithClose>
 
-    <!-- Кнопка для тестирования КБЖУ, доступна только админам -->
+    <!-- Кнопка для тестирования КБЖУ, только для админов -->
     <v-btn
         v-if="isAdmin"
         color="secondary"
@@ -259,67 +259,68 @@
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
 import { retrieveLaunchParams } from "@telegram-apps/sdk";
 import Chart from 'chart.js/auto';
-import { useApi } from '~/composables/useApi'
-import { useKbzhu } from '~/composables/useKbzhu'; // подставьте нужный путь
-import BottomSheetWithClose from '../shared/BottomSheetWithClose.vue'; // Убедитесь в корректности пути
-import KbzhuCalculatorTest from './KbzhuCalculatorTest.vue'; // Убедитесь в корректности пути
-import { useUserStore } from '@/stores/userStore' // Убедитесь в корректности пути
+import { useApi } from '~/composables/useApi';
+import { useKbzhu } from '~/composables/useKbzhu'; // Хук для расчёта КБЖУ
+import { useKbzhuAnalytics } from '~/composables/analytics/usersKbzhu'; // Хук для аналитики
+import BottomSheetWithClose from '../shared/BottomSheetWithClose.vue';
+import KbzhuCalculatorTest from './KbzhuCalculatorTest.vue';
+import { useUserStore } from '@/stores/userStore';
 
-// Интерфейсы для типов данных
+// ------------------ Интерфейсы ------------------
 interface FormData {
-  gender: string
-  bodyType: string
-  age: number | null
-  height: number | null
-  weight: number | null
-  goal: string
-  workoutsPerWeek: number
+  gender: string;
+  bodyType: string;
+  age: number | null;
+  height: number | null;
+  weight: number | null;
+  goal: string;
+  workoutsPerWeek: number;
 }
 
 interface StringOption {
-  text: string
-  value: string
+  text: string;
+  value: string;
 }
 
 interface NumberOption {
-  text: string
-  value: number
+  text: string;
+  value: number;
 }
 
 interface KbzhuResult {
-  calories: number
-  extraCalories: number
-  proteins: number
-  fats: number
-  carbs: number
+  calories: number;
+  extraCalories: number;
+  proteins: number;
+  fats: number;
+  carbs: number;
 }
 
-// Инициализация данных пользователя из Telegram
-const telegramUserId = ref<string | null>(null)
+// ------------------ Инициализация ------------------
+
+// Telegram user ID
+const telegramUserId = ref<number | null>(null);
 
 // Данные для селекторов
 const genders: StringOption[] = [
   { text: 'Мужчина', value: 'мужчина' },
   { text: 'Женщина', value: 'женщина' },
-]
+];
 
 const bodyTypes: StringOption[] = [
   { text: 'Худощавое', value: 'худощавое' },
   { text: 'Среднее', value: 'среднее' },
   { text: 'Плотное', value: 'плотное' },
-]
+];
 
 const goals: StringOption[] = [
   { text: 'Похудение', value: 'похудение' },
   { text: 'Удержание', value: 'удержание' },
   { text: 'Набор', value: 'набор' },
-]
+];
 
-const { apiRequest } = useApi()
+const workoutsLabels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-const workoutsLabels = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-
-// Функция для корректного склонения слова "год"
+// Функция для склонения "год"
 const getYearDeclension = (age: number): string => {
   const lastDigit = age % 10;
   const lastTwoDigits = age % 100;
@@ -327,29 +328,24 @@ const getYearDeclension = (age: number): string => {
   if (lastTwoDigits >= 11 && lastTwoDigits <= 14) {
     return 'лет';
   }
-
   if (lastDigit === 1) {
     return 'год';
   }
-
   if (lastDigit >= 2 && lastDigit <= 4) {
     return 'года';
   }
-
   return 'лет';
 };
 
-// Опции для v-select с правильным склонением
+// Создаем списки опций для возраста, роста, веса
 const ageOptions: NumberOption[] = Array.from({ length: 111 }, (_, i) => {
   const age = 10 + i;
-  const declension = getYearDeclension(age);
   return {
-    text: `${age} ${declension}`,
+    text: `${age} ${getYearDeclension(age)}`,
     value: age,
   };
 });
 
-// Опции для роста и веса
 const heightOptions: NumberOption[] = Array.from({ length: 101 }, (_, i) => ({
   text: `${150 + i} см`,
   value: 150 + i,
@@ -369,119 +365,135 @@ const formData = reactive<FormData>({
   weight: null,
   goal: '',
   workoutsPerWeek: 3,
-})
+});
 
-// Watcher для отслеживания изменений в formData
-watch(formData, (newVal) => {
-  console.log('formData изменился:', JSON.stringify(newVal, null, 2));
-}, { deep: true });
+// Подключаем хук аналитики
+const { sendAnalyticsData } = useKbzhuAnalytics();
 
-// Функции обработчиков выбора пола/телосложения
+// Watcher для формы — логирует изменения
+watch(
+    formData,
+    (newVal) => {
+      console.log('formData изменился:', JSON.stringify(newVal, null, 2));
+    },
+    { deep: true }
+);
+
+// -------------- Хэндлеры выбора --------------
 const selectGender = (gender: string) => {
   formData.gender = gender;
   console.log('Selected Gender:', formData.gender);
 
-  if (gender === 'мужчина') { // Мужчина
+  // Пример автозаполнения при выборе пола
+  if (gender === 'мужчина') {
     formData.height = 175;
     formData.weight = 90;
     formData.age = 30;
-  } else if (gender === 'женщина') { // Женщина
+  } else if (gender === 'женщина') {
     formData.height = 170;
     formData.weight = 60;
     formData.age = 30;
   }
-
-  console.log('После выбора пола:', JSON.stringify(formData, null, 2));
-}
+};
 
 const selectBodyType = (bodyType: string) => {
   formData.bodyType = bodyType;
   console.log('Selected Body Type:', formData.bodyType);
-}
+};
 
 const selectGoal = (goal: string) => {
   formData.goal = goal;
   console.log('Selected Goal:', formData.goal);
 };
 
-// Состояние для v-bottom-sheet
-const showBottomSheet = ref(false)
+// ---------- Состояние для BottomSheetWithClose ----------
+const showBottomSheet = ref(false);
 
-// Добавляем ref для диаграммы
+// ---------- Диаграмма (Chart.js) ----------
 let macroChart: Chart | null = null;
 
-// --- ПОДКЛЮЧАЕМ НАШ ХУК ---
+// ---------- Хук для расчёта КБЖУ ----------
 const {
   kbzhuResult,
   isGenerating,
   errorMessages,
-  calculateKbzhu
-} = useKbzhu()
+  calculateKbzhu,
+} = useKbzhu();
 
-// Watcher для kbzhuResult
+// Подключаем API для дополнительной логики
+const { apiRequest } = useApi();
+
+// --------- Watchers для вывода в консоль ---------
 watch(kbzhuResult, (newResult) => {
   console.log('kbzhuResult изменился:', newResult);
 });
 
-// Watcher для errorMessages
 watch(errorMessages, (newErrors) => {
   if (newErrors.length > 0) {
     console.error('errorMessages:', newErrors);
   }
 });
 
-// Подключаем Pinia стор
-const userStore = useUserStore()
+// ---------- Pinia для проверки, админ ли пользователь ----------
+const userStore = useUserStore();
+const isAdmin = computed(() => userStore.role === 'admin');
 
-// Вычисляемое свойство: является ли пользователь админом
-const isAdmin = computed(() => userStore.role === 'admin')
+// ---------- Тестовый компонент (для админов) ----------
+const showTestComponent = ref(false);
+const toggleTestComponent = () => {
+  showTestComponent.value = !showTestComponent.value;
+};
 
-// Состояние для отображения тестового компонента
-const showTestComponent = ref(false)
-
-// Запрашиваем данные Telegram при монтировании
+// ---------- Telegram initData ----------
 onMounted(() => {
   if (process.client) {
     const launchParams = retrieveLaunchParams();
     if (launchParams && launchParams.initData) {
       const user = launchParams.initData.user;
       if (user && user.id) {
-        telegramUserId.value = String(user.id);
+        telegramUserId.value = Number(user.id);
         console.log('telegramUserId:', telegramUserId.value);
       } else {
         console.error('Не удалось получить данные пользователя из Telegram.');
-        errorMessages.value.push('Не удалось получить данные пользователя. Убедитесь, что приложение запущено внутри Telegram.')
+        errorMessages.value.push('Не удалось получить данные пользователя. Убедитесь, что приложение запущено внутри Telegram.');
       }
     } else {
       console.error('Не удалось получить initData из launchParams.');
-      errorMessages.value.push('Не удалось получить данные пользователя. Убедитесь, что приложение запущено внутри Telegram.')
+      errorMessages.value.push('Не удалось получить данные пользователя. Убедитесь, что приложение запущено внутри Telegram.');
     }
   }
 });
 
-// Новый ref для анимации имитации генерации
-const isAnimating = ref(false)
+// ---------- Имитируем анимацию генерации ----------
+const isAnimating = ref(false);
 
-// Эта функция сначала имитирует генерацию, а затем вызывает реальную логику
+// ---------- Основная кнопка "Рассчитать" ----------
 const onCalculate = async () => {
   console.log('Вызов onCalculate с formData:', JSON.stringify(formData, null, 2));
-  isAnimating.value = true
 
-  // Генерируем случайную задержку между 1.1 и 1.3 секунд
-  const delay = 1100 + Math.random() * 200 // миллисекунды
-  await new Promise(resolve => setTimeout(resolve, delay))
+  // Имитация генерации
+  isAnimating.value = true;
+  const delay = 1100 + Math.random() * 200;
+  await new Promise(resolve => setTimeout(resolve, delay));
+  isAnimating.value = false;
 
-  isAnimating.value = false
+  // Запускаем реальный расчёт
+  await calculateKbzhu(formData, showBottomSheet, nextTick, updateMacroChart);
 
-  // Вызываем реальную логику расчёта
-  calculateKbzhu(formData, showBottomSheet, nextTick, updateMacroChart)
-}
+  // Если нет ошибок — отправляем результаты через модуль аналитики
+  if (!errorMessages.value.length && kbzhuResult.value) {
+    try {
+      console.log('Отправляем аналитические данные через модуль аналитики...');
+      sendAnalyticsData(telegramUserId.value, formData, kbzhuResult.value);
+    } catch (err) {
+      console.error('Ошибка при отправке аналитики через модуль:', err);
+    }
+  }
+};
 
-// Функция для обновления диаграммы (остаётся здесь)
+// ---------- Функция для обновления диаграммы ----------
 const updateMacroChart = () => {
   if (!kbzhuResult.value) return;
-
-  console.log('Обновление диаграммы с kbzhuResult:', kbzhuResult.value);
 
   const proteinCalories = kbzhuResult.value.proteins * 4;
   const fatCalories = kbzhuResult.value.fats * 9;
@@ -498,7 +510,6 @@ const updateMacroChart = () => {
     return;
   }
 
-  // Уничтожаем предыдущую диаграмму, если она есть
   if (macroChart) {
     macroChart.destroy();
   }
@@ -510,59 +521,58 @@ const updateMacroChart = () => {
         `Белки (${proteinPercent}%)`,
         `Жиры (${fatPercent}%)`,
         `Углеводы (${carbPercent}%)`,
-        `Калорий (${totalMacroCalories} ккал)`,
+        `Всего (${totalMacroCalories} ккал)`,
       ],
-      datasets: [{
-        data: [proteinCalories, fatCalories, carbCalories],
-        backgroundColor: [
-          '#42A5F5', // Синий для белков
-          '#FFA726', // Оранжевый для жиров
-          '#66BB6A', // Зелёный для углеводов
-          '#d16060', // Для примера
-        ],
-        hoverOffset: 4
-      }]
+      datasets: [
+        {
+          data: [proteinCalories, fatCalories, carbCalories],
+          backgroundColor: [
+            '#42A5F5', // Белки
+            '#FFA726', // Жиры
+            '#66BB6A', // Углеводы
+            '#d16060', // Дополнительный цвет
+          ],
+          hoverOffset: 4,
+        },
+      ],
     },
     options: {
       plugins: {
         tooltip: {
           callbacks: {
-            label: function(context) {
+            label: function (context) {
               const label = context.label || '';
               const value = context.parsed;
               return `${label}: ${value} ккал`;
-            }
-          }
+            },
+          },
         },
         legend: {
           position: 'bottom',
           labels: {
-            color: '#fff', // Цвет текста легенды (для темного фона)
-          }
-        }
-      }
-    }
+            color: '#fff',
+          },
+        },
+      },
+    },
   });
+};
 
-  console.log('Диаграмма обновлена');
-}
-
-// Функция для управления v-bottom-sheet (используем новый компонент)
+// ---------- Закрытие BottomSheet (если нужно) ----------
 const closeBottomSheet = () => {
-  showBottomSheet.value = false
-  // Уничтожаем диаграмму при закрытии
+  showBottomSheet.value = false;
   if (macroChart) {
     macroChart.destroy();
     macroChart = null;
   }
-}
+};
 
-// Функция для отправки результатов в Telegram
+// ---------- Отправка результатов себе в Telegram ----------
 const sendKbzhuResult = async () => {
-  if (!kbzhuResult.value || !telegramUserId.value) {
-    errorMessages.value.push('Не удалось отправить результаты. Проверьте данные пользователя.')
+  if (!kbzhuResult.value || telegramUserId.value === null) {
+    errorMessages.value.push('Не удалось отправить результаты. Проверьте данные пользователя.');
     console.error('sendKbzhuResult: отсутствуют kbzhuResult или telegramUserId');
-    return
+    return;
   }
 
   console.log('Отправка результатов для Telegram ID:', telegramUserId.value, 'kbzhuResult:', kbzhuResult.value);
@@ -570,24 +580,18 @@ const sendKbzhuResult = async () => {
   try {
     await apiRequest('post', 'send-kbzhu', {
       userId: telegramUserId.value,
-      kbzhuResult: kbzhuResult.value
-    })
-
-    alert('Результаты успешно отправлены!')
+      kbzhuResult: kbzhuResult.value,
+    });
+    alert('Результаты успешно отправлены!');
   } catch (error: any) {
-    console.error('Ошибка при отправке результатов:', error)
-    errorMessages.value.push('Не удалось отправить результаты. Попробуйте позже.')
+    console.error('Ошибка при отправке результатов:', error);
+    errorMessages.value.push('Не удалось отправить результаты. Попробуйте позже.');
   }
-}
-
-// Функция для переключения видимости тестового компонента
-const toggleTestComponent = () => {
-  showTestComponent.value = !showTestComponent.value
-}
+};
 </script>
 
 <style scoped>
-/* Дополнительные стили для темной темы */
+/* Дополнительные стили для тёмной темы */
 .dark-background {
   background-color: #121212 !important;
 }
@@ -596,13 +600,12 @@ const toggleTestComponent = () => {
   min-width: 45%;
 }
 
-/* Аналогично TrainingByMuscles: выделение выбранной кнопки */
 .selected-button {
   background-color: var(--v-primary-base);
   color: white;
 }
 
-/* Вращение иконки */
+/* Вращающаяся иконка при загрузке */
 .rotatingDumbbell {
   animation: rotate-dumbbell 1s linear infinite;
 }
@@ -616,30 +619,27 @@ const toggleTestComponent = () => {
   }
 }
 
-/* Стилизация контейнера диаграммы */
 .chart-container {
   max-width: 300px;
   margin: 20px auto;
 }
 
-/* Остальные стили остаются без изменений */
+/* BottomSheet стили */
 .rounded-bottom-sheet {
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
   overflow: hidden;
 }
 
-/* Контейнер для кнопок закрытия и отправки */
+/* Кнопка для тестов */
 .text-center .v-btn {
   min-width: 150px;
 }
 
-/* Изменение цвета иконки для кнопок */
 .v-btn .v-icon {
   margin-right: 0;
 }
 
-/* Перетаскивание (если необходимо) */
 .dragging {
   opacity: 0.5;
 }

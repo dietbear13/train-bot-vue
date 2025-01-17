@@ -1,4 +1,4 @@
-// ~/composables/useApi.ts
+/* /composables/useApi.ts */
 import axios, { type AxiosInstance, type AxiosRequestConfig, type Method } from 'axios'
 
 // Базовые URL для основных и резервных серверов
@@ -9,7 +9,7 @@ const fallbackBaseURL = 'http://localhost:3002/api/'
 // Создаём экземпляр Axios с основным базовым URL
 const axiosInstance: AxiosInstance = axios.create({
     baseURL: primaryBaseURL,
-    timeout: 5000,
+    timeout: 10000,
 })
 
 
