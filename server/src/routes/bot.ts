@@ -358,8 +358,12 @@ router.post('/send-detailed-plan', async (req: Request, res: Response) => {
     const validSplitComment = splitComment && typeof splitComment === 'string' ? splitComment : '';
 
     try {
-        // Формируем HTML-сообщение с ссылками-иконками для каждого упражнения
         const messageHTML = formatWeeklyWorkoutMessageHTML(plan, splitName, splitComment);
+
+        function capitalizeFirstLetter(str: string) {
+            if (!str) return '';
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
 
         // Добавляем иконку-ссылку к каждому упражнению
         // Используем схему tg://open-web-app для открытия Mini App внутри Telegram
@@ -369,7 +373,7 @@ router.post('/send-detailed-plan', async (req: Request, res: Response) => {
                 detailedMessage += `<u>${escapeHTML(day.dayName)}</u>\n`;
                 day.exercises.forEach((exercise: Exercise, index: number) => {
                     const externalUrl = `${appUrl}/exerciseInChat?name=${encodeURIComponent(exercise.name)}`;
-                    detailedMessage += `${index + 1}. ${escapeHTML(exercise.name)} — ${exercise.sets}×${exercise.reps} <a href="${externalUrl}">🔗</a>\n`;
+                    detailedMessage += `${index + 1}. ${escapeHTML(capitalizeFirstLetter(exercise.name))} — ${exercise.sets}×${exercise.reps} <a href="${externalUrl}">🔗</a>\n`;
                 });
                 detailedMessage += `\n`;
             }
@@ -395,3 +399,6 @@ router.post('/send-detailed-plan', async (req: Request, res: Response) => {
 
 
 export default router;
+
+
+// посмотри код проекта nuxt 3 vuetify, точнее модуля с маршрутами для его сервера src/routes/bot.ts, который отправляет тренировки пользователю в телеграме /send-detailed-plan. Я хочу улучшить его и прикрепить инлайн кнопку к сообщению, которая бы собирала telegram starts в качестве доната - нажал на кнопку и старс отправился. Нужно учитывать, что это сообщение могло быть переслано кем-то кому-то без прямого доступа к боту, но кнопка всегда должна задонатить мне. Расскажи как делаются донаты для моего telegram mini app?

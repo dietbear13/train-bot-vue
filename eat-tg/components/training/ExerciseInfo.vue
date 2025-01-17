@@ -6,7 +6,7 @@
   >
   <v-card-text v-if="exercise">
     <!-- Переносим заголовок в тело нижнего листа -->
-    <div class="headline mb-4">{{ exercise.name || 'Об упражнении' }}</div>
+    <div class="headline mb-4">{{ (exercise.name) || 'Об упражнении' }}</div>
 
     <!-- Отображение GIF-картинки -->
     <div v-if="exercise.gifImage" class="gif-container">

@@ -1,3 +1,5 @@
+// scr/bot.ts
+
 import dotenv from 'dotenv';
 import TelegramBot, {InlineKeyboardMarkup} from 'node-telegram-bot-api';
 

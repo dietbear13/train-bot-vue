@@ -1,94 +1,91 @@
 <!-- pages/exerciseInChat.vue -->
 <template>
   <div>
-    <!-- Информационная плашка -->
-    <v-alert
-        v-if="showBanner"
-        type="warning"
-        colored-border
-        class="banner-alert"
-    >
-      <div class="d-flex justify-space-between align-center">
-        <div
-            class="flex-grow-1"
-            @click="openInstructions"
-            style="cursor: pointer;"
-        >
-          <strong>Гифка открылась не в Telegram?</strong> Узнай как
-          включить встроенный браузер телеграм одной кнопкой!
-        </div>
-        <v-btn icon @click="closeBanner">
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
-      </div>
-    </v-alert>
-
     <v-card v-if="exercise" class="pa-4 mx-auto" max-width="600">
-      <v-card-title>{{ exercise.name }}</v-card-title>
+      <v-card-title style="word-break: break-word;">
+        {{ capitalizeFirstLetter(exercise.name) }}
+      </v-card-title>
 
-      <v-img
-          v-if="exercise.gifImage"
-          :src="getGifUrl(exercise.gifImage)"
-          aspect-ratio="1.7777"
-          class="my-4"
-          style="border-radius: 16px;"
-      />
+      <div class="gif-container my-4">
+        <v-img
+            v-if="exercise.gifImage"
+            :src="getGifUrl(exercise.gifImage)"
+            aspect-ratio="1.7777"
+            class="rounded-gif"
+        />
+      </div>
+
+      <!-- Информационная плашка -->
+      <v-alert
+          v-if="showBanner"
+          type="info"
+          colored-border
+          variant="tonal"
+          close-label="Закрыть"
+          class="banner-alert"
+          @close="handleCloseBanner"
+      >
+        <div class="d-flex justify-space-between align-center">
+          <div
+              class="flex-grow-1"
+              @click="openInstructions"
+              style="cursor: pointer;"
+          >
+            <strong>Если страница открылась в браузере, свернув Telegram</strong>, поставьте в настройках Telegram открытие ссылок во встроенном браузере.
+            <br><u>Открыть инструкцию <v-icon size="14px">mdi-open-in-new</v-icon></u>
+          </div>
+        </div>
+      </v-alert>
 
       <!-- Контент упражнения -->
       <v-card-text>
-        <div>
-          <strong>Основная мышца:</strong> {{ exercise.mainMuscle }}
-        </div>
-        <div>
-          <strong>Доп. мышцы:</strong> {{ exercise.additionalMuscles || '—' }}
-        </div>
-        <div>
-          <strong>Оборудование:</strong> {{ exercise.equipment || '—' }}
-        </div>
-        <div>
-          <strong>Техника:</strong>
-          <p style="white-space: pre-wrap;">{{ exercise.technique || '—' }}</p>
-        </div>
-        <div class="mt-2">
-          <strong>Ограничения:</strong>
-          <ul>
-            <li>
-              Спина:
-              <span>
-                {{
-                  exercise.spineRestrictions
-                      ? 'не рекомендуется'
-                      : 'можно'
-                }}
-              </span>
-            </li>
-            <li>
-              Колени:
-              <span>
-                {{
-                  exercise.kneeRestrictions
-                      ? 'не рекомендуется'
-                      : 'можно'
-                }}
-              </span>
-            </li>
-            <li>
-              Плечи:
-              <span>
-                {{
-                  exercise.shoulderRestrictions
-                      ? 'не рекомендуется'
-                      : 'можно'
-                }}
-              </span>
-            </li>
-          </ul>
-        </div>
-        <div style="color: gray; font-size: 0.8rem;">
-          Не является медицинской рекомендацией, при травмах стоит обратиться к
-          врачу.
+        <v-list dense>
+          <v-list-item>
+            <v-list-item-title class="font-weight-bold">Основная мышца:</v-list-item-title>
+            <v-list-item-subtitle>{{ exercise.mainMuscle }}</v-list-item-subtitle>
+          </v-list-item>
+
+          <v-list-item>
+            <v-list-item-title class="font-weight-bold">Доп. мышцы:</v-list-item-title>
+            <v-list-item-subtitle>{{ exercise.additionalMuscles || '—' }}</v-list-item-subtitle>
+          </v-list-item>
+
+          <v-list-item>
+            <v-list-item-title class="font-weight-bold">Оборудование:</v-list-item-title>
+            <v-list-item-subtitle>{{ exercise.equipment || '—' }}</v-list-item-subtitle>
+          </v-list-item>
+
+          <v-list-item>
+              <v-list-item-title class="font-weight-bold">Техника:</v-list-item-title>
+              <v-list-item-subtitle style="white-space: pre-wrap;">{{ exercise.technique || '—' }}</v-list-item-subtitle>
+          </v-list-item>
+
+          <v-list-item>
+            <v-list-item-title class="font-weight-bold">Ограничения при травмах</v-list-item-title>
+            <v-list-item-subtitle>
+              <v-list>
+                <v-list-item>
+                    <v-list-item-title>Спина: {{ exercise.spineRestrictions ? 'не рекомендуется' : 'можно' }}</v-list-item-title>
+                    <v-list-item-title>Колени: {{ exercise.kneeRestrictions ? 'не рекомендуется' : 'можно' }}</v-list-item-title>
+                    <v-list-item-title>Плечи: {{ exercise.shoulderRestrictions ? 'не рекомендуется' : 'можно' }}</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-list-item-subtitle>
+          </v-list-item>
+        </v-list>
+
+        <div class="mt-2 text-gray small-text">
+          Не является медицинской рекомендацией, при травмах стоит обратиться к врачу.
         </div>
       </v-card-text>
+
+      <!-- Кнопка для перехода в полную версию бота -->
+      <div v-if="exercise" class="mt-4 text-center">
+        <v-btn color="primary" @click="redirectToTelegramBot">
+          Перейти в телеграм бот
+        </v-btn>
+      </div>
+
     </v-card>
 
     <div v-else class="text-center my-10">
@@ -99,13 +96,6 @@
       />
     </div>
 
-    <!-- Кнопка для перехода в полную версию бота -->
-    <div v-if="exercise" class="mt-4 text-center">
-      <v-btn color="primary" @click="redirectToTelegramBot">
-        Перейти в телеграм бот
-      </v-btn>
-    </div>
-
     <!-- Модальное окно с инструкцией -->
     <v-dialog v-model="isDialogOpen" max-width="600">
       <v-card class="instruction-card">
@@ -113,66 +103,22 @@
           Как включить встроенный браузер в Telegram
         </v-card-title>
         <v-card-text>
-          <!-- Замена v-tabs и v-tab на v-window и v-window-item -->
-          <v-window v-model="currentTab" class="instruction-window">
-            <!-- Навигация между окнами -->
-            <div class="d-flex justify-center mb-4">
-              <v-btn
-                  text
-                  :color="currentTab === 'ios' ? 'primary' : 'default'"
-                  @click="currentTab = 'ios'"
-                  class="flex-grow-1 d-flex flex-column align-center"
-              >
-                <span>iOS</span>
-                <v-icon>mdi-apple</v-icon>
-              </v-btn>
-              <v-btn
-                  text
-                  :color="currentTab === 'android' ? 'primary' : 'default'"
-                  @click="currentTab = 'android'"
-                  class="flex-grow-1 d-flex flex-column align-center"
-              >
-                <span>Android</span>
-                <v-icon>mdi-android</v-icon>
-              </v-btn>
-            </div>
+          <!-- Иконки платформ -->
+          <div class="d-flex justify-center mb-2">
+            <v-icon large class="mr-2">mdi-apple</v-icon>
+            <v-icon large>mdi-android</v-icon>
+          </div>
 
-            <!-- Содержимое окон -->
-            <v-window-item value="ios">
-              <v-card-text>
-                <ol>
-                  <li>Откройте приложение Telegram на вашем iPhone.</li>
-                  <li>Перейдите в <strong>Настройки</strong>.</li>
-                  <li>Выберите <strong>Данные и хранилище</strong>.</li>
-                  <li>Найдите раздел <strong>Браузер</strong>.</li>
-                  <li>Выберите среди всех <strong>Telegram</strong>.</li>
-                </ol>
-              </v-card-text>
-            </v-window-item>
-
-            <v-window-item value="android">
-              <v-card-text>
-                <ol>
-                  <li>
-                    Откройте приложение Telegram на вашем устройстве Android.
-                  </li>
-                  <li>
-                    Нажмите на три полоски (меню) в верхнем левом углу.
-                  </li>
-                  <li>Перейдите в <strong>Настройки</strong>.</li>
-                  <li>
-                    Выберите <strong>Данные и хранилище</strong>.
-                  </li>
-                  <li>Найдите раздел <strong>Браузер</strong>.</li>
-                  <li>Выберите среди всех <strong>Telegram</strong>.</li>
-                </ol>
-              </v-card-text>
-            </v-window-item>
-          </v-window>
+          <!-- Инструкция -->
+          <div class="mx-3">
+            <p>1. Откройте <strong>Настройки</strong> Telegram.</p>
+            <p>2. Выберите <strong>Данные и хранилище</strong> → <strong>Браузер</strong>.</p>
+              <p>3. Выберите браузер <strong>Telegram</strong>.</p>
+          </div>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="primary" text @click="closeDialog">Закрыть</v-btn>
+          <v-btn text @click="isDialogOpen = false">Закрыть</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -208,7 +154,12 @@ const showBanner = ref(false);
 const isDialogOpen = ref(false);
 
 // Переменная для управления текущей вкладкой
-const currentTab = ref('ios');
+
+function capitalizeFirstLetter(str) {
+  if (!str) return '';
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 
 /**
  * Метод для получения полного URL GIF
@@ -231,14 +182,6 @@ function checkBannerVisibility() {
 }
 
 /**
- * Метод для закрытия плашки
- */
-function closeBanner() {
-  showBanner.value = false;
-  localStorage.setItem('bannerClosed', 'true');
-}
-
-/**
  * Метод для открытия инструкций
  */
 function openInstructions() {
@@ -250,6 +193,14 @@ function openInstructions() {
  */
 function closeDialog() {
   isDialogOpen.value = false;
+}
+
+/**
+ * Метод для закрытия плашки и сохранения состояния
+ */
+function handleCloseBanner() {
+  showBanner.value = false;
+  localStorage.setItem('bannerClosed', 'true');
 }
 
 /**
@@ -296,9 +247,16 @@ onMounted(() => {
 
 <style scoped>
 .banner-alert {
-  background-color: #fff3cd; /* Светло-желтый цвет */
-  border-left: 4px solid #ffeeba; /* Темнее желтый для границы */
-  margin-bottom: 16px;
+  border-radius: 16px;
+}
+
+.gif-container {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.rounded-gif {
+  border-radius: 16px;
 }
 
 .icon-container {
@@ -324,6 +282,37 @@ onMounted(() => {
 .v-btn .v-icon {
   color: inherit; /* Убираем цветовое оформление иконок */
 }
+
+.font-weight-bold {
+  font-weight: 600;
+}
+
+.text-gray {
+  color: gray;
+}
+
+.small-text {
+  font-size: 0.9rem;
+}
+
+.v-list-item-title {
+  font-size: 1rem;
+}
+
+.v-list-item-subtitle {
+  font-size: 0.95rem;
+}
+
+.custom-list {
+  padding-left: 20px; /* Отступ для списка */
+  margin: 0; /* Убираем внешние отступы */
+}
+
+.custom-list li {
+  margin-bottom: 4px; /* Отступ между элементами списка */
+  list-style-type: disc; /* Маркированные точки */
+}
+
 
 @media (max-width: 600px) {
   .instruction-card {
