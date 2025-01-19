@@ -110,6 +110,12 @@ const handleDonateStars = () => {
     isLoading.value = false;
   }
 };
+
+// Определение метаданных страницы для использования разметки no-footer
+definePageMeta({
+  layout: 'no-footer',
+});
+
 </script>
 
 <style scoped>

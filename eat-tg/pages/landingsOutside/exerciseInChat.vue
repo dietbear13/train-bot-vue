@@ -116,7 +116,7 @@
                 >
                   {{ exercise.spineRestrictions ? 'mdi-close-circle' : 'mdi-check-circle' }}
                 </v-icon>
-                Спина:
+                позвоночника:
                 <span :class="exercise.spineRestrictions ? 'text-red' : 'text-green'">
                   {{ exercise.spineRestrictions ? 'не рекомендуется' : 'можно' }}
                 </span>
@@ -128,7 +128,7 @@
                 >
                   {{ exercise.kneeRestrictions ? 'mdi-close-circle' : 'mdi-check-circle' }}
                 </v-icon>
-                Колени:
+                коленей:
                 <span :class="exercise.kneeRestrictions ? 'text-red' : 'text-green'">
                   {{ exercise.kneeRestrictions ? 'не рекомендуется' : 'можно' }}
                 </span>
@@ -140,7 +140,7 @@
                 >
                   {{ exercise.shoulderRestrictions ? 'mdi-close-circle' : 'mdi-check-circle' }}
                 </v-icon>
-                Плечи:
+                плеч:
                 <span :class="exercise.shoulderRestrictions ? 'text-red' : 'text-green'">
                   {{ exercise.shoulderRestrictions ? 'не рекомендуется' : 'можно' }}
                 </span>
