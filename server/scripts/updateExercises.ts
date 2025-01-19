@@ -32,7 +32,7 @@ interface ExerciseData {
 interface ExerciseDocument extends ExerciseData, Document {}
 
 // Подключение к MongoDB
-mongoose.connect('mongodb://localhost:27017/fitness-app', {})
+mongoose.connect('mongodb://mongodb:27017/fitness-app', {})
     .then(() => {
         console.log('Connected to MongoDB');
     })

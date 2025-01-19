@@ -9,7 +9,7 @@ const filePath = path.join(__dirname, 'сплиты.xlsx');
 
 const updateSplits = async () => {
     try {
-        await mongoose.connect('mongodb://localhost:27017/fitness-app');
+        await mongoose.connect('mongodb://mongodb:27017/fitness-app');
         console.log('Connected to MongoDB');
 
         // Очищаем коллекцию

@@ -1,13 +1,13 @@
-// scr/bot.ts
+// src/bot.ts
 
 import dotenv from 'dotenv';
-import TelegramBot, {InlineKeyboardMarkup} from 'node-telegram-bot-api';
+import TelegramBot, { InlineKeyboardMarkup } from 'node-telegram-bot-api';
 
 // Загрузка переменных окружения из .env файла
 dotenv.config();
 
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
-const appUrl = process.env.APP_URL; // URL вашего Telegram Mini App
+const appUrl = process.env.APP_URL; // URL вашего приложения, например, https://giveaway-bot.ru.tuna.am
 
 if (!botToken) {
     throw new Error('TELEGRAM_BOT_TOKEN не задан в файле .env');
@@ -17,21 +17,15 @@ if (!appUrl) {
     throw new Error('APP_URL не задан в файле .env');
 }
 
-// Инициализация бота с использованием polling
+// Инициализация бота с использованием polling без некорректных опций request
 const bot = new TelegramBot(botToken, {
     polling: true,
-    request: {
-        url: botToken,
-        agentOptions:{
-            keepAlive: true,
-            family: 4
-        }
-    }
 });
 
-console.log('Бот запущен')
+console.log('Бот запущен');
+
 /**
- * Функция для создания кнопки Telegram Mini App
+ * Функция для создания кнопки Telegram Web App
  * @param text Текст кнопки
  * @param path Путь внутри приложения (например, '/training' или '/nutrition')
  * @returns Кнопка с параметром web_app
@@ -40,7 +34,7 @@ const openTelegramLink = (text: string, path: string): any => {
     return {
         text: text,
         web_app: {
-            url: `${appUrl}${path}`, // Полный URL вашего Mini App с добавленным путем
+            url: `${appUrl}${path}`, // Полный URL вашего Web App с добавленным путем
         },
     };
 };
@@ -68,11 +62,14 @@ bot.onText(/\/start/, (msg) => {
     const keyboard: InlineKeyboardMarkup = {
         inline_keyboard: [
             [
-                openTelegramLink('🏋️‍♂️ Тренировки', ''), // Страница тренировок
+                openTelegramLink('🏋️‍♂️ Тренировки', '/'), // Страница тренировок
                 openTelegramLink('🍏 Питание', '/nutrition'), // Страница питания
             ],
             [
-                openUrlButton('🔗 тг-канал «кОчалка»', 'https://t.me/training_health'), // Переход в канал
+                openUrlButton('🔗 ТГ-канал «кОчалка»', 'https://t.me/training_health'), // Переход в канал
+            ],
+            [
+                openTelegramLink('⭐ Поддержать проект', '/landingsOutside/donatStars'), // Корректный путь для донатов
             ],
         ],
     };

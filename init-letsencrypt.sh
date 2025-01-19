@@ -6,7 +6,7 @@ if ! [ -x "$(command -v docker compose)" ]; then
 fi
 
 
-domains=(fitnesstgbot.ru)
+domains=(fitnesstgbot.ru www.fitnesstgbot.ru)
 rsa_key_size=4096
 data_path="./certbot"
 email="dietbear13@gmail.com" # Adding a valid address is strongly recommended

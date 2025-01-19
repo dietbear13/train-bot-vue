@@ -2,7 +2,7 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig, type Method } from 'axios'
 
 // Базовые URL для основных и резервных серверов
-const primaryBaseURL = 'https://fit-server-bot.ru.tuna.am/api/'
+const primaryBaseURL = 'https://fitnesstgbot.ru/api/'
 const fallbackBaseURL = 'http://localhost:3002/api/'
 // const primaryBaseURL = 'https://fitnesstgbot.ru/api/'
 
@@ -42,6 +42,7 @@ export function useApi() {
 
         try {
             const response = await axiosInstance(config)
+            console.log('! response UseApi', response)
             return response.data
         } catch (error) {
             console.error(`Ошибка при запросе к ${endpoint}:`, error)

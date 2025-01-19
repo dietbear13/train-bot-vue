@@ -24,6 +24,12 @@
           hide-default-footer
           dense
       >
+        <!-- Шаблон для форматирования поля dateAdded -->
+        <template #item.dateAdded="{ item }">
+          {{ formatDate(item.dateAdded) }}
+        </template>
+
+        <!-- Шаблон для действий -->
         <template #item.actions="{ item }">
           <v-btn
               icon
@@ -84,8 +90,9 @@
                     hide-default-footer
                     dense
                 >
+                  <!-- Шаблон для форматирования поля timestamp -->
                   <template #item.timestamp="{ item }">
-                    {{ formatTimestamp(item.timestamp) }}
+                    {{ formatDate(item.timestamp) }}
                   </template>
                   <template #item.gender="{ item }">
                     {{ item.formData.gender }}
@@ -152,7 +159,6 @@
     </v-card>
   </v-container>
 </template>
-
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
@@ -224,41 +230,29 @@ const kbzhuLoading = ref<boolean>(false);
 
 // Заголовки таблицы пользователей
 const userHeaders = [
-  { title: 'Telegram ID', value: 'telegramId' },
-  { title: 'Роль', value: 'role' },
-  { title: 'Дата Добавления', value: 'dateAdded' },
-  { title: 'Действия', value: 'actions', sortable: false },
-  { title: 'Дата кбжу', value: 'timestamp' },
-  { title: 'Пол', value: 'gender' },
-  { title: 'Телосложение', value: 'bodyType' },
-  { title: 'Возраст', value: 'age' },
-  { title: 'Рост', value: 'height' },
-  { title: 'Вес', value: 'weight' },
-  { title: 'Цель', value: 'goal' },
-  { title: 'Тренировок в неделю', value: 'workoutsPerWeek' },
-  { title: 'Калории', value: 'calories' },
-  { title: 'Доп. Калории', value: 'extraCalories' },
-  { title: 'Белки', value: 'proteins' },
-  { title: 'Жиры', value: 'fats' },
-  { title: 'Углеводы', value: 'carbs' },
+  { text: 'Telegram ID', value: 'telegramId' },
+  { text: 'Роль', value: 'role' },
+  { text: 'Дата Добавления', value: 'dateAdded' },
+  // KbzhuHeaders будут добавлены динамически
+  { text: 'Действия', value: 'actions', sortable: false },
 
 ];
 
 // Заголовки таблицы КБЖУ (для диалога)
 const kbzhuHeaders = [
-  { title: 'Дата', value: 'timestamp' },
-  { title: 'Пол', value: 'gender' },
-  { title: 'Телосложение', value: 'bodyType' },
-  { title: 'Возраст', value: 'age' },
-  { title: 'Рост', value: 'height' },
-  { title: 'Вес', value: 'weight' },
-  { title: 'Цель', value: 'goal' },
-  { title: 'Тренировок в неделю', value: 'workoutsPerWeek' },
-  { title: 'Калории', value: 'calories' },
-  { title: 'Доп. Калории', value: 'extraCalories' },
-  { title: 'Белки', value: 'proteins' },
-  { title: 'Жиры', value: 'fats' },
-  { title: 'Углеводы', value: 'carbs' },
+  { text: 'Дата', value: 'timestamp' },
+  { text: 'Пол', value: 'gender' },
+  { text: 'Телосложение', value: 'bodyType' },
+  { text: 'Возраст', value: 'age' },
+  { text: 'Рост (см)', value: 'height' },
+  { text: 'Вес (кг)', value: 'weight' },
+  { text: 'Цель', value: 'goal' },
+  { text: 'Тренировок в неделю', value: 'workoutsPerWeek' },
+  { text: 'Калории (ккал)', value: 'calories' },
+  { text: 'Доп. Калории (ккал)', value: 'extraCalories' },
+  { text: 'Белки (г)', value: 'proteins' },
+  { text: 'Жиры (г)', value: 'fats' },
+  { text: 'Углеводы (г)', value: 'carbs' },
 ];
 
 // Динамическое объединение заголовков
@@ -447,16 +441,24 @@ const viewUser = async (user: User) => {
   }
 };
 
-// Форматируем дату (timestamp в секундах) в удобочитаемую
+// Форматируем дату (timestamp в секундах) в вид "23 сентября 2024"
 const formatDate = (timestamp: number): string => {
   const date = new Date(timestamp * 1000);
-  return date.toLocaleString();
+  return date.toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
 };
 
 // Форматируем timestamp в миллисекундах для KbzhuHistory
 const formatTimestamp = (timestamp: number): string => {
   const date = new Date(timestamp);
-  return date.toLocaleString();
+  return date.toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
 };
 
 // Закрытие диалога пользователя
@@ -468,13 +470,15 @@ const closeUserDialog = () => {
 // Загрузка пользователей при монтировании компонента, только для администраторов
 onMounted(() => {
   if (userStore.role === 'admin') {
-    fetchUsers();
+    fetchUsers().then(() => {
+      console.log('Combined Headers:', combinedHeaders.value);
+      console.log('Processed Users:', processedUsers.value);
+    });
   } else {
     userError.value = 'У вас нет доступа к этой странице.';
   }
 });
 </script>
-
 
 <style scoped>
 /* Дополнительные стили для тёмной темы */

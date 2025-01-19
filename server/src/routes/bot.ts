@@ -238,24 +238,76 @@ const sendWorkoutToUser = (
         });
 };
 
-/**
- * Маршрут: отправка плана тренировок на неделю
- * (Остаётся без изменений)
- */
-router.post('/send-workout', async (req: Request<{}, {}, SendWorkoutRequestBody>, res: Response) => {
-    const { userId, splitName, splitComment, plan } = req.body;
 
-    if (!userId || !splitName || !plan || !Array.isArray(plan)) {
-        console.log('userId, splitName, plan:', userId, splitName, plan);
-        return res.status(400).json({ message: 'Необходимо указать userId, splitName и plan[]' });
+/**
+ * Функция для отправки тренировки пользователю
+ */
+const sendWorkoutsToUser = (
+    chatId: number,
+    muscleGroup: string,
+    date: string,
+    workout: { name: string; sets: number; reps: number }[]
+) => {
+    let message = `${muscleGroup}, тренировка (${date})\n\n`;
+    message += '[Генератор тренировок](https://t.me/freeload_top_bot)\n';
+    message += '[Канал о тренировках и здоровье](https://t.me/training_health)\n\n';
+    workout.forEach((exercise, index) => {
+        message += `${index + 1}. ${exercise.name} — ${exercise.sets}×${exercise.reps}\n`;
+    });
+
+    // Логирование для отладки
+    console.log('Сообщение для отправки:', message);
+
+    bot
+        .sendMessage(chatId, message, {
+            parse_mode: 'Markdown',
+            disable_web_page_preview: true,
+        })
+        .then(() => {
+            console.log(`Workout sent to user ${chatId}`);
+        })
+        .catch((error) => {
+            console.error('Error sending message to userAndAdmin:', error.response?.body || error.message);
+        });
+};
+
+
+
+/**
+ * Маршрут для отправки тренировки
+ */
+router.post('/send-workout', async (req: Request, res: Response) => {
+    const { userId, muscleGroup, date, workout } = req.body;
+
+    if (!userId || !muscleGroup || !date || !workout || !Array.isArray(workout)) {
+        return res.status(400).json({ message: 'Необходимо указать userId, muscleGroup, date и workout (массив упражнений).' });
     }
 
     try {
-        sendWorkoutToUser(userId, splitName, splitComment, plan);
-        res.json({ message: 'Тренировка отправлена в сообщением в чат' });
+        function capitalizeFirstLetter(str: string) {
+            if (!str) return '';
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        // Формируем сообщение с тренировкой
+        let workoutMessage = `<b>Тренировка: ${escapeHTML(muscleGroup)}</b>\nДата: ${escapeHTML(date)}\n\n`;
+
+        workout.forEach((exercise: Exercise, index: number) => {
+            const externalUrl = `${appUrl}/landingsOutside/exerciseInChat?name=${encodeURIComponent(exercise.name)}`;
+            workoutMessage += `${index + 1}. ${escapeHTML(capitalizeFirstLetter(exercise.name))} — ${exercise.sets}×${exercise.reps} <a href="${externalUrl}">🔗</a>\n`;
+        });
+
+        // Отправляем сообщение пользователю
+        await bot.sendMessage(userId, workoutMessage, {
+            parse_mode: 'HTML',
+            disable_web_page_preview: true,
+        });
+
+        console.log(`Тренировка отправлена пользователю ${userId}`);
+        res.json({ message: 'Тренировка отправлена в Telegram' });
     } catch (error: any) {
         console.error('Ошибка при отправке сообщения в Telegram:', error.message);
-        res.status(500).json({ message: 'Ошибка при отправке сообщения в Telegram', error: error.message });
+        res.status(500).json({ message: 'Ошибка при отправке сообщения в Telegram.' });
     }
 });
 
@@ -372,7 +424,7 @@ router.post('/send-detailed-plan', async (req: Request, res: Response) => {
             if (day.exercises && day.exercises.length > 0) {
                 detailedMessage += `<u>${escapeHTML(day.dayName)}</u>\n`;
                 day.exercises.forEach((exercise: Exercise, index: number) => {
-                    const externalUrl = `${appUrl}/exerciseInChat?name=${encodeURIComponent(exercise.name)}`;
+                    const externalUrl = `${appUrl}/landingsOutside/exerciseInChat?name=${encodeURIComponent(exercise.name)}`;
                     detailedMessage += `${index + 1}. ${escapeHTML(capitalizeFirstLetter(exercise.name))} — ${exercise.sets}×${exercise.reps} <a href="${externalUrl}">🔗</a>\n`;
                 });
                 detailedMessage += `\n`;
@@ -400,5 +452,3 @@ router.post('/send-detailed-plan', async (req: Request, res: Response) => {
 
 export default router;
 
-
-// посмотри код проекта nuxt 3 vuetify, точнее модуля с маршрутами для его сервера src/routes/bot.ts, который отправляет тренировки пользователю в телеграме /send-detailed-plan. Я хочу улучшить его и прикрепить инлайн кнопку к сообщению, которая бы собирала telegram starts в качестве доната - нажал на кнопку и старс отправился. Нужно учитывать, что это сообщение могло быть переслано кем-то кому-то без прямого доступа к боту, но кнопка всегда должна задонатить мне. Расскажи как делаются донаты для моего telegram mini app?

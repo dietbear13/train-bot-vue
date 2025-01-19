@@ -4,7 +4,8 @@ import cors from 'cors';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import TelegramBot from 'node-telegram-bot-api';
-import './bot'; // если у вас есть файл с логикой бота
+import './bot';
+import path from 'path';
 
 // Импорт старых маршрутов
 import splitsRoutes from './routes/splits';
@@ -13,8 +14,7 @@ import usersRoutes from './routes/users';
 import exercisesRoutes from './routes/exercises';
 import exerciseRoutes from './routes/exercise';
 import patternsRoutes from './routes/patterns';
-
-// <-- Импортируем наш новый маршрут
+// import donationsRoutes from './routes/donations';
 import analyticsMainRoutes from './routes/analytics/analyticsMain';
 
 dotenv.config();
@@ -26,7 +26,7 @@ if (!botToken) {
 const bot = new TelegramBot(botToken, { polling: false });
 
 const app = express();
-const port = 3002;
+const port = 4000;
 
 app.use(cors({
     origin: '*',
@@ -37,9 +37,9 @@ app.use(express.json());
 
 // Подключение к MongoDB
 mongoose
-    .connect('mongodb://localhost:27017/fitness-app', {} as mongoose.ConnectOptions)
+    // .connect('mongodb://localhost:27017/fitness-app', {} as mongoose.ConnectOptions)
     // Для продакшена (docker etc.)
-    // .connect('mongodb://mongodb:27017/fitness-app', {} as mongoose.ConnectOptions)
+    .connect('mongodb://mongodb:27017/fitness-app', {} as mongoose.ConnectOptions)
     .then(() => {
         console.log('Connected to MongoDB');
     })
@@ -47,11 +47,6 @@ mongoose
         console.error('Error connecting to MongoDB:', error);
     });
 
-// Служебный тестовый маршрут
-app.use('/api/log', (req, res) => {
-    console.log("req", req.body);
-    res.send('OK');
-});
 
 // Подключаем основные роуты
 app.use('/api', splitsRoutes);
@@ -60,9 +55,13 @@ app.use('/api', usersRoutes);
 app.use('/api', exercisesRoutes);
 app.use('/api', patternsRoutes);
 app.use('/api', exerciseRoutes);
+// app.use('/api', donationsRoutes);
 
 // <-- Подключаем наш новый маршрут Analytics
 app.use('/api', analyticsMainRoutes);
+
+// Подключаем маршрут Donations
+// app.use('/api/donations', donationsRoutes);
 
 // Запускаем сервер
 app.listen(port, () => {

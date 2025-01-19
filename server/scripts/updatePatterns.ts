@@ -134,7 +134,7 @@ async function populatePatternsDB() {
 async function main() {
     try {
         // Подключение к MongoDB
-        await mongoose.connect('mongodb://localhost:27017/fitness-app');
+        await mongoose.connect('mongodb://mongodb:27017/fitness-app');
         console.log('Connected to MongoDB');
 
         // Запуск функции заполнения базы данных

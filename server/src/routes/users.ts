@@ -26,6 +26,7 @@ router.get('/users', async (req: Request, res: Response) => {
  * Кроме того, проверяет фактическую подписку (для не-админа).
  */
 router.post('/check-user', async (req: Request, res: Response) => {
+
     const { telegramId } = req.body;
 
     if (!telegramId) {
@@ -96,6 +97,7 @@ router.post('/check-user', async (req: Request, res: Response) => {
         // 5) Возвращаем актуальную роль
         return res.json({ role: user.role });
     } catch (error: any) {
+        console.error('Ошибка', error);
         console.error('Ошибка при работе с пользователем:', error.message);
         res.status(500).json({ message: 'Ошибка при работе с пользователем' });
     }
