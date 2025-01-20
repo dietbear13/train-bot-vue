@@ -1,5 +1,4 @@
 // src/models/User.ts
-
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IKbzhuHistory {
@@ -22,6 +21,11 @@ export interface IKbzhuHistory {
     timestamp: number; // UNIX timestamp
 }
 
+export interface IReferral {
+    inviteeId: number;
+    date: number; // UNIX timestamp
+}
+
 export interface IUser extends Document {
     telegramId: number;
     role: 'admin' | 'freeUser' | 'paidUser';
@@ -29,6 +33,7 @@ export interface IUser extends Document {
     datePaid?: number; // UNIX timestamp
     datePaidUntil?: number; // UNIX timestamp
     kbzhuHistory?: IKbzhuHistory[]; // История результатов КБЖУ
+    referrals?: IReferral[]; // Список рефералов
 }
 
 const UserSchema: Schema = new Schema({
@@ -56,6 +61,12 @@ const UserSchema: Schema = new Schema({
                 carbs: { type: Number, required: true },
             },
             timestamp: { type: Number, required: true },
+        },
+    ],
+    referrals: [
+        {
+            inviteeId: { type: Number, required: true },
+            date: { type: Number, required: true },
         },
     ],
 });

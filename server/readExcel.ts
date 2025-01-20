@@ -28,7 +28,7 @@ const exercises = sheet.slice(1).map((row: any) => ({
 }));
 
 // Подключение к MongoDB и загрузка данных
-mongoose.connect('mongodb://localhost:27017/fitness-app', {} as mongoose.ConnectOptions)
+mongoose.connect('mongodb://mongodb:27017/fitness-app', {} as mongoose.ConnectOptions)
     .then(async () => {
         console.log('Подключено к MongoDB');
         try {

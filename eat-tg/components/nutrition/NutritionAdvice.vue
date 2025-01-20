@@ -62,12 +62,17 @@
     >
       <div v-html="formattedContent" class="py-2 px-4"></div>
     </BottomSheetWithClose>
+
+    <!-- Сюда новый код -->
+    <ReferralLink></ReferralLink>
+
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import BottomSheetWithClose from '@/components/shared/BottomSheetWithClose.vue';
+import ReferralLink from '~/components/shared/ReferralLink.vue'
 
 // Интерфейс для элементов совета
 interface AdviceItem {

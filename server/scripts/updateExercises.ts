@@ -2,7 +2,6 @@
 
 import mongoose, { Schema, Document, model } from 'mongoose';
 import xlsx from 'xlsx';
-import fs from 'fs';
 import path from 'path';
 
 interface ExerciseData {
@@ -73,7 +72,6 @@ const sheetName = workbook.SheetNames[0];
 const worksheet = workbook.Sheets[sheetName];
 
 // Преобразование данных Excel в JSON
-// { header: 1 } — означает, что возвращается массив массивов
 const jsonData = xlsx.utils.sheet_to_json<string[]>(worksheet, { header: 1 });
 
 // Первая строка - заголовки
@@ -88,6 +86,10 @@ function toBoolean(value: string | undefined): boolean {
 
 const updateExercises = async () => {
     try {
+        // Очищаем коллекцию Exercise
+        await Exercise.deleteMany({});
+        console.log('Коллекция Exercise очищена');
+
         for (const row of dataRows) {
             const exerciseData: ExerciseData = {
                 category: row[0] || '',

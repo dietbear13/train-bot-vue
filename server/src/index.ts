@@ -16,6 +16,7 @@ import exerciseRoutes from './routes/exercise';
 import patternsRoutes from './routes/patterns';
 // import donationsRoutes from './routes/donations';
 import analyticsMainRoutes from './routes/analytics/analyticsMain';
+import referralRoutes from './routes/referral';
 
 dotenv.config();
 
@@ -60,8 +61,8 @@ app.use('/api', exerciseRoutes);
 // <-- Подключаем наш новый маршрут Analytics
 app.use('/api', analyticsMainRoutes);
 
-// Подключаем маршрут Donations
-// app.use('/api/donations', donationsRoutes);
+// Подключаем новый маршрут Referral
+app.use('/api', referralRoutes);
 
 // Запускаем сервер
 app.listen(port, () => {
