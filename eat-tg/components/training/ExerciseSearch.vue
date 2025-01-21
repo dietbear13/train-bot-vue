@@ -581,7 +581,7 @@ export default defineComponent({
           splitComment: sendWorkoutData.value.splitComment,
           plan,
         };
-        await apiRequest('post', 'send-workout', payload);
+        await apiRequest('post', 'bot/send-workout', payload);
 
         // Установка сообщения и отображение Snackbar
         snackbarMessage.value = 'Тренировка успешно отправлена!';

@@ -61,7 +61,7 @@ const sendWorkoutsToUser = (
     workout: { name: string; sets: number; reps: number }[]
 ) => {
     let message = `${muscleGroup}, тренировка (${date})\n\n`;
-    message += '[Генератор тренировок](https://t.me/freeload_top_bot)\n';
+    message += '[Генератор тренировок](https://t.me/kochalkatg_bot)\n';
     message += '[Канал о тренировках и здоровье](https://t.me/training_health)\n\n';
     workout.forEach((exercise, index) => {
         message += `${index + 1}. ${exercise.name} — ${exercise.sets}×${exercise.reps}\n`;

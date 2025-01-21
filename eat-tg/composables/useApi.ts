@@ -7,7 +7,7 @@ const primaryBaseURL = 'https://fitnesstgbot.ru/api/'
 // Создаём экземпляр Axios с основным базовым URL
 const axiosInstance: AxiosInstance = axios.create({
     baseURL: primaryBaseURL,
-    timeout: 10000,
+    timeout: 15000,
 })
 
 

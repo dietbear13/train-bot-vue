@@ -3,8 +3,8 @@
 import { Router, Request, Response } from 'express';
 import User from '../models/User';
 
-// Импортируем наш bot из bot.ts
-import { bot } from './bot';
+// Импортируем наш bot из bot.ts с корректным путем
+import bot from '../bot';
 
 const router = Router();
 

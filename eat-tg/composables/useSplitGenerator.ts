@@ -521,7 +521,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
 
         try {
             console.log('Отправка плана тренировок (через useApi)')
-            await apiRequest('post', 'send-detailed-plan', {
+            await apiRequest('post', 'bot/send-detailed-plan', {
                 userId: params.telegramUserId.value,
                 plan: finalPlan.value,
                 splitName: params.selectedSplitRef.value?.split || '',

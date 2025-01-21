@@ -578,7 +578,7 @@ const sendKbzhuResult = async () => {
   console.log('Отправка результатов для Telegram ID:', telegramUserId.value, 'kbzhuResult:', kbzhuResult.value);
 
   try {
-    await apiRequest('post', 'send-kbzhu', {
+    await apiRequest('post', 'bot/send-kbzhu', {
       userId: telegramUserId.value,
       kbzhuResult: kbzhuResult.value,
     });

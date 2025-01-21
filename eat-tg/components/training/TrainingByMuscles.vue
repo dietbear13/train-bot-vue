@@ -599,7 +599,7 @@ export default defineComponent({
       }
       try {
         const workoutData = JSON.parse(JSON.stringify(workoutResults.value))
-        await apiRequest('post', 'send-workout', {
+        await apiRequest('post', 'bot/send-workout', {
           userId: telegramUserId.value,
           muscleGroup: muscleSubgroup.value,
           date: date.value,

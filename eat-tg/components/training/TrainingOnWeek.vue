@@ -374,7 +374,7 @@ export default defineComponent({
         }
       }
       try {
-        const response = await apiRequest('post', 'admin/log-exercises', requestData)
+        const response = await apiRequest('post', 'bot/admin/log-exercises', requestData)
         showSnackbar('Сообщение успешно отправлено!', 'success')
         console.log(`Сообщение "${exercise.name}" отправлено админу. Ответ:`, response.data)
       } catch (err: any) {

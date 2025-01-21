@@ -1,10 +1,13 @@
 // routes/donations/stars.ts
 import express, { Request, Response } from 'express';
-import axios from 'axios';
+// import axios from 'axios';
 import StarDonation from '../../models/StarDonation';
-import { BOT_TOKEN } from '../../config'; // где-то у вас хранится BOT_TOKEN
+
+const axios = require('axios');
 
 const router = express.Router();
+
+const BOT_TOKEN = process.env.BOT_TOKEN;
 
 /**
  * POST /api/donations/stars

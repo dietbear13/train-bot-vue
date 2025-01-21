@@ -20,6 +20,9 @@ import referralRouter from './routes/referral';
 
 dotenv.config();
 
+const appUrl = process.env.APP_URL;
+
+
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
 if (!botToken) {
     throw new Error('TELEGRAM_BOT_TOKEN не задан в файле .env');
@@ -66,5 +69,5 @@ app.use('/api', analyticsMainRoutes);
 
 // Запускаем сервер
 app.listen(port, () => {
-    console.log(`Сервер запущен на http://localhost:${port}`);
+    console.log(`Сервер запущен на ${appUrl}:${port}`);
 });

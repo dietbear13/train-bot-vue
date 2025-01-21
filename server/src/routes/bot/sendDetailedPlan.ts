@@ -64,7 +64,7 @@ router.post('/send-detailed-plan', async (req: Request, res: Response) => {
         });
 
         // Добавляем ссылки на бота и канал в конце сообщения
-        detailedMessage += `<a href="https://t.me/freeload_top_bot">бот с тренировками</a>\n`;
+        detailedMessage += `<a href="https://t.me/kochalkatg_bot">бот с тренировками</a>\n`;
         detailedMessage += `<a href="https://t.me/training_health">тг-канал «кОчалка»</a>\n`;
 
         // Отправляем сообщение пользователю

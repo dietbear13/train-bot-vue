@@ -1,5 +1,7 @@
 // src/utils/helpers.ts
 
+import { GeneratedDay } from '../routes/bot/types';
+
 /**
  * Функция для экранирования специальных символов HTML.
  */
@@ -25,8 +27,6 @@ export const escapeMarkdownV2 = (text: string): string => {
  * Функция для форматирования недельного тренировочного плана в HTML-сообщение.
  * Исключает дни отдыха (где exercises пусты).
  */
-import { escapeHTML } from '../utils/helpers';
-
 export const formatWeeklyWorkoutMessageHTML = (
     plan: GeneratedDay[],
     splitName: string,
@@ -50,7 +50,7 @@ export const formatWeeklyWorkoutMessageHTML = (
         }
     });
 
-    message += `<a href="https://t.me/freeload_top_bot">бот с тренировками</a>\n`;
+    message += `<a href="https://t.me/kochalkatg_bot">бот с тренировками</a>\n`;
     message += `<a href="https://t.me/training_health">тг-канал «кОчалка»</a>\n`;
 
     return message;

@@ -8,7 +8,7 @@ const router = Router();
 /**
  * Маршрут: проверка доступа бота к каналу
  */
-router.post('/bot/check-bot-access', async (req: Request, res: Response) => {
+router.post('/check-bot-access', async (req: Request, res: Response) => {
     const { channelId } = req.body;
     if (!channelId) {
         return res.status(400).json({ message: 'Необходимо указать channelId' });
