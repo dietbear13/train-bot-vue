@@ -3,8 +3,6 @@ import axios, { type AxiosInstance, type AxiosRequestConfig, type Method } from 
 
 // Базовые URL для основных и резервных серверов
 const primaryBaseURL = 'https://fitnesstgbot.ru/api/'
-const fallbackBaseURL = 'http://localhost:3002/api/'
-// const primaryBaseURL = 'https://fitnesstgbot.ru/api/'
 
 // Создаём экземпляр Axios с основным базовым URL
 const axiosInstance: AxiosInstance = axios.create({

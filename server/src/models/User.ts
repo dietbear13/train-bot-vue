@@ -33,10 +33,10 @@ export interface IUser extends Document {
     datePaid?: number; // UNIX timestamp
     datePaidUntil?: number; // UNIX timestamp
     kbzhuHistory?: IKbzhuHistory[]; // История результатов КБЖУ
-    referrals?: IReferral[]; // Список рефералов
+    referrals: IReferral[]; // Сделано обязательным
 }
 
-const UserSchema: Schema = new Schema({
+const UserSchema: Schema = new Schema<IUser>({
     telegramId: { type: Number, required: true, unique: true },
     role: { type: String, enum: ['admin', 'freeUser', 'paidUser'], default: 'freeUser' },
     dateAdded: { type: Number, required: true },
@@ -63,12 +63,15 @@ const UserSchema: Schema = new Schema({
             timestamp: { type: Number, required: true },
         },
     ],
-    referrals: [
-        {
-            inviteeId: { type: Number, required: true },
-            date: { type: Number, required: true },
-        },
-    ],
+    referrals: {
+        type: [
+            {
+                inviteeId: { type: Number, required: true },
+                date: { type: Number, required: true },
+            }
+        ],
+        default: [], // Устанавливаем дефолтное значение как пустой массив
+    },
 });
 
 export default mongoose.model<IUser>('User', UserSchema);

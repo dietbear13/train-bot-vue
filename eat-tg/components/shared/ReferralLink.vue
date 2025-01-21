@@ -1,14 +1,31 @@
 <template>
   <v-card>
-    <v-card-title>Реферальная ссылка</v-card-title>
-    <v-card-text>
+    <v-card-title>Реферальная система</v-card-title>
+
+    <!-- Если пользователь пришёл по чужой ссылке, мы просто показываем,
+         что данные о реферале отправлены, или можно отобразить другое сообщение -->
+    <v-card-text v-if="invitedById !== null">
+      <p>
+        Спасибо, что пришли по реферальной ссылке (ID пригласившего: {{ invitedById }})!
+      </p>
+      <p>
+        Ваш Telegram ID (приглашённого): {{ invitedUserId }} <br />
+        Данные успешно отправлены на сервер.
+      </p>
+    </v-card-text>
+
+    <!-- Иначе показываем поле для копирования / расшаривания ссылки -->
+    <v-card-text v-else>
       <v-text-field
           v-model="referralLink"
           label="Ваша реферальная ссылка"
           readonly
-      ></v-text-field>
+          append-icon="mdi-content-copy"
+          @click:append="copyReferralLink"
+      />
     </v-card-text>
-    <v-card-actions>
+
+    <v-card-actions v-if="referralLink">
       <v-btn color="primary" @click="shareOnTelegram">
         Поделиться в Telegram
       </v-btn>
@@ -17,80 +34,103 @@
 </template>
 
 <script lang="ts" setup>
+/**
+ * ReferralLink.vue
+ *
+ * - Если у текущего пользователя в initDataUnsafe есть start_param,
+ *   значит он "приглашённый" (invited user).
+ * - Иначе он "пригласивший" (referrer), и мы генерируем ему ссылку.
+ */
+
 import { ref, onMounted } from 'vue';
-import { retrieveLaunchParams } from '@telegram-apps/sdk';
-import { useApi } from '@/composables/useApi'; // Предполагается, что у вас есть такой composable
-import { useRouter } from 'vue-router';
+import { useApi } from '~/composables/useApi';
 
-// Состояния
-const referralLink = ref<string>('');
-const telegramUserId = ref<number | null>(null);
-const router = useRouter();
+// Поля для контроля состояния
+const invitedById = ref<number | null>(null);    // ID пригласившего (если пользователь пришёл по ссылке)
+const invitedUserId = ref<number | null>(null); // ID приглашённого (текущего пользователя)
+const referralLink = ref<string>('');           // Реферальная ссылка (для пригласившего)
 
-// Функция для генерации реферальной ссылки
-const generateReferralLink = () => {
-  // реферальная ссылка включает ID пользователя в качестве query параметра
-  if (telegramUserId.value) {
-    referralLink.value = `https://https://fitnesstgbot.ru?ref=${telegramUserId.value}`;
-  } else {
-    referralLink.value = 'Не удалось сгенерировать ссылку';
-  }
-};
-
-// Инициализация Telegram и получение ID пользователя
+// Инициализация в onMounted (когда компонент загружен)
 onMounted(() => {
-  if (process.client) {
-    const launchParams = retrieveLaunchParams();
-    if (launchParams && launchParams.initData) {
-      const user = launchParams.initData.user;
-      if (user && user.id) {
-        telegramUserId.value = Number(user.id);
-        console.log('telegramUserId:', telegramUserId.value);
-        generateReferralLink();
-        // Отправляем данные на сервер
-        sendReferralData();
-      } else {
-        console.error('Не удалось получить данные пользователя из Telegram.');
-      }
-    } else {
-      console.error('Не удалось получить initData из launchParams.');
-    }
+  if (typeof window === 'undefined') return; // safety check на SSR
+
+  const telegram = window.Telegram;
+  if (!telegram || !telegram.WebApp) {
+    console.warn('Запущено вне Telegram WebApp или недоступно window.Telegram.');
+    return;
+  }
+
+  // initDataUnsafe = распакованная информация о юзере, start_param и пр.
+  const initDataUnsafe = telegram.WebApp.initDataUnsafe;
+  console.log('initDataUnsafe:', initDataUnsafe);
+
+  if (!initDataUnsafe) {
+    console.error('Не удалось получить initDataUnsafe.');
+    return;
+  }
+
+  // 1) Проверяем, есть ли start_param (ID пригласившего)
+  if (initDataUnsafe.start_param) {
+    // Это значит, что текущий пользователь пришёл по чужой ссылке
+    const referrerId = parseInt(initDataUnsafe.start_param, 10);
+    invitedById.value = !isNaN(referrerId) ? referrerId : null;
+  }
+
+  // 2) ID текущего пользователя
+  if (initDataUnsafe.user && initDataUnsafe.user.id) {
+    invitedUserId.value = initDataUnsafe.user.id;
+  }
+
+  // 3) Если invitedById.value есть, значит пользователь пришёл по ссылке
+  //    => отправляем данные на сервер (кто пригласил, кого, время)
+  //    Иначе (нет start_param), генерируем реферальную ссылку для самого пользователя.
+  if (invitedById.value && invitedUserId.value) {
+    // отправляем данные на сервер
+    sendReferralData(invitedById.value, invitedUserId.value);
+  } else if (invitedUserId.value) {
+    // пользователь зашёл сам, значит он может генерировать свою ссылку
+    referralLink.value = `https://t.me/kochalkatg_bot?start=${invitedUserId.value}`;
   }
 });
 
-// Функция для отправки данных на сервер
-const sendReferralData = async () => {
-  if (telegramUserId.value) {
-    const inviteeId = getInviteeId(); // Реализуйте логику получения ID приглашенного
-    try {
-      await useApi.post('/api/referral', {
-        inviterId: telegramUserId.value,
-        inviteeId: inviteeId,
+/**
+ * Копирование ссылки в буфер
+ */
+const copyReferralLink = () => {
+  if (!referralLink.value) return;
+  navigator.clipboard
+      .writeText(referralLink.value)
+      .then(() => {
+        alert('Реферальная ссылка скопирована в буфер обмена.');
       });
-      console.log('Данные реферальной ссылки отправлены на сервер');
-    } catch (error) {
-      console.error('Ошибка при отправке данных на сервер:', error);
-    }
-  }
 };
 
-// Функция для получения ID приглашенного
-const getInviteeId = (): number => {
-  // Реализуйте логику получения ID приглашенного пользователя
-  // Это может быть, например, текущий пользователь в приложении
-  // Здесь для примера вернём статическое значение
-  return 123456; // Замените на реальную логику
-};
-
-// Функция для поделиться в Telegram
+/**
+ * Открыть ссылку в Telegram (если нужно поделиться в самом WebApp)
+ */
 const shareOnTelegram = () => {
   if (referralLink.value) {
-    // Используем Telegram Web App API для отправки сообщения
-    window.Telegram.WebApp.sendData(referralLink.value);
+    window.Telegram.WebApp.openTelegramLink(referralLink.value);
   }
 };
-</script>
 
-<style scoped>
-/* Добавьте стили по необходимости */
-</style>
+/**
+ * Отправка реферальных данных на сервер
+ */
+const sendReferralData = (referrerId: number, newUserId: number) => {
+  const { apiRequest } = useApi();
+  const timestamp = new Date().toISOString();
+
+  apiRequest('POST', '/referrals', {
+    invitedBy: referrerId,
+    invitedUser: newUserId,
+    timestamp
+  })
+      .then((response) => {
+        console.log('Реферальные данные успешно отправлены:', response);
+      })
+      .catch((err) => {
+        console.error('Ошибка при отправке реферальных данных:', err);
+      });
+};
+</script>

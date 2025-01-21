@@ -18,16 +18,16 @@
     </div>
 
     <v-row dense>
-      <v-col cols="6" class="label-col">Основная мышца:</v-col>
+      <v-col cols="6" class="label-col">Основная и дополнитьльные мышцы</v-col>
       <v-col cols="6" class="value-col">{{ exercise.mainMuscle }}</v-col>
 
       <v-col cols="6" class="label-col">Дополнительные мышцы:</v-col>
       <v-col cols="6" class="value-col">{{ exercise.additionalMuscles || '—' }}</v-col>
 
-      <v-col cols="6" class="label-col">Тип упражнения:</v-col>
+      <v-col cols="6" class="label-col">Тип упражнения</v-col>
       <v-col cols="6" class="value-col">{{ exercise.typeExercise || '—' }}</v-col>
 
-      <v-col cols="6" class="label-col">Оборудование:</v-col>
+      <v-col cols="6" class="label-col">Оборудование</v-col>
       <v-col cols="6" class="value-col">{{ exercise.equipment || '—' }}</v-col>
 
       <v-col cols="6" class="label-col">Предупреждение по GIF:</v-col>
@@ -47,8 +47,8 @@
 
       <v-col cols="6" class="label-col">При проблемах со спиной:</v-col>
       <v-col cols="6" class="value-col">
-        <span v-if="exercise.spineRestrictions">Не рекомендуется</span>
-        <span v-else>Можно</span>
+        <span v-if="exercise.spineRestrictions"> Не рекомендуется</span>
+        <span v-else> Можно</span>
       </v-col>
 
       <v-col cols="6" class="label-col">При проблемах с коленями:</v-col>
