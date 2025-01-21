@@ -68,7 +68,7 @@ function tryFindExercise(
     repetitionLevel: string,
     genderStr: string,
     usedIds: Set<string>,
-    maxTries: number = 55
+    maxTries: number = 500
 ): { exercise: Exercise; reps: number; sets: number } | null {
     let attempt = 0
     while (attempt < maxTries) {
@@ -104,7 +104,7 @@ function tryFindExercise(
             .map((x) => parseInt(x, 10))
             .filter((n) => !isNaN(n))
 
-        console.log('Парсенные повторения:', repsArray)
+        console.log('Спаршенные повторения:', repsArray)
 
         if (repsArray.length === 0) {
             console.warn('Повторения не были распознаны.')
@@ -190,15 +190,17 @@ export default function useWorkoutGenerator(params: HookParams) {
             const mgMatch = p.muscleGroup.toLowerCase() === muscleGroup.value.toLowerCase()
             const sgMatch = p.subcategory.toLowerCase() === muscleSubgroup.value.toLowerCase()
 
-            return mgMatch && sgMatch
+            // Добавлено условие, что паттерн должен содержать не менее 2 упражнений
+            const hasEnoughExercises = p.exercises.length >= 2
+
+            return mgMatch && sgMatch && hasEnoughExercises
         })
 
         console.log('Отфильтрованные паттерны:', filteredPatterns)
 
         if (filteredPatterns.length === 0) {
-            showSnackbar('Подходящий паттерн не найден.', 'error')
             console.log(
-                'Не найдено подходящих паттернов для выбранных параметров.'
+                'Не найдено подходящих паттернов для выбранных параметров или паттерны содержат менее 2 упражнений.'
             )
             isGenerating.value = false
             return
@@ -209,6 +211,7 @@ export default function useWorkoutGenerator(params: HookParams) {
         usedExerciseIds.value = new Set()
 
         console.log('Выбранный паттерн:', pattern)
+        console.log('Количество упражнений в паттерне:', pattern.exercises.length)
 
         const workout: WorkoutResult[] = []
 

@@ -1,198 +1,232 @@
 <!-- pages/exerciseInChat.vue -->
 <template>
-  <div>
-    <v-card v-if="exercise" class="pa-6 mx-auto" max-width="700">
+  <v-container class="py-2" fluid>
+    <v-card v-if="exercise" class="mx-auto" max-width="700" outlined>
+      <!-- Заголовок -->
       <v-card-title class="headline text-center" style="word-break: break-word;">
         {{ capitalizeFirstLetter(exercise.name) }}
       </v-card-title>
 
-      <div class="gif-container my-6">
-        <v-img
-            v-if="exercise.gifImage"
-            :src="getGifUrl(exercise.gifImage)"
-            aspect-ratio="1.7777"
-            class="rounded-gif"
-            alt="Exercise GIF"
-        />
-      </div>
+      <!-- Изображение GIF -->
+      <v-img
+          v-if="exercise.gifImage"
+          :src="getGifUrl(exercise.gifImage)"
+          aspect-ratio="16/9"
+          class="my-2 rounded-lg"
+          alt="{{ capitalizeFirstLetter(exercise.name) }}"
+      />
 
       <!-- Информационная плашка -->
       <v-alert
           v-if="showBanner"
           type="info"
-          colored-border
-          variant="tonal"
+          border="left"
           dismissible
-          class="banner-alert"
+          class="mb-2 rounded-lg"
           @dismissed="handleCloseBanner"
       >
-        <div class="d-flex justify-space-between align-center">
-          <div
-              class="flex-grow-1"
-              @click="openInstructions"
-              style="cursor: pointer;"
-          >
+        <v-row align="center" justify="space-between">
+          <v-col cols="12" @click="openInstructions" class="cursor-pointer">
             <strong>Если страница открылась в браузере, свернув Telegram</strong>, поставьте в настройках Telegram открытие ссылок во встроенном браузере.
-            <br><u>Открыть инструкцию <v-icon size="14px">mdi-open-in-new</v-icon></u>
-          </div>
-        </div>
+            <br>
+            <u>Открыть инструкцию <v-icon small>mdi-open-in-new</v-icon></u>
+          </v-col>
+        </v-row>
       </v-alert>
 
       <!-- Контент упражнения -->
       <v-card-text>
-        <v-row dense>
+        <v-row>
           <!-- Основная и Дополнительные мышцы -->
           <v-col cols="12" md="6">
-            <div class="d-flex align-center mb-2">
-              <v-icon class="mr-2" color="primary">mdi-human-muscle</v-icon>
-              <strong>Основная мышца:</strong>
-            </div>
-            <v-chip-group>
-              <v-chip
-                  class="ma-1"
-                  color="primary lighten-4"
-                  text-color="primary"
-                  label
-              >
-                {{ exercise.mainMuscle }}
-              </v-chip>
-              <v-chip
-                  v-if="exercise.additionalMuscles"
-                  class="ma-1"
-                  color="secondary lighten-4"
-                  text-color="secondary"
-                  label
-              >
-                {{ exercise.additionalMuscles }}
-              </v-chip>
-            </v-chip-group>
+            <v-card flat>
+              <v-card-title class="d-flex align-center">
+                <v-icon color="primary" class="me-2">mdi-arm-flex</v-icon>
+                <span class="font-weight-bold">Мышцы</span>
+              </v-card-title>
+              <v-card-text>
+                <v-chip-group column>
+                  <v-chip
+                      v-for="(muscle, index) in splitMuscles(exercise.mainMuscle)"
+                      :key="'main-muscle-' + index"
+                      color="primary lighten-4"
+                      text-color="primary"
+                      outlined
+                      class="ma-1"
+                  >
+                    {{ muscle }}
+                  </v-chip>
+                </v-chip-group>
+              </v-card-text>
+            </v-card>
+
+            <v-card flat class="mt-4" v-if="exercise.additionalMuscles">
+              <v-card-title class="d-flex align-center">
+                <v-icon color="secondary" class="me-2">mdi-human-muscle</v-icon>
+              </v-card-title>
+              <v-card-text>
+                <v-chip-group column>
+                  <v-chip
+                      v-for="(muscle, index) in splitMuscles(exercise.additionalMuscles)"
+                      :key="'additional-muscle-' + index"
+                      color="secondary lighten-4"
+                      text-color="secondary"
+                      outlined
+                      class="ma-1"
+                  >
+                    {{ muscle }}
+                  </v-chip>
+                </v-chip-group>
+              </v-card-text>
+            </v-card>
           </v-col>
 
           <!-- Оборудование -->
           <v-col cols="12" md="6">
-            <div class="d-flex align-center mb-2">
-              <v-icon class="mr-2" color="primary">mdi-dumbbell</v-icon>
-              <strong>Оборудование:</strong>
-            </div>
-            <v-chip
-                v-if="exercise.equipment"
-                class="ma-1"
-                color="success lighten-4"
-                text-color="success"
-                label
-            >
-              {{ exercise.equipment }}
-            </v-chip>
-            <span v-else>—</span>
+            <v-card flat>
+              <v-card-title class="d-flex align-center">
+                <v-icon color="success" class="me-2">mdi-dumbbell</v-icon>
+                <span class="font-weight-bold">Оборудование:</span>
+              </v-card-title>
+              <v-card-text>
+                <template v-if="exercise.equipment">
+                  <v-chip
+                      color="success lighten-4"
+                      text-color="success"
+                      outlined
+                      class="ma-1"
+                  >
+                    {{ exercise.equipment }}
+                  </v-chip>
+                </template>
+                <template v-else>
+                  <span>—</span>
+                </template>
+              </v-card-text>
+            </v-card>
           </v-col>
 
           <!-- Техника -->
           <v-col cols="12">
-            <div class="d-flex align-center mb-2">
-              <v-icon class="mr-2" color="primary">mdi-skill-level</v-icon>
-              <strong>Техника:</strong>
-            </div>
-            <div v-if="exercise.technique">
-              <v-expand-transition>
-                <div class="technique-text">
-                  {{ exercise.technique }}
-                </div>
-              </v-expand-transition>
-            </div>
-            <span v-else>—</span>
+            <v-card flat>
+              <v-card-title class="d-flex align-center">
+                <v-icon color="info" class="me-2">mdi-skill-level</v-icon>
+                <span class="font-weight-bold">Техника:</span>
+              </v-card-title>
+              <v-card-text>
+                <template v-if="exercise.technique">
+                  <transition name="fade">
+                    <div class="technique-text">
+                      {{ exercise.technique }}
+                    </div>
+                  </transition>
+                </template>
+                <template v-else>
+                  <span>—</span>
+                </template>
+              </v-card-text>
+            </v-card>
           </v-col>
 
           <!-- Ограничения при травмах -->
           <v-col cols="12">
-            <div class="d-flex align-center mb-2">
-              <v-icon class="mr-2" color="error">mdi-alert</v-icon>
-              <strong>Ограничения при травмах:</strong>
-            </div>
-            <v-row>
-              <v-col cols="12" sm="4" class="d-flex align-center">
-                <v-icon
-                    :color="exercise.spineRestrictions ? 'red lighten-2' : 'green lighten-2'"
-                    class="mr-2"
-                >
-                  {{ exercise.spineRestrictions ? 'mdi-close-circle' : 'mdi-check-circle' }}
-                </v-icon>
-                позвоночника:
-                <span :class="exercise.spineRestrictions ? 'text-red' : 'text-green'">
-                  {{ exercise.spineRestrictions ? 'не рекомендуется' : 'можно' }}
-                </span>
-              </v-col>
-              <v-col cols="12" sm="4" class="d-flex align-center">
-                <v-icon
-                    :color="exercise.kneeRestrictions ? 'red lighten-2' : 'green lighten-2'"
-                    class="mr-2"
-                >
-                  {{ exercise.kneeRestrictions ? 'mdi-close-circle' : 'mdi-check-circle' }}
-                </v-icon>
-                коленей:
-                <span :class="exercise.kneeRestrictions ? 'text-red' : 'text-green'">
-                  {{ exercise.kneeRestrictions ? 'не рекомендуется' : 'можно' }}
-                </span>
-              </v-col>
-              <v-col cols="12" sm="4" class="d-flex align-center">
-                <v-icon
-                    :color="exercise.shoulderRestrictions ? 'red lighten-2' : 'green lighten-2'"
-                    class="mr-2"
-                >
-                  {{ exercise.shoulderRestrictions ? 'mdi-close-circle' : 'mdi-check-circle' }}
-                </v-icon>
-                плеч:
-                <span :class="exercise.shoulderRestrictions ? 'text-red' : 'text-green'">
-                  {{ exercise.shoulderRestrictions ? 'не рекомендуется' : 'можно' }}
-                </span>
-              </v-col>
-            </v-row>
+            <v-card flat>
+              <v-card-title class="d-flex align-center">
+                <v-icon color="error" class="me-2">mdi-alert</v-icon>
+                <span class="font-weight-bold">Ограничения при травмах:</span>
+              </v-card-title>
+              <v-card-text>
+                <v-row>
+                  <v-col cols="12" sm="4" class="d-flex align-center">
+                    <v-icon
+                        :color="exercise.spineRestrictions ? 'red lighten-2' : 'green lighten-2'"
+                        class="me-2"
+                    >
+                      {{ exercise.spineRestrictions ? 'mdi-close-circle' : 'mdi-check-circle' }}
+                    </v-icon>
+                    Позвоночника:
+                    <span :class="exercise.spineRestrictions ? 'text-red' : 'text-green'">
+                      {{ exercise.spineRestrictions ? 'не рекомендуется' : 'можно' }}
+                    </span>
+                  </v-col>
+                  <v-col cols="12" sm="4" class="d-flex align-center">
+                    <v-icon
+                        :color="exercise.kneeRestrictions ? 'red lighten-2' : 'green lighten-2'"
+                        class="me-2"
+                    >
+                      {{ exercise.kneeRestrictions ? 'mdi-close-circle' : 'mdi-check-circle' }}
+                    </v-icon>
+                    Коленей:
+                    <span :class="exercise.kneeRestrictions ? 'text-red' : 'text-green'">
+                      {{ exercise.kneeRestrictions ? 'не рекомендуется' : 'можно' }}
+                    </span>
+                  </v-col>
+                  <v-col cols="12" sm="4" class="d-flex align-center">
+                    <v-icon
+                        :color="exercise.shoulderRestrictions ? 'red lighten-2' : 'green lighten-2'"
+                        class="me-2"
+                    >
+                      {{ exercise.shoulderRestrictions ? 'mdi-close-circle' : 'mdi-check-circle' }}
+                    </v-icon>
+                    Плеч:
+                    <span :class="exercise.shoulderRestrictions ? 'text-red' : 'text-green'">
+                      {{ exercise.shoulderRestrictions ? 'не рекомендуется' : 'можно' }}
+                    </span>
+                  </v-col>
+                </v-row>
+              </v-card-text>
+            </v-card>
           </v-col>
         </v-row>
 
-        <div class="mt-4 text-gray small-text">
+        <v-divider class="my-4"></v-divider>
+
+        <v-alert type="warning" border="left" outlined>
           Не является медицинской рекомендацией, при травмах стоит обратиться к врачу.
-        </div>
+        </v-alert>
       </v-card-text>
 
-      <!-- Кнопка для перехода в полную версию бота -->
-      <div class="mt-6 text-center">
+      <!-- Кнопка перехода в Telegram бот -->
+      <v-card-actions class="justify-center">
         <v-btn color="primary" @click="redirectToTelegramBot" large>
           Перейти в Telegram бот
         </v-btn>
-      </div>
+      </v-card-actions>
     </v-card>
 
-    <v-card v-else class="pa-6 mx-auto" max-width="700">
-      <div class="text-center my-10">
-        <v-progress-circular
-            indeterminate
-            color="primary"
-            size="48"
-        />
-      </div>
+    <!-- Индикатор загрузки -->
+    <v-card v-else class="mx-auto" max-width="700" outlined>
+      <v-card-text class="d-flex justify-center py-10">
+        <v-progress-circular indeterminate color="primary" size="48"></v-progress-circular>
+      </v-card-text>
     </v-card>
 
     <!-- Модальное окно с инструкцией -->
     <v-dialog v-model="isDialogOpen" max-width="600">
-      <v-card class="instruction-card">
+      <v-card>
         <v-card-title class="headline">
           Как включить встроенный браузер в Telegram
         </v-card-title>
         <v-card-text>
           <!-- Иконки платформ -->
-          <div class="d-flex justify-center mb-4">
-            <v-icon large class="mr-2">mdi-apple</v-icon>
-            <v-icon large class="ml-2">mdi-android</v-icon>
-          </div>
+          <v-row justify="center" class="mb-4">
+            <v-col cols="auto">
+              <v-icon large>mdi-apple</v-icon>
+            </v-col>
+          </v-row>
 
           <!-- Инструкция -->
-          <div class="mx-4">
-            <ol>
-              <li>Откройте <strong>Настройки</strong> Telegram.</li>
-              <li>Выберите <strong>Данные и хранилище</strong> → <strong>Браузер</strong>.</li>
-              <li>Выберите браузер <strong>Telegram</strong>.</li>
-            </ol>
-          </div>
+          <v-list>
+            <v-list-item>
+                <v-list-item-title>1. Откройте <strong>Настройки</strong> Telegram.</v-list-item-title>
+            </v-list-item>
+            <v-list-item>
+                <v-list-item-title>2. Выберите <strong>Данные и хранилище</strong> → <strong>Браузер</strong>.</v-list-item-title>
+            </v-list-item>
+            <v-list-item>
+                <v-list-item-title>3. Выберите браузер <strong>Telegram</strong>.</v-list-item-title>
+            </v-list-item>
+          </v-list>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
@@ -200,7 +234,7 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </div>
+  </v-container>
 </template>
 
 <script setup lang="ts">
@@ -269,13 +303,6 @@ function openInstructions() {
 }
 
 /**
- * Метод для закрытия диалога
- */
-function closeDialog() {
-  isDialogOpen.value = false;
-}
-
-/**
  * Метод для закрытия плашки и сохранения состояния
  */
 function handleCloseBanner() {
@@ -314,6 +341,11 @@ async function fetchExerciseData() {
   }
 }
 
+// Функция для разделения мышц, если они перечислены через запятую
+function splitMuscles(muscles: string): string[] {
+  return muscles.split(',').map(muscle => muscle.trim());
+}
+
 // Определение метаданных страницы для использования разметки no-footer
 definePageMeta({
   layout: 'no-footer',
@@ -330,77 +362,12 @@ onMounted(() => {
   border-radius: 16px;
 }
 
-.gif-container {
-  border-radius: 16px;
-  overflow: hidden;
-}
-
-.rounded-gif {
+.rounded-lg {
   border-radius: 16px;
 }
 
-.icon-container {
-  display: flex;
-  justify-content: center;
-  margin-top: 16px;
-}
-
-/* Дополнительные стили для кнопок вкладок */
-.instruction-card {
-  height: 500px; /* Фиксированная высота модального окна */
-}
-
-.instruction-window {
-  height: calc(100% - 64px); /* Учитываем высоту кнопок и отступы */
-  overflow-y: auto; /* Добавляем прокрутку, если содержимое превышает высоту */
-}
-
-.v-btn {
-  min-width: 100px;
-}
-
-.v-btn .v-icon {
-  color: inherit; /* Убираем цветовое оформление иконок */
-}
-
-.headline {
-  font-weight: 700;
-}
-
-.text-gray {
-  color: gray;
-}
-
-.small-text {
-  font-size: 0.9rem;
-}
-
-.v-list-item-title {
-  font-size: 1rem;
-}
-
-.v-list-item-subtitle {
-  font-size: 0.95rem;
-  /* Убираем обрезку текста */
-  white-space: normal !important;
-  overflow: visible !important;
-  text-overflow: unset !important;
-}
-
-.custom-list {
-  padding-left: 20px; /* Отступ для списка */
-  margin: 0; /* Убираем внешние отступы */
-}
-
-.custom-list li {
-  margin-bottom: 4px; /* Отступ между элементами списка */
-  list-style-type: disc; /* Маркированные точки */
-}
-
-.full-text {
-  white-space: normal !important;
-  overflow: visible !important;
-  text-overflow: unset !important;
+.cursor-pointer {
+  cursor: pointer;
 }
 
 .technique-text {
@@ -417,8 +384,8 @@ onMounted(() => {
 }
 
 @media (max-width: 600px) {
-  .instruction-card {
-    height: 80vh; /* Адаптивная высота для малых экранов */
+  .v-card {
+    margin: 4px !important;
   }
 }
 </style>

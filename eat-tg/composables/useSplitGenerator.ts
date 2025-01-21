@@ -137,7 +137,7 @@ function tryFindExercise(
     repetitionLevel: string,
     genderStr: string,
     usedIds: Set<string>,
-    maxTries: number = 55
+    maxTries: number = 500
 ): { exercise: Exercise; reps: number; sets: number } | null {
     let attempt = 0
     while (attempt < maxTries) {
@@ -521,7 +521,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
 
         try {
             console.log('Отправка плана тренировок (через useApi)')
-            await apiRequest('post', 'bot/send-detailed-plan', {
+            await apiRequest('post', 'send-detailed-plan', {
                 userId: params.telegramUserId.value,
                 plan: finalPlan.value,
                 splitName: params.selectedSplitRef.value?.split || '',

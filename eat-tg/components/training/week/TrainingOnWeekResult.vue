@@ -81,7 +81,7 @@
                 @click="openExerciseInfo(ex)"
                 style="cursor: pointer; text-decoration: underline;"
             >
-              {{ formatExerciseName(ex.name) }}
+              {{ formatExerciseName(ex.name) }}🔗
             </div>
 
             <!-- Блок с кнопками +/- и т.д. -->
@@ -121,20 +121,21 @@
                 <v-btn
                     icon
                     variant="text"
-                    class="mx-0"
-                    size="24px"
+                    class="mx-0 mb-1"
+                    size="26px"
                     @click="emitRegenerateExerciseSplit(day.exercises, i2, idx)"
                     color="primary"
                 >
                   <v-icon>mdi-refresh</v-icon>
                 </v-btn>
 
+                <!-- Кнопка удаления с открытием попапа -->
                 <v-btn
                     icon
                     variant="text"
                     class="mx-0"
-                    size="24px"
-                    @click="emitRemoveExerciseSplit(day.exercises, i2)"
+                    size="26px"
+                    @click="confirmDeleteExercise(day.exercises, i2)"
                     color="#db5856"
                 >
                   <v-icon>mdi-delete</v-icon>
@@ -167,6 +168,22 @@
       v-model="showExerciseInfo"
       :exercise="selectedExerciseForGif"
   />
+
+  <!-- Попап подтверждения удаления упражнения -->
+  <v-dialog v-model="dialog.show" max-width="500">
+    <v-card>
+      <v-card-title class="headline">Подтвердите удаление</v-card-title>
+      <v-card-text>
+        Вы уверены, что хотите удалить упражнение
+        <strong>{{ dialog.exercise?.name }}</strong> из программы?
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer></v-spacer>
+        <v-btn color="grey" text @click="closeDialog">Отмена</v-btn>
+        <v-btn color="red" text @click="deleteExercise">Удалить</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script lang="ts">
@@ -292,6 +309,45 @@ export default defineComponent({
       emit('regenerateExerciseSplit', exercisesArr, index, dayIndex)
     }
 
+    // =========== Состояния для попапа подтверждения удаления ===========
+    const dialog = ref<{
+      show: boolean
+      exercise: Exercise | null
+      exercisesArr: Exercise[] | null
+      exerciseIndex: number | null
+    }>({
+      show: false,
+      exercise: null,
+      exercisesArr: null,
+      exerciseIndex: null
+    })
+
+    // Функция для открытия попапа
+    const confirmDeleteExercise = (exercisesArr: Exercise[], index: number) => {
+      dialog.value = {
+        show: true,
+        exercise: exercisesArr[index],
+        exercisesArr: exercisesArr,
+        exerciseIndex: index
+      }
+    }
+
+    // Функция для закрытия попапа
+    const closeDialog = () => {
+      dialog.value.show = false
+      dialog.value.exercise = null
+      dialog.value.exercisesArr = null
+      dialog.value.exerciseIndex = null
+    }
+
+    // Функция для подтверждения удаления
+    const deleteExercise = () => {
+      if (dialog.value.exercisesArr !== null && dialog.value.exerciseIndex !== null) {
+        emitRemoveExerciseSplit(dialog.value.exercisesArr, dialog.value.exerciseIndex)
+      }
+      closeDialog()
+    }
+
     return {
       localShowBottomSheet,
       syncShowBottomSheet,
@@ -310,14 +366,20 @@ export default defineComponent({
       emitIncreaseRepsSplit,
       emitDecreaseRepsSplit,
       emitRemoveExerciseSplit,
-      emitRegenerateExerciseSplit
+      emitRegenerateExerciseSplit,
+
+      // Для попапа подтверждения удаления
+      dialog,
+      confirmDeleteExercise,
+      closeDialog,
+      deleteExercise
     }
   },
   watch: {
-    localShowBottomSheet(newVal) {
+    localShowBottomSheet(newVal: boolean) {
       this.syncShowBottomSheet()
     },
-    showBottomSheet(newVal) {
+    showBottomSheet(newVal: boolean) {
       this.localShowBottomSheet = newVal
     }
   }
@@ -405,5 +467,14 @@ export default defineComponent({
   100% {
     transform: rotate(360deg);
   }
+}
+
+/* Стили для попапа подтверждения */
+.v-dialog .v-card {
+  border-radius: 12px;
+}
+
+.v-btn {
+  text-transform: none;
 }
 </style>

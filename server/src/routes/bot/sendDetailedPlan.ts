@@ -57,7 +57,7 @@ router.post('/send-detailed-plan', async (req: Request, res: Response) => {
                 detailedMessage += `<u>${escapeHTML(day.dayName)}</u>\n`;
                 day.exercises.forEach((exercise: Exercise, index: number) => {
                     const externalUrl = `${appUrl}/landingsOutside/exerciseInChat?name=${encodeURIComponent(exercise.name)}`;
-                    detailedMessage += `${index + 1}. ${escapeHTML(capitalizeFirstLetter(exercise.name))} — ${exercise.sets}×${exercise.reps} <a href="${externalUrl}">🔗</a>\n`;
+                    detailedMessage += `${index + 1}. <a href="${externalUrl}">${escapeHTML(capitalizeFirstLetter(exercise.name))}</a> — ${exercise.sets}×${exercise.reps} <a href="${externalUrl}">🔗</a>\n`;
                 });
                 detailedMessage += `\n`;
             }

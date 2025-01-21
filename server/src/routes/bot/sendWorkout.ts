@@ -104,7 +104,7 @@ router.post('/send-workout', async (req: Request, res: Response) => {
 
         workout.forEach((exercise: Exercise, index: number) => {
             const externalUrl = `${appUrl}/landingsOutside/exerciseInChat?name=${encodeURIComponent(exercise.name)}`;
-            workoutMessage += `${index + 1}. ${escapeHTML(capitalizeFirstLetter(exercise.name))} — ${exercise.sets}×${exercise.reps} <a href="${externalUrl}">🔗</a>\n`;
+            workoutMessage += `${index + 1}. <a href="${externalUrl}">${escapeHTML(capitalizeFirstLetter(exercise.name))}</a> — ${exercise.sets}×${exercise.reps} <a href="${externalUrl}">🔗</a>\n`;
         });
 
         // Отправляем сообщение пользователю
