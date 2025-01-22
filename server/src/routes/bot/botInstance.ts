@@ -4,7 +4,7 @@ import TelegramBot from 'node-telegram-bot-api';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const botToken = process.env.TELEGRAM_BOT_TOKEN as string;
+const botToken = process.env.TELEGRAM_BOT_API_KEY as string;
 export const bot = new TelegramBot(botToken, { polling: false });
 
 // Важно: URL вашего мини-приложения (из .env)

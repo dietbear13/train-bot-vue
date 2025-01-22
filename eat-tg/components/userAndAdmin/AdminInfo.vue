@@ -215,7 +215,7 @@ interface TelegramGetChatResponse {
 }
 
 const config = useRuntimeConfig();
-const TELEGRAM_BOT_TOKEN = config.public.telegramBotApiKey;
+const TELEGRAM_BOT_API_KEY = config.public.telegramBotApiKey;
 
 // Реактивные переменные
 const userStore = useUserStore();
@@ -352,7 +352,7 @@ watch(computedFilteredUsers, (newVal) => {
 // используя getChat?chat_id={telegramId}
 const fetchUserInfo = async (userId: number) => {
   // Строим URL для запроса к Telegram Bot API
-  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getChat?chat_id=${userId}`;
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_API_KEY}/getChat?chat_id=${userId}`;
 
   try {
     const response = await fetch(url);
