@@ -44,8 +44,9 @@
                 <v-icon color="primary" class="me-2">mdi-arm-flex</v-icon>
                 <span class="font-weight-bold">Мышцы</span>
               </v-card-title>
-              <v-card-text>
+              <v-card-text class="pa-0">
                 <v-chip-group column>
+                  <!-- Основные мышцы -->
                   <v-chip
                       v-for="(muscle, index) in splitMuscles(exercise.mainMuscle)"
                       :key="'main-muscle-' + index"
@@ -56,17 +57,9 @@
                   >
                     {{ muscle }}
                   </v-chip>
-                </v-chip-group>
-              </v-card-text>
-            </v-card>
-
-            <v-card flat class="mt-4" v-if="exercise.additionalMuscles">
-              <v-card-title class="d-flex align-center">
-                <v-icon color="secondary" class="me-2">mdi-human-muscle</v-icon>
-              </v-card-title>
-              <v-card-text>
-                <v-chip-group column>
+                  <!-- Дополнительные мышцы -->
                   <v-chip
+                      v-if="exercise.additionalMuscles"
                       v-for="(muscle, index) in splitMuscles(exercise.additionalMuscles)"
                       :key="'additional-muscle-' + index"
                       color="secondary lighten-4"
@@ -80,15 +73,17 @@
               </v-card-text>
             </v-card>
           </v-col>
+        </v-row>
+      </v-card-text>
 
           <!-- Оборудование -->
           <v-col cols="12" md="6">
             <v-card flat>
               <v-card-title class="d-flex align-center">
-                <v-icon color="success" class="me-2">mdi-dumbbell</v-icon>
+                <v-icon color="success" class="me-0">mdi-dumbbell</v-icon>
                 <span class="font-weight-bold">Оборудование:</span>
               </v-card-title>
-              <v-card-text>
+              <v-card-text class="pa-0">
                 <template v-if="exercise.equipment">
                   <v-chip
                       color="success lighten-4"
@@ -110,10 +105,10 @@
           <v-col cols="12">
             <v-card flat>
               <v-card-title class="d-flex align-center">
-                <v-icon color="info" class="me-2">mdi-skill-level</v-icon>
+                <v-icon color="info" class="me-0">mdi-weight-lifter</v-icon>
                 <span class="font-weight-bold">Техника:</span>
               </v-card-title>
-              <v-card-text>
+              <v-card-text class="pa-0">
                 <template v-if="exercise.technique">
                   <transition name="fade">
                     <div class="technique-text">
@@ -132,10 +127,10 @@
           <v-col cols="12">
             <v-card flat>
               <v-card-title class="d-flex align-center">
-                <v-icon color="error" class="me-2">mdi-alert</v-icon>
+                <v-icon color="error" class="me-0">mdi-alert</v-icon>
                 <span class="font-weight-bold">Ограничения при травмах:</span>
               </v-card-title>
-              <v-card-text>
+              <v-card-text class="pa-0">
                 <v-row>
                   <v-col cols="12" sm="4" class="d-flex align-center">
                     <v-icon
@@ -177,14 +172,12 @@
               </v-card-text>
             </v-card>
           </v-col>
-        </v-row>
 
         <v-divider class="my-4"></v-divider>
 
         <v-alert type="warning" border="left" outlined>
           Не является медицинской рекомендацией, при травмах стоит обратиться к врачу.
         </v-alert>
-      </v-card-text>
 
       <!-- Кнопка перехода в Telegram бот -->
       <v-card-actions class="justify-center">

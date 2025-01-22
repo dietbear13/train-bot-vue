@@ -41,9 +41,11 @@ app.use(express.json());
 
 // Подключение к MongoDB
 mongoose
-    // .connect('mongodb://localhost:27017/fitness-app', {} as mongoose.ConnectOptions)
-    // Для продакшена (docker etc.)
-    .connect('mongodb://mongodb:27017/fitness-app', {} as mongoose.ConnectOptions)
+    .connect('mongodb://frobot1519dpf:2!L8ys9U)(rK@mongodb:27017/fitness-app', {
+        authSource: 'fitness-app', // Указываем базу данных для аутентификации
+        useNewUrlParser: true, // Для поддержки новых парсеров URL
+        useUnifiedTopology: true, // Для использования нового механизма мониторинга серверов
+    } as mongoose.ConnectOptions)
     .then(() => {
         console.log('Connected to MongoDB');
     })
