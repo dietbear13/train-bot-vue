@@ -9,7 +9,7 @@ import bot from '../bot';
 const router = Router();
 
 /**
- * Маршрут для получения списка всех пользователей (только для администраторов)
+ * Маршрут для получения списка всех пользователей
  */
 router.get('/users', async (req: Request, res: Response) => {
     try {

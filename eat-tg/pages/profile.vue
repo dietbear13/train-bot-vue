@@ -7,14 +7,31 @@
       <p>{{ roleDisplay }}</p>
     </div>
 
+    <!-- Секция для admin -->
+    <div v-if="userStore.role === 'admin'">
+      <v-card class="mb-2 elevation-1">
+        <!-- ИСПРАВЛЕНО: проверяем, есть ли данные в kbzhuHistory -->
+        <KbzhuCardProfile
+            :kbzhu="latestKbzhuResult"
+            :timestamp="latestKbzhuTimestamp"
+        />
+      </v-card>
+    </div>
+
     <!-- Компонент AdminInfo для администраторов -->
     <AdminInfo v-if="userStore.role === 'admin'" />
 
     <!-- Секция для paidUser -->
-    <div v-else-if="userStore.role === 'paidUser'" class="paid-user-section">
-      <v-card class="mb-4">
+    <div v-else-if="userStore.role === 'paidUser'">
+      <v-card class="mb-2 elevation-1">
+        <!-- ИСПРАВЛЕНО: проверяем, есть ли данные в kbzhuHistory -->
+        <KbzhuCardProfile
+            v-if="userStore.role === 'paidUser'"
+            :kbzhu="latestKbzhuResult"
+            :timestamp="latestKbzhuTimestamp"
+        />
+
         <v-card-text>
-          <p>Ты уже подписан на канал. Спасибо за вашу поддержку!</p>
           <p>
             Читай наш канал <a :href="channelLink" target="_blank">кОчалка</a>.
           </p>
@@ -27,10 +44,12 @@
 
     <!-- Секция для freeUser -->
     <div v-else-if="userStore.role === 'freeUser'" class="upgrade-section">
-      <v-card class="mb-4">
+      <v-card class="mb-4 elevation-1">
         <v-card-text>
           <p>
-            Подпишись на мой канал <a :href="channelLink" target="_blank">кОчалка</a>, чтобы получить полный функционал.
+            Подпишись на мой канал
+            <a :href="channelLink" target="_blank">кОчалка</a>, чтобы получить
+            полный функционал.
           </p>
           <v-btn color="primary" @click="goToChannel" class="my-2">
             Перейти в канал
@@ -71,7 +90,9 @@
 import { reactive, computed } from 'vue';
 import { useUserStore } from '~/stores/userStore';
 import AdminInfo from '~/components/userAndAdmin/AdminInfo.vue';
+import KbzhuCardProfile from '~/components/nutrition/KbzhuCardProfile.vue';
 import { useApi } from '~/composables/useApi';
+import 'dotenv';
 
 /**
  * Хранилище пользователя
@@ -79,8 +100,7 @@ import { useApi } from '~/composables/useApi';
 const userStore = useUserStore();
 
 /**
- * Простой пример локального Snackbar:
- * (Можно вынести в свой composable, если хотите переиспользовать)
+ * Простой пример локального Snackbar
  */
 const snackbar = reactive({
   show: false,
@@ -89,9 +109,19 @@ const snackbar = reactive({
   timeout: 1500,
 });
 
+interface IKbzhuHistory {
+  kbzhuResult: {
+    calories: number;
+    extraCalories: number;
+    proteins: number;
+    fats: number;
+    carbs: number;
+  };
+  timestamp: number; // UNIX timestamp
+}
+
 /**
- * Вызов метода API.
- * Предполагаем, что у вас есть useApi с методом apiRequest
+ * Вызов метода API (если нужен для других запросов).
  */
 const { apiRequest } = useApi();
 
@@ -107,7 +137,6 @@ const goToChannel = () => {
   window.open(channelLink, '_blank');
 };
 
-
 /**
  * Ручная проверка подписки (по кнопке):
  * Делает POST на /check-user, передаёт { telegramId }, сервер возвращает { role }.
@@ -120,17 +149,14 @@ const checkSubscription = async () => {
       return;
     }
 
-    // Запрос к вашему маршруту /check-user
     const result = await apiRequest<{ role?: string; error?: string }>(
         'post',
         'check-user',
         { telegramId: userStore.telegramId }
     );
 
-    // Если вернулась роль
     if (result.role) {
       userStore.setRole(result.role as 'admin' | 'freeUser' | 'paidUser');
-
       if (result.role === 'paidUser') {
         showSnackbar('Подтверждаю подписку! У тебя полный доступ.', 'success');
       } else if (result.role === 'freeUser') {
@@ -144,14 +170,20 @@ const checkSubscription = async () => {
     }
   } catch (error: any) {
     console.error('Ошибка при проверке подписки:', error);
-    showSnackbar('Ошибка при проверке подписки, обратитесь к разработчику.', 'error');
+    showSnackbar(
+        'Ошибка при проверке подписки, обратитесь к разработчику.',
+        'error'
+    );
   }
 };
 
 /**
  * Удобная функция для отображения сообщений в Snackbar
  */
-function showSnackbar(message: string, color: 'success' | 'error' | 'info' | 'warning' = 'info') {
+function showSnackbar(
+    message: string,
+    color: 'success' | 'error' | 'info' | 'warning' = 'info'
+) {
   snackbar.message = message;
   snackbar.color = color;
   snackbar.show = true;
@@ -172,13 +204,37 @@ const roleDisplay = computed(() => {
       return 'Неизвестно';
   }
 });
+
+/**
+ * Получение последнего результата КБЖУ
+ */
+const latestKbzhuResult = computed(() => {
+  if (userStore.kbzhuHistory && userStore.kbzhuHistory.length > 0) {
+    const sortedHistory = [...userStore.kbzhuHistory].sort(
+        (a, b) => b.timestamp - a.timestamp
+    );
+    console.log('++ sortedHistory', sortedHistory);
+    return sortedHistory[0].kbzhu; // <-- используем kbzhu, а не kbzhuResult
+  }
+  return null;
+});
+
+/**
+ * Получение timestamp последнего результата КБЖУ
+ */
+const latestKbzhuTimestamp = computed(() => {
+  if (userStore.kbzhuHistory && userStore.kbzhuHistory.length > 0) {
+    const sortedHistory = [...userStore.kbzhuHistory].sort(
+        (a, b) => b.timestamp - a.timestamp
+    );
+    return sortedHistory[0].timestamp;
+  }
+  return null;
+});
 </script>
 
 <style scoped>
 .upgrade-section {
-  margin-top: 20px;
-}
-.paid-user-section {
   margin-top: 20px;
 }
 </style>

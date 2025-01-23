@@ -249,6 +249,14 @@ interface Exercise {
   gifImage?: string;
 }
 
+interface KbzhuResult {
+  calories: number;
+  extraCalories: number;
+  proteins: number;
+  fats: number;
+  carbs: number;
+}
+
 const exercise = ref<Exercise | null>(null);
 const route = useRoute();
 const router = useRouter();

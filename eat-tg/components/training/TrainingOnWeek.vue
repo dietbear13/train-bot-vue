@@ -282,7 +282,6 @@ export default defineComponent({
         console.log('Загруженные сплиты:', data)
       } catch (error: any) {
         console.error('Ошибка при загрузке сплитов:', error)
-        showSnackbar('Ошибка при загрузке сплитов.', 'error')
       }
     }
 

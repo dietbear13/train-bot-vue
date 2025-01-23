@@ -7,7 +7,7 @@ import TelegramBot, { InlineKeyboardMarkup } from 'node-telegram-bot-api';
 dotenv.config();
 
 const botToken = process.env.TELEGRAM_BOT_API_KEY;
-const appUrl = process.env.APP_URL; // URL вашего приложения, например, https://giveaway-bot.ru.tuna.am
+const appUrl = process.env.APP_URL;
 
 if (!botToken) {
     throw new Error('TELEGRAM_BOT_API_KEY не задан в файле .env');
