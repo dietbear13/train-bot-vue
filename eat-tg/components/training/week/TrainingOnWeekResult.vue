@@ -1,17 +1,14 @@
 <!-- /training/week/TrainingOnWeekResult.vue -->
 <template>
-  <!-- BottomSheetWithClose для отображения результата -->
   <BottomSheetWithClose
       v-model="localShowBottomSheet"
       :title="selectedSplit ? `${selectedSplit.split} на неделю` : 'Программа на неделю'"
   >
     <v-card-text class="ma-0">
-      <!-- Комментарий к сплиту (если есть) -->
       <div v-if="selectedSplit?.splitComment" class="split-comment-area mb-3">
         <strong>{{ selectedSplit.splitComment }}</strong>
       </div>
 
-      <!-- Кнопка для перегенерации всего сплита -->
       <v-btn
           block
           color="success"
@@ -25,7 +22,6 @@
         пересоздать всю неделю
       </v-btn>
 
-      <!-- Кнопка "Отправить себе" -->
       <v-btn
           block
           color="primary"
@@ -44,7 +40,6 @@
           :key="idx"
           class="day-block mt-2"
       >
-        <!-- Заголовок дня + кнопка для обновления упражнений дня -->
         <h3 class="day-heading">
           День {{ idx + 1 }} ({{ dayName(idx) }})
           <v-btn
@@ -63,19 +58,16 @@
           </v-btn>
         </h3>
 
-        <!-- Если нет упражнений => отдых -->
         <div v-if="day.exercises.length === 0" class="rest-label">
           отдых
         </div>
 
-        <!-- Иначе => список упражнений -->
         <div v-else class="day-exercises-table">
           <div
               v-for="(ex, i2) in day.exercises"
               :key="i2"
               class="exercise-row"
           >
-            <!-- Название упражнения (делаем кликабельным!) -->
             <div
                 class="exercise-name"
                 @click="openExerciseInfo(ex)"
@@ -84,9 +76,7 @@
               {{ formatExerciseName(ex.name) }}🔗
             </div>
 
-            <!-- Блок с кнопками +/- и т.д. -->
             <div class="row-controls" style="display: flex; align-items: center; gap: 8px;">
-              <!-- - reps + -->
               <div class="sets-reps-row">
                 <v-btn
                     icon
@@ -116,7 +106,6 @@
                 </v-btn>
               </div>
 
-              <!-- refresh / delete -->
               <div class="vertical-buttons">
                 <v-btn
                     icon
@@ -129,7 +118,6 @@
                   <v-icon>mdi-refresh</v-icon>
                 </v-btn>
 
-                <!-- Кнопка удаления с открытием попапа -->
                 <v-btn
                     icon
                     variant="text"
@@ -146,7 +134,6 @@
         </div>
       </div>
 
-      <!-- Кнопка "Отправить себе" -->
       <v-btn
           block
           color="primary"
@@ -159,17 +146,14 @@
         <v-icon>mdi-send</v-icon>
         Отправить сообщением
       </v-btn>
-
     </v-card-text>
   </BottomSheetWithClose>
 
-  <!-- Показываем ExerciseInfo -->
   <ExerciseInfo
       v-model="showExerciseInfo"
       :exercise="selectedExerciseForGif"
   />
 
-  <!-- Попап подтверждения удаления упражнения -->
   <v-dialog v-model="dialog.show" max-width="500">
     <v-card>
       <v-card-title class="headline">Подтвердите удаление</v-card-title>
@@ -193,14 +177,12 @@ import AdminExerciseButton from '~/components/userAndAdmin/AdminExerciseButton.v
 import ExerciseInfo from '~/components/training/ExerciseInfo.vue'
 import { useApi } from '~/composables/useApi'
 
-// Типы упражнений и плана
 interface Exercise {
   _id: string
   name: string
   sets: number
   reps: number
   originalPattern?: string
-  // Допустим, у нас могут быть и другие поля, включая gifImage и т.п.
 }
 interface DayPlan {
   dayName: string
@@ -252,24 +234,18 @@ export default defineComponent({
     'regenerateExerciseSplit'
   ],
   setup(props, { emit }) {
-    // =========== v-model для BottomSheetWithClose ===============
     const localShowBottomSheet = ref(props.showBottomSheet)
     const syncShowBottomSheet = () => {
       emit('update:showBottomSheet', localShowBottomSheet.value)
     }
 
-    // =========== Для загрузки полного упражнения из /exercises/{_id} =========
     const { apiRequest } = useApi()
 
-    // =========== Состояния для ExerciseInfo ===============
     const showExerciseInfo = ref(false)
     const selectedExerciseForGif = ref<Exercise | null>(null)
 
-    // При клике на упражнение — запросим с сервера полные данные:
     const openExerciseInfo = async (exercise: Exercise) => {
       try {
-        // Например, делаем GET /exercises/:id
-        // где exercise._id — идентификатор упражнения
         const fullExercise = await apiRequest<Exercise>('get', `exercises/${exercise._id}`)
         selectedExerciseForGif.value = fullExercise
         showExerciseInfo.value = true
@@ -278,13 +254,11 @@ export default defineComponent({
       }
     }
 
-    // Название дня недели
     const dayName = (index: number) => {
       const days = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье']
       return days[index % 7]
     }
 
-    // Форматируем имя упражнения
     const formatExerciseName = (rawName: string): string => {
       if (!rawName) return ''
       return rawName.charAt(0).toUpperCase() + rawName.slice(1)
@@ -293,23 +267,16 @@ export default defineComponent({
     // Эмиты
     const emitRegenerateWholeSplit = () => emit('regenerateWholeSplit')
     const emitSendWorkoutPlan = () => emit('sendWorkoutPlan')
-    const emitRefreshDayExercises = (dayIndex: number) => {
-      emit('refreshDayExercises', dayIndex)
-    }
-    const emitIncreaseRepsSplit = (exercisesArr: Exercise[], index: number) => {
-      emit('increaseRepsSplit', exercisesArr, index)
-    }
-    const emitDecreaseRepsSplit = (exercisesArr: Exercise[], index: number) => {
-      emit('decreaseRepsSplit', exercisesArr, index)
-    }
-    const emitRemoveExerciseSplit = (exercisesArr: Exercise[], index: number) => {
-      emit('removeExerciseSplit', exercisesArr, index)
-    }
-    const emitRegenerateExerciseSplit = (exercisesArr: Exercise[], index: number, dayIndex: number) => {
-      emit('regenerateExerciseSplit', exercisesArr, index, dayIndex)
-    }
+    const emitRefreshDayExercises = (dayIndex: number) => emit('refreshDayExercises', dayIndex)
+    const emitIncreaseRepsSplit = (exercisesArr: Exercise[], index: number) =>
+        emit('increaseRepsSplit', exercisesArr, index)
+    const emitDecreaseRepsSplit = (exercisesArr: Exercise[], index: number) =>
+        emit('decreaseRepsSplit', exercisesArr, index)
+    const emitRemoveExerciseSplit = (exercisesArr: Exercise[], index: number) =>
+        emit('removeExerciseSplit', exercisesArr, index)
+    const emitRegenerateExerciseSplit = (exercisesArr: Exercise[], index: number, dayIndex: number) =>
+        emit('regenerateExerciseSplit', exercisesArr, index, dayIndex)
 
-    // =========== Состояния для попапа подтверждения удаления ===========
     const dialog = ref<{
       show: boolean
       exercise: Exercise | null
@@ -322,7 +289,6 @@ export default defineComponent({
       exerciseIndex: null
     })
 
-    // Функция для открытия попапа
     const confirmDeleteExercise = (exercisesArr: Exercise[], index: number) => {
       dialog.value = {
         show: true,
@@ -331,16 +297,12 @@ export default defineComponent({
         exerciseIndex: index
       }
     }
-
-    // Функция для закрытия попапа
     const closeDialog = () => {
       dialog.value.show = false
       dialog.value.exercise = null
       dialog.value.exercisesArr = null
       dialog.value.exerciseIndex = null
     }
-
-    // Функция для подтверждения удаления
     const deleteExercise = () => {
       if (dialog.value.exercisesArr !== null && dialog.value.exerciseIndex !== null) {
         emitRemoveExerciseSplit(dialog.value.exercisesArr, dialog.value.exerciseIndex)
@@ -351,15 +313,11 @@ export default defineComponent({
     return {
       localShowBottomSheet,
       syncShowBottomSheet,
-
-      // Для ExerciseInfo
       showExerciseInfo,
       selectedExerciseForGif,
       openExerciseInfo,
-
       dayName,
       formatExerciseName,
-
       emitRegenerateWholeSplit,
       emitSendWorkoutPlan,
       emitRefreshDayExercises,
@@ -367,8 +325,6 @@ export default defineComponent({
       emitDecreaseRepsSplit,
       emitRemoveExerciseSplit,
       emitRegenerateExerciseSplit,
-
-      // Для попапа подтверждения удаления
       dialog,
       confirmDeleteExercise,
       closeDialog,

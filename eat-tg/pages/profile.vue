@@ -2,28 +2,34 @@
   <v-container>
     <h2 class="my-2">Профиль</h2>
 
-    <div v-if="userStore.role">
+    <div v-if="userStore.role" class="mb-2">
       <p>Ваш Telegram ID: {{ userStore.telegramId }}</p>
       <p>{{ roleDisplay }}</p>
     </div>
 
     <!-- Секция для admin -->
-    <div v-if="userStore.role === 'admin'">
-      <v-card class="mb-2 elevation-1">
-        <!-- ИСПРАВЛЕНО: проверяем, есть ли данные в kbzhuHistory -->
-        <KbzhuCardProfile
-            :kbzhu="latestKbzhuResult"
-            :timestamp="latestKbzhuTimestamp"
-        />
-      </v-card>
-    </div>
+    <v-card
+        v-if="userStore.role === 'admin'"
+        style="border-radius: 16px"
+        flat
+    >
+      <!-- ИСПРАВЛЕНО: проверяем, есть ли данные в kbzhuHistory -->
+      <KbzhuCardProfile
+          :kbzhu="latestKbzhuResult"
+          :timestamp="latestKbzhuTimestamp"
+      />
+    </v-card>
 
     <!-- Компонент AdminInfo для администраторов -->
     <AdminInfo v-if="userStore.role === 'admin'" />
 
     <!-- Секция для paidUser -->
     <div v-else-if="userStore.role === 'paidUser'">
-      <v-card class="mb-2 elevation-1">
+      <v-card
+          class="mb-1"
+          style="border-radius: 16px"
+          flat
+      >
         <!-- ИСПРАВЛЕНО: проверяем, есть ли данные в kbzhuHistory -->
         <KbzhuCardProfile
             v-if="userStore.role === 'paidUser'"
@@ -44,7 +50,7 @@
 
     <!-- Секция для freeUser -->
     <div v-else-if="userStore.role === 'freeUser'" class="upgrade-section">
-      <v-card class="mb-4 elevation-1">
+      <v-card class="mb-2">
         <v-card-text>
           <p>
             Подпишись на мой канал

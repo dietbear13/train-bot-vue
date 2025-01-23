@@ -34,10 +34,11 @@
             :isLoading="isLoading"
             :isGenerating="isGenerating"
             :errorMessages="errorMessages"
-            @update:gender="gender = $event"
-            @update:selectedSplitType="selectedSplitType = $event"
-            @update:selectedSplitId="onSelectSplitId"
-            @generateSplitWorkout="generateSplitWorkout"
+            :isAnimating="isAnimating"
+        @update:gender="gender = $event"
+        @update:selectedSplitType="selectedSplitType = $event"
+        @update:selectedSplitId="onSelectSplitId"
+        @generateSplitWorkout="generateSplitWorkout"
         />
 
         <!-- Компонент результата (сплит на неделю) -->
@@ -159,6 +160,10 @@ export default defineComponent({
     // Состояния загрузки/ошибок
     const isLoading = ref(false)
     const isGenerating = ref(false)
+
+    // === Добавляем флаг анимации ===
+    const isAnimating = ref(false)
+
     const showBottomSheet = ref(false)
     const errorMessages = ref<string[]>([])
     const refreshingDays = ref<Record<number, boolean>>({})
@@ -250,7 +255,7 @@ export default defineComponent({
       selectedSplitRef: selectedSplit
     })
 
-    // Методы
+    // Метод, делающий реальный запрос (пример)
     async function realGenerateSplitWorkout() {
       if (!selectedSplit.value || !gender.value) {
         errorMessages.value.push('Выберите пол и сплит.')
@@ -263,13 +268,25 @@ export default defineComponent({
       console.log('Генерация сплита (реальный вызов) завершена.')
     }
 
+    // === Здесь ловим @generateSplitWorkout из TrainingOnWeekInputs ===
     async function generateSplitWorkout() {
+      // Включаем анимацию
+      console.log('Родитель: включаем анимацию.')
+      isAnimating.value = true
+
+      // Имитируем задержку (или реальный запрос)
       isLoading.value = true
       const delayTime = 1500 + Math.random() * 1000
       await new Promise((resolve) => setTimeout(resolve, delayTime))
 
+      // Вызываем реальную генерацию
       await realGenerateSplitWorkout()
 
+      // По окончании — выключаем анимацию
+      console.log('Родитель: выключаем анимацию.')
+      isAnimating.value = false
+
+      // И логически завершаем "Loading"
       isLoading.value = false
     }
 
@@ -287,10 +304,6 @@ export default defineComponent({
 
     // onMounted
     onMounted(async () => {
-      // 1. Эмулируем получение роли (или делаем реальный запрос)
-      //    Если роль изначально уже доступна, можно снять комментарий
-      //    и сразу установить roleLoading.value = false.
-      //    Либо, если есть реальный запрос, делаем await userStore.fetchRole() и т.п.
       await loadSplits()
 
       if (process.client) {
@@ -308,11 +321,7 @@ export default defineComponent({
       }
 
       // Допустим, тут ваша логика определения userStore.role
-      // Для демонстрации — просто делаем небольшую паузу
-      // (уберите, если не нужно)
       await new Promise((resolve) => setTimeout(resolve, 800))
-
-      // 2. Когда мы точно знаем, что role уже определена, снимаем "loading"
       roleLoading.value = false
     })
 
@@ -332,7 +341,6 @@ export default defineComponent({
       console.log(`Все упражнения дня #${dayIndex + 1} перегенерированы.`)
     }
 
-    // Перегенерация всего сплита
     const regenerateWholeSplit = async () => {
       if (!selectedSplitType.value || !selectedSplitComment.value) {
         console.warn('Нет типа или комментария, нечего перегенерировать.')
@@ -430,23 +438,19 @@ export default defineComponent({
       }
     }
 
-    // Удалить упражнение
     const removeExerciseSplit = (exercisesArr: any, index: number) => {
       exercisesArr.splice(index, 1)
     }
 
-    // Перегенерировать одно упражнение
     const regenerateExerciseSplit = (exercisesArr: any, index: number, dayIndex: number) => {
       regenerateExercise(dayIndex, index, gender.value)
       console.log(`Упражнение #${index} в дне #${dayIndex + 1} перегенерировано.`)
     }
 
-    // Обёртка для изменения selectedSplitId (из TrainingOnWeekInputs)
     const onSelectSplitId = (newVal: string) => {
       selectedSplitId.value = newVal
     }
 
-    // Модалка с подробностями упражнения
     const showExerciseInfo = ref(false)
     const selectedExercise = ref<any>(null)
     const openExerciseInfo = (exercise: any) => {
@@ -455,7 +459,10 @@ export default defineComponent({
     }
 
     return {
-      // Данные
+      userStore,
+      roleLoading,
+      canCreateTraining,
+
       genders,
       gender,
       allSplits,
@@ -467,14 +474,20 @@ export default defineComponent({
 
       isLoading,
       isGenerating,
+      /* Передаём флаг на UI */
+      isAnimating, // <-- Добавлен флаг
+
       showBottomSheet,
       errorMessages,
-      snackbar,
       refreshingDays,
 
       userData,
       telegramUserId,
       initData,
+      snackbar,
+
+      finalPlan,
+      sendWorkoutPlan,
 
       // Методы
       generateSplitWorkout,
@@ -490,17 +503,9 @@ export default defineComponent({
       showSnackbar,
       onSelectSplitId,
 
-      finalPlan,
-      sendWorkoutPlan,
-
       showExerciseInfo,
       selectedExercise,
-      openExerciseInfo,
-
-      // Роль из Pinia и флаг загрузки
-      userStore,
-      canCreateTraining,
-      roleLoading
+      openExerciseInfo
     }
   }
 })

@@ -21,6 +21,16 @@ export interface IKbzhuHistory {
     timestamp: number; // UNIX timestamp
 }
 
+// Новая история тренировок (примерная структура):
+export interface ITrainingHistory {
+    formData: {
+        gender: string;
+        splitType: string;
+        splitId: string;
+    };
+    timestamp: number; // UNIX timestamp
+}
+
 export interface IReferral {
     inviteeId: number;
     date: number; // UNIX timestamp
@@ -33,7 +43,8 @@ export interface IUser extends Document {
     datePaid?: number; // UNIX timestamp
     datePaidUntil?: number; // UNIX timestamp
     kbzhuHistory?: IKbzhuHistory[]; // История результатов КБЖУ
-    referrals: IReferral[]; // Сделано обязательным
+    trainingHistory?: ITrainingHistory[];
+    referrals: IReferral[];
 }
 
 const UserSchema: Schema = new Schema<IUser>({
@@ -63,6 +74,16 @@ const UserSchema: Schema = new Schema<IUser>({
             timestamp: { type: Number, required: true },
         },
     ],
+    trainingHistory: [
+        {
+            formData: {
+                gender: { type: String, required: true },
+                splitType: { type: String, required: true },
+                splitId: { type: String, required: true },
+            },
+            timestamp: { type: Number, required: true },
+        },
+    ],
     referrals: {
         type: [
             {
@@ -70,7 +91,7 @@ const UserSchema: Schema = new Schema<IUser>({
                 date: { type: Number, required: true },
             }
         ],
-        default: [], // Устанавливаем дефолтное значение как пустой массив
+        default: [],
     },
 });
 

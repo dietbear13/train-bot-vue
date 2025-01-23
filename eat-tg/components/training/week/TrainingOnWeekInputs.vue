@@ -1,13 +1,12 @@
 <!-- training/week/TrainingOnWeekInputs.vue -->
-
 <template>
   <!-- Форма с выбором пола, типа сплита, конкретного сплита, кнопкой "Создать" -->
-  <v-form @submit.prevent="emitGenerateSplit">
+  <v-form @submit.prevent="onGenerateSplit">
     <!-- Выбор пола -->
     <v-card class="mb-2 dark-background" variant="tonal">
       <v-card-text class="pa-1">
         <v-slide-group
-            v-model="localGender"
+            v-model="formData.gender"
             show-arrows
             class="flex-nowrap"
             center-active
@@ -22,8 +21,8 @@
                 variant="text"
                 outlined
                 class="group-button mx-auto"
-                :class="{ 'selected-button': localGender === option }"
-                @click="onSelectGender(option)"
+                :class="{ 'selected-button': formData.gender === option }"
+                @click="selectGender(option)"
                 rounded="lg"
             >
               {{ option }}
@@ -52,8 +51,8 @@
             <v-btn
                 block
                 :value="type"
-                :class="{ 'selected-button': localSelectedSplitType === type }"
-                @click="onSelectSplitType(type)"
+                :class="{ 'selected-button': formData.splitType === type }"
+                @click="selectSplitType(type)"
                 rounded="lg"
                 variant="text"
             >
@@ -80,8 +79,8 @@
               class="py-1"
           >
             <v-card
-                @click="onSelectSplit(split)"
-                :class="{ 'selected-split-card': localSelectedSplitId === split._id }"
+                @click="selectSplit(split)"
+                :class="{ 'selected-split-card': formData.splitId === split._id }"
                 outlined
                 class="split-card"
             >
@@ -89,7 +88,7 @@
                 <!-- Радио-кнопка -->
                 <div class="radio-container">
                   <v-radio
-                      v-model="localSelectedSplitId"
+                      v-model="formData.splitId"
                       :value="split._id"
                       class="split-radio"
                       hide-details
@@ -97,7 +96,7 @@
                 </div>
                 <!-- Контент сплита (комментарий) -->
                 <div
-                    :class="['split-content', { 'truncate': localSelectedSplitId !== split._id }]"
+                    :class="['split-content', { 'truncate': formData.splitId !== split._id }]"
                     class="mb-4"
                 >
                   <v-card-text style="padding: 4px" v-if="split.splitComment">{{ split.splitComment }}</v-card-text>
@@ -111,7 +110,7 @@
                     variant="elevated"
                 >
                   <!-- Отображаем уровень сложности только если сплит выбран -->
-                  <span v-if="localSelectedSplitId === split._id">
+                  <span v-if="formData.splitId === split._id">
                     {{ getDifficultyLabel(Number(split.difficultyLevelSplit || 0)) }}
                   </span>
                 </v-chip>
@@ -124,7 +123,7 @@
 
     <!-- Если нет доступных сплитов -->
     <v-card
-        v-else-if="localGender && uniqueSplitTypes.length === 0"
+        v-else-if="formData.gender && uniqueSplitTypes.length === 0"
         class="my-2 dark-background pa-2"
         variant="tonal"
     >
@@ -135,17 +134,20 @@
 
     <!-- Кнопка "Сгенерировать" (отображаем, только если выбран сплит) -->
     <v-btn
-        v-if="selectedSplit"
+        v-if="formData.splitId"
         color="success"
         class="mt-1"
         rounded="lg"
         width="100%"
-        :disabled="isGenerating"
-        @click="emitGenerateSplit"
+        :disabled="isAnimating || isGenerating"
+        @click="onGenerateSplit"
     >
-      <span v-if="isLoading">Создаю.. </span>
-      <span v-else>Создать </span>
-      <v-icon right :class="{ rotatingDumbbell: isLoading }">
+      <!-- Три состояния кнопки: -->
+      <span v-if="isAnimating">Генерирую.. </span>
+      <span v-else-if="isGenerating">Создаю.. </span>
+      <span v-else>Создать</span>
+
+      <v-icon right :class="{ rotatingDumbbell: isAnimating || isGenerating }">
         mdi-dumbbell
       </v-icon>
     </v-btn>
@@ -156,7 +158,7 @@
         type="error"
         class="mt-2"
         dismissible
-        @input="clearErrors"
+        @input="errorMessages.splice(0, errorMessages.length)"
     >
       <ul>
         <li v-for="(msg, index) in errorMessages" :key="index">
@@ -168,13 +170,14 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, watch, PropType } from 'vue'
+import { defineComponent, ref, reactive, watch, onMounted, PropType } from 'vue'
+import { retrieveLaunchParams } from '@telegram-apps/sdk'
 
 interface Split {
   _id: string;
   split: string;
   splitComment?: string;
-  difficultyLevelSplit: number | string; // Обновлено для поддержки строк и чисел
+  difficultyLevelSplit: number | string;
 }
 
 export default defineComponent({
@@ -217,6 +220,11 @@ export default defineComponent({
       type: Boolean,
       default: false
     },
+    // Родитель теперь управляет анимацией: передаём isAnimating как проп
+    isAnimating: {
+      type: Boolean,
+      default: false
+    },
     errorMessages: {
       type: Array as PropType<string[]>,
       default: () => []
@@ -226,84 +234,86 @@ export default defineComponent({
     'update:gender',
     'update:selectedSplitType',
     'update:selectedSplitId',
+    // Родитель получит это, чтобы сам "включить анимацию" и т.д.
     'generateSplitWorkout'
   ],
   setup(props, { emit }) {
-    // Локальные reactive-поля
-    const localGender = ref(props.gender)
-    const localSelectedSplitType = ref(props.selectedSplitType)
-    const localSelectedSplitId = ref(props.selectedSplitId)
-
-    // Следим за входящим gender -> обновляем localGender
-    watch(() => props.gender, (newVal) => {
-      console.log('gender prop changed:', newVal)
-      localGender.value = newVal
-    })
-    // Следим за входящим selectedSplitType
-    watch(() => props.selectedSplitType, (newVal) => {
-      console.log('selectedSplitType prop changed:', newVal)
-      localSelectedSplitType.value = newVal
-    })
-    // Следим за входящим selectedSplitId
-    watch(() => props.selectedSplitId, (newVal) => {
-      console.log('selectedSplitId prop changed:', newVal)
-      localSelectedSplitId.value = newVal
+    // formData: локальное хранилище выбранных опций (gender, splitType, splitId)
+    const formData = reactive({
+      gender: props.gender || '',
+      splitType: props.selectedSplitType || '',
+      splitId: props.selectedSplitId || ''
     })
 
-    // Метод при выборе пола
-    const onSelectGender = (option: string) => {
-      console.log('Selected gender:', option)
-      localGender.value = option
+    // Следим за formData
+    watch(formData, (newVal) => {
+      console.log('formData изменился:', JSON.stringify(newVal))
+    }, { deep: true })
+
+    // telegramUserId
+    const telegramUserId = ref<number | null>(null)
+    onMounted(() => {
+      if (process.client) {
+        const launchParams = retrieveLaunchParams()
+        if (launchParams && launchParams.initData && launchParams.initData.user) {
+          const user = launchParams.initData.user
+          if (user && user.id) {
+            telegramUserId.value = Number(user.id)
+            console.log('telegramUserId:', telegramUserId.value)
+          } else {
+            console.error('Не удалось получить данные пользователя из Telegram.')
+            props.errorMessages.push('Не удалось получить данные пользователя. Убедитесь, что приложение запущено внутри Telegram.')
+          }
+        }
+      }
+    })
+
+    const selectGender = (option: string) => {
+      formData.gender = option
       emit('update:gender', option)
+      console.log('Selected gender:', option)
     }
 
-    // Метод при выборе типа сплита
-    const onSelectSplitType = (type: string) => {
-      console.log('Selected split type:', type)
-      localSelectedSplitType.value = type
+    const selectSplitType = (type: string) => {
+      formData.splitType = type
       emit('update:selectedSplitType', type)
+      console.log('Selected split type:', type)
     }
 
-    // Метод при выборе конкретного сплита
-    const onSelectSplit = (split: Split) => {
-      console.log('Selected split:', split)
-      localSelectedSplitId.value = split._id
+    const selectSplit = (split: Split) => {
+      formData.splitId = split._id
       emit('update:selectedSplitId', split._id)
+      console.log('Selected split:', split)
     }
 
-    // При клике на кнопку «Создать»
-    const emitGenerateSplit = () => {
-      console.log('Emit generateSplitWorkout')
+    // Когда пользователь жмёт "Создать" (Сгенерировать)
+    const onGenerateSplit = () => {
+      // Мы просто говорим родителю: "Пользователь хочет сгенерировать"
+      // Родитель уже решит, как включать/выключать анимацию.
+      console.log('onGenerateSplit: emit generateSplitWorkout')
+      if (props.errorMessages.length > 0) {
+        console.warn('Есть ошибки, не генерируем тренировку.')
+        return
+      }
       emit('generateSplitWorkout')
     }
 
-    // Удалить все ошибки (здесь пустая, если хотим прокидывать наверх — делаем emit)
-    const clearErrors = () => {
-      console.log('Clearing errors')
-      // emit('clearErrors') — если бы хотели сбрасывать ошибки в родителе
-    }
-
-    // Метод для получения цвета чипа по уровню сложности
     const getDifficultyColor = (level: number | string): string => {
       const numericLevel = Number(level)
-      console.log('getDifficultyColor called with level:', numericLevel)
       switch (numericLevel) {
         case 1:
-          return '#33cc99' // Пастельный зеленый
+          return '#33cc99'
         case 2:
-          return '#FFCC33' // Пастельный желтый
+          return '#FFCC33'
         case 3:
-          return '#FF6666' // Пастельный красный
+          return '#FF6666'
         default:
-          console.warn('Unknown difficulty level:', numericLevel)
           return 'grey'
       }
     }
 
-    // Метод для получения текстовой метки по уровню сложности
     const getDifficultyLabel = (level: number | string): string => {
       const numericLevel = Number(level)
-      console.log('getDifficultyLabel called with level:', numericLevel)
       switch (numericLevel) {
         case 1:
           return 'начальный'
@@ -312,29 +322,25 @@ export default defineComponent({
         case 3:
           return 'профи'
         default:
-          console.warn('Unknown difficulty level:', numericLevel)
           return 'Неизвестно'
       }
     }
 
-    // Дополнительный лог для проверки данных сплитов при их изменении
+    // Логирование splitsToShow
     watch(() => props.splitsToShow, (newSplits) => {
       console.log('splitsToShow updated:', newSplits)
-      newSplits.forEach(split => {
-        console.log('Full Split Object:', split)
-        console.log(`Split ID: ${split._id}, Difficulty Level: ${split.difficultyLevelSplit}`)
+      newSplits.forEach(s => {
+        console.log('Full Split Object:', s)
       })
     }, { immediate: true, deep: true })
 
     return {
-      localGender,
-      localSelectedSplitType,
-      localSelectedSplitId,
-      onSelectGender,
-      onSelectSplitType,
-      onSelectSplit,
-      emitGenerateSplit,
-      clearErrors,
+      formData,
+      telegramUserId,
+      selectGender,
+      selectSplitType,
+      selectSplit,
+      onGenerateSplit,
       getDifficultyColor,
       getDifficultyLabel
     }
@@ -359,7 +365,7 @@ export default defineComponent({
 
 /* Общая стилизация для блоков со сплитами */
 .split-card {
-  position: relative; /* Для позиционирования чипа */
+  position: relative;
   cursor: pointer;
   transition: background-color 0.3s, border 0.3s;
   border-radius: 14px;
@@ -371,13 +377,9 @@ export default defineComponent({
 }
 
 .split-card.selected-split-card {
-  background-color: rgba(33, 150, 243, 1); /* Полупрозрачный синий фон */
+  background-color: rgba(33, 150, 243, 1);
   border: 2px solid var(--v-primary-base);
   color: white;
-}
-
-.split-card .v-card-title {
-  font-weight: bold;
 }
 
 .split-card .v-card-text {
@@ -388,16 +390,8 @@ export default defineComponent({
   color: #fff;
 }
 
-.split-card.selected-split-card .v-card-title {
-  color: #fff;
-}
-
 .split-card:not(.selected-split-card) {
   background-color: rgba(255, 255, 255, 0.05);
-}
-
-.split-card:not(.selected-split-card):hover {
-  background-color: rgba(255, 255, 255, 0.1);
 }
 
 /* Радио-кнопка, контейнер */
@@ -422,36 +416,21 @@ export default defineComponent({
   flex: 1;
   display: flex;
   flex-direction: column;
+  margin-left: 8px;
 }
 
-.split-content .v-card-title {
-  font-size: 1rem;
-  margin-bottom: 4px;
-}
-
-.split-content .v-card-text {
-  font-size: 0.9rem;
-  color: #ccc;
-}
-
-/* Добавляем класс для обрезки текста до 2 строк с многоточием */
 .truncate {
   overflow: hidden;
   display: -webkit-box;
-  -webkit-line-clamp: 2; /* Количество отображаемых строк */
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 
-.split-content .v-card-text.truncate {
-  /* Дополнительные стили, если необходимо */
-}
-
-/* Обёртка для списка доступных сплитов */
 .splits {
   border-radius: 14px;
 }
 
-/* Анимация вращения штанги, при isLoading=true */
+/* Анимация вращения штанги */
 .rotatingDumbbell {
   animation: rotate-dumbbell 1s linear infinite;
 }
