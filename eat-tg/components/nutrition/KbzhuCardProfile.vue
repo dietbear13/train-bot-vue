@@ -11,7 +11,7 @@
         <v-chip
             color="white"
             text-color="darkgray"
-            style="justify-content: right;"
+            style="align-content: flex-end"
             v-if="userTimestamp"
         >
           {{ formattedDate }}
@@ -32,12 +32,12 @@
 
       <v-row>
         <v-col>
-          <div class="title-text">Калории</div>
-          <div class="value-text">{{ userKbzhu.calories }} ккал</div>
+          <div class="title-text" style="text-align: center">Калории</div>
+          <div class="value-text" style="text-align: center">{{ userKbzhu.calories }} ккал</div>
         </v-col>
         <v-col>
-          <div class="title-text">Доп. Калории</div>
-          <div class="value-text">{{ userKbzhu.extraCalories }} ккал</div>
+          <div class="title-text" style="text-align: center">Доп. Калории</div>
+          <div class="value-text" style="text-align: center">{{ userKbzhu.extraCalories }} ккал</div>
         </v-col>
       </v-row>
 
@@ -45,17 +45,17 @@
 
       <!-- Строка (row) с Белками, Жирами и Углеводами -->
       <v-row>
-        <v-col>
-          <div class="title-text">Белки</div>
-          <div class="value-text">{{ userKbzhu.proteins }} г</div>
+        <v-col style="text-align: center">
+          <div class="title-text" style="text-align: center">Белки</div>
+          <div class="value-text" style="text-align: center">{{ userKbzhu.proteins }} г</div>
         </v-col>
         <v-col>
-          <div class="title-text">Жиры</div>
-          <div class="value-text">{{ userKbzhu.fats }} г</div>
+          <div class="title-text" style="text-align: center">Жиры</div>
+          <div class="value-text" style="text-align: center">{{ userKbzhu.fats }} г</div>
         </v-col>
         <v-col>
-          <div class="title-text">Углеводы</div>
-          <div class="value-text">{{ userKbzhu.carbs }} г</div>
+          <div class="title-text" style="text-align: center">Углеводы</div>
+          <div class="value-text" style="text-align: center">{{ userKbzhu.carbs }} г</div>
         </v-col>
       </v-row>
     </v-card-text>

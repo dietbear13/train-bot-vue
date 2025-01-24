@@ -1,4 +1,4 @@
-<!-- components/BottomSheetWithClose.vue -->
+<!-- components/shared/BottomSheetWithClose.vue -->
 <template>
   <v-bottom-sheet
       v-model="internalModel"
@@ -74,8 +74,8 @@ export default defineComponent({
 
 <style scoped>
 .rounded-t-xl {
-  border-top-left-radius: 16px!important;
-  border-top-right-radius: 16px!important;
+  border-top-left-radius: 16px !important;
+  border-top-right-radius: 16px !important;
 }
 
 .relative-position {
