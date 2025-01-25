@@ -1,4 +1,5 @@
 // src/models/User.ts
+
 import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IKbzhuHistory {
@@ -21,7 +22,6 @@ export interface IKbzhuHistory {
     timestamp: number; // UNIX timestamp
 }
 
-// Новая история тренировок (примерная структура):
 export interface ITrainingHistory {
     formData: {
         gender: string;
@@ -36,15 +36,25 @@ export interface IReferral {
     date: number; // UNIX timestamp
 }
 
+// Новая структура для лайков
+export interface IBlogLike {
+    postId: number;
+    liked: boolean;     // true (лайк) или false (анлайк)
+    date: number;       // время, когда пользователь изменил лайк
+}
+
 export interface IUser extends Document {
     telegramId: number;
     role: 'admin' | 'freeUser' | 'paidUser';
     dateAdded: number; // UNIX timestamp
     datePaid?: number; // UNIX timestamp
     datePaidUntil?: number; // UNIX timestamp
-    kbzhuHistory?: IKbzhuHistory[]; // История результатов КБЖУ
+    kbzhuHistory?: IKbzhuHistory[];
     trainingHistory?: ITrainingHistory[];
     referrals: IReferral[];
+
+    // Новое поле для лайков
+    blogLikes?: IBlogLike[];
 }
 
 const UserSchema: Schema = new Schema<IUser>({
@@ -88,6 +98,17 @@ const UserSchema: Schema = new Schema<IUser>({
         type: [
             {
                 inviteeId: { type: Number, required: true },
+                date: { type: Number, required: true },
+            }
+        ],
+        default: [],
+    },
+    // Новое поле для хранения лайков блога
+    blogLikes: {
+        type: [
+            {
+                postId: { type: Number, required: true },
+                liked: { type: Boolean, default: true },
                 date: { type: Number, required: true },
             }
         ],

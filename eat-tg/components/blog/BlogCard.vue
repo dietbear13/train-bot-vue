@@ -1,8 +1,6 @@
 <template>
-  <v-col
-      cols="12"
-  >
-    <!-- Поисковая строка внутри дочернего компонента -->
+  <v-col cols="12">
+    <!-- Поисковая строка -->
     <v-text-field
         v-model="searchQuery"
         variant="outlined"
@@ -42,8 +40,9 @@
                 variant="tonal"
                 @click="toggleLike(post.id)"
                 class="ma-2"
+                right
             >
-              <v-icon left>
+              <v-icon class="mr-1" left>
                 mdi-heart
               </v-icon>
               {{ post.likesCount }}
@@ -58,6 +57,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { retrieveLaunchParams } from '@telegram-apps/sdk'
+// Импортируем наш composable для работы с API
+import { useApi } from '~/composables/useApi'
 
 // Структура постов — пример
 interface Post {
@@ -68,10 +69,13 @@ interface Post {
   userLiked: boolean
 }
 
+// Получаем функцию для работы с API
+const { apiRequest } = useApi()
+
 // telegramUserId
 const telegramUserId = ref<number | null>(null)
 
-onMounted(() => {
+onMounted(async () => {
   if (process.client) {
     const launchParams = retrieveLaunchParams()
     if (launchParams && launchParams.initData && launchParams.initData.user) {
@@ -82,10 +86,35 @@ onMounted(() => {
         console.error('Не удалось получить данные пользователя из Telegram.')
       }
     }
+
+    // 1) Пример: при монтировании компонента можем сразу загрузить актуальные лайки пользователя
+    //    (если у вас на бэкенде предусмотрен GET /api/blog-likes?telegramId=...)
+    if (telegramUserId.value) {
+      try {
+        const likesData = await apiRequest<{ postId: number }[]>(
+            'GET',
+            '/blog-likes',
+            null, // data для GET обычно не нужен
+            { telegramId: telegramUserId.value } // передаём query-параметры
+        )
+
+        // likesData может быть массивом постов, которые пользователь лайкнул
+        // здесь просто проставляем userLiked = true, если пост есть в likesData
+        posts.value = posts.value.map(post => {
+          const isLiked = likesData.some(like => like.postId === post.id)
+          return {
+            ...post,
+            userLiked: isLiked,
+          }
+        })
+      } catch (error) {
+        console.error('Не удалось загрузить лайки пользователя:', error)
+      }
+    }
   }
 })
 
-// Пример массива постов (будут подгружаться с сервера)
+// Пример массива постов (будут подгружаться с сервера или пока заглушка)
 const posts = ref<Post[]>([
   {
     id: 1,
@@ -123,7 +152,7 @@ const filteredPosts = computed(() => {
   )
 })
 
-// Клик по лайку
+// Клик по лайку (локально обновляем UI — увеличиваем/уменьшаем счётчик)
 function toggleLike(postId: number) {
   const post = posts.value.find(p => p.id === postId)
   if (!post) return
@@ -137,13 +166,14 @@ function toggleLike(postId: number) {
   }
 }
 
-// Следим за изменениями во всех постах (deep: true)
+// Следим за изменениями лайков во всех постах (deep: true)
 watch(
     () => posts.value,
     (newVal, oldVal) => {
       newVal.forEach((newPost, index) => {
         const oldPost = oldVal?.[index]
         if (oldPost && newPost.userLiked !== oldPost.userLiked) {
+          // Если статус userLiked изменился – отправляем запрос на сервер
           sendLikeToServer(
               telegramUserId.value ? telegramUserId.value.toString() : null,
               newPost.id,
@@ -155,7 +185,7 @@ watch(
     { deep: true }
 )
 
-// Отправка данных о лайке на ваш бэкенд
+// Отправка данных о лайке на бэкенд
 async function sendLikeToServer(
     telegramId: string | null,
     postId: number,
@@ -163,14 +193,11 @@ async function sendLikeToServer(
 ) {
   if (!telegramId) return
   try {
-    await fetch('/api/likes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        telegramId,
-        postId,
-        like,
-      }),
+    // Используем наш composable useApi
+    await apiRequest('POST', '/blog-likes', {
+      telegramId,
+      postId,
+      like,
     })
   } catch (error) {
     console.error('Ошибка при отправке лайка:', error)
@@ -179,7 +206,6 @@ async function sendLikeToServer(
 </script>
 
 <style scoped>
-/* Пример простой стилизации (на ваш вкус) */
 .text-justify {
   text-align: justify;
 }

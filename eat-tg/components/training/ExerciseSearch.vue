@@ -448,13 +448,13 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted } from 'vue';
-import { useUserStore } from '~/stores/userStore';
-import { useExerciseFilter } from '~/composables/useExerciseFilter';
-import type { Exercise } from '~/composables/types';
-import ExerciseInfo from '~/components/training/ExerciseInfo.vue';
-import { useApi } from '~/composables/useApi';
+import { useUserStore } from '../../stores/userStore';
+import { useExerciseFilter } from '../../composables/useExerciseFilter';
+import type { Exercise } from '../../composables/types';
+import ExerciseInfo from '../../components/training/ExerciseInfo.vue';
+import { useApi } from '../../composables/useApi';
 import draggable from 'vuedraggable';
-import BottomSheetWithClose from '~/components/shared/BottomSheetWithClose.vue';
+import BottomSheetWithClose from '../../components/shared/BottomSheetWithClose.vue';
 import { retrieveLaunchParams } from '@telegram-apps/sdk';
 
 interface WorkoutItem extends Exercise {

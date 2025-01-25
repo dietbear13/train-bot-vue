@@ -381,13 +381,10 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
     // Функция для загрузки упражнений
     async function loadExercises() {
         try {
-            console.log('Загрузка упражнений (через useApi)')
             const data = await apiRequest<Exercise[]>('get', 'exercises')
             exercises.value = Array.isArray(data) ? data : []
-            console.log('Загружены упражнения:', exercises.value)
         } catch (err: any) {
             console.error('Ошибка при загрузке упражнений:', err)
-            params.showSnackbar('Ошибка при загрузке упражнений.', 'error')
         }
     }
 

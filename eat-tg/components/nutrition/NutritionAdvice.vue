@@ -1,64 +1,55 @@
-<!-- components/shared/NutritionAdvice.vue -->
+<!-- components/nutrition/NutritionAdvice.vue -->
 <template>
   <div class="nutrition-advice">
+    <v-card class="pa-4">
+      <v-card-title class="text-h5 font-weight-bold">
+        Примеры питания
+      </v-card-title>
+      <v-card-subtitle>
+        Ниже вы найдёте готовые варианты рационов для мужчин и женщин под разные цели,
+        а также советы по питанию до и после тренировки.
+      </v-card-subtitle>
 
-    <!-- Итерация по категориям (тегам) -->
-    <v-data-iterator
-        :items="categories"
-        :items-per-page="-1"
-        item-key="name"
-        class="mt-4"
-    >
-      <template #default="{ item }">
-        <!-- Проверяем, что item определён и имеет необходимые свойства -->
-        <template v-if="logAndCheckItem(item)">
-          <!-- Каждая категория обёрнута в карточку -->
-          <v-card class="my-4">
-            <v-card-title class="text-h5 font-weight-bold">
-              {{ item.name }}
-            </v-card-title>
-            <!-- Можно добавить описание категории, если нужно -->
-            <v-card-subtitle v-if="item.description && item.description.trim() !== ''">
-              {{ item.description }}
-            </v-card-subtitle>
+      <v-expansion-panels multiple>
+        <v-expansion-panel
+            v-for="(section, index) in allSections"
+            :key="index"
+        >
+          <v-expansion-panel-title>
+            {{ section.title }}
+          </v-expansion-panel-title>
+          <v-expansion-panel-text>
+            <p v-if="section.description">
+              {{ section.description }}
+            </p>
 
-            <!-- Перебор постов внутри категории -->
-            <v-row>
+            <v-row dense>
               <v-col
-                  v-for="(post, index) in item.posts"
-                  :key="index"
+                  v-for="(item, i) in section.items"
+                  :key="i"
                   cols="12"
-                  sm="6"
-                  class="d-flex"
+                  md="6"
+                  class="mb-2 d-flex"
               >
-                <v-card class="mb-4 w-100">
-                  <!-- Заголовок поста -->
-                  <v-card-title>{{ post.title }}</v-card-title>
-                  <!-- Кнопка для открытия подробностей в BottomSheet -->
+                <v-card outlined class="w-100">
+                  <v-card-title>{{ item.title }}</v-card-title>
+                  <v-card-text v-if="item.shortDescription">
+                    {{ item.shortDescription }}
+                  </v-card-text>
                   <v-card-actions>
-                    <v-btn
-                        color="primary"
-                        @click="openBottomSheet(post)"
-                    >
-                      Открыть полностью
+                    <v-btn color="primary" @click="openBottomSheet(item)">
+                      Подробнее
                     </v-btn>
                   </v-card-actions>
                 </v-card>
               </v-col>
             </v-row>
-          </v-card>
-        </template>
-        <!-- Если item не определён, отображаем сообщение или ничего -->
-        <template v-else>
-          <v-alert type="error">
-            Некорректные данные категории.
-            <pre>{{ item }}</pre> <!-- Выводим проблемный item для отладки -->
-          </v-alert>
-        </template>
-      </template>
-    </v-data-iterator>
+          </v-expansion-panel-text>
+        </v-expansion-panel>
+      </v-expansion-panels>
+    </v-card>
 
-    <!-- BottomSheet для показа выбранного контента -->
+    <!-- Модальное окно (BottomSheet) для подробного просмотра -->
     <BottomSheetWithClose
         v-model="bottomSheet"
         :title="selectedItem?.title"
@@ -66,182 +57,139 @@
       <div v-html="formattedContent" class="py-2 px-4"></div>
     </BottomSheetWithClose>
 
-    <!-- Пример подключения другого компонента (как в вашем коде) -->
-    <ReferralLink></ReferralLink>
-
+    <ReferralLink />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import BottomSheetWithClose from '@/components/shared/BottomSheetWithClose.vue';
+import BottomSheetWithClose from '~/components/shared/BottomSheetWithClose.vue';
 import ReferralLink from '~/components/shared/ReferralLink.vue';
 
-/**
- * Описывает структуру одного «поста» (записи в блоге).
- */
-interface Post {
-  title: string;   // Заголовок
-  content: string; // Полное содержимое (текст)
-  image?: string;  // Путь к картинке (необязательно)
+/** Структуры данных */
+interface NutritionExample {
+  title: string;
+  content: string;
+  shortDescription?: string;
 }
 
-/**
- * Описывает структуру категории (тега),
- * в которой может быть несколько постов.
- */
-interface Category {
-  name: string;         // Название категории
-  description?: string; // Доп. описание (если нужно)
-  posts: Post[];        // Список постов
+interface NutritionSection {
+  title: string;
+  description?: string;
+  items: NutritionExample[];
 }
 
-/**
- * Массив категорий (тегов). Можно легко менять или добавлять новые.
- */
-const categories = ref<Category[]>([
+/** Примерные данные для аккордеона */
+const allSections = ref<NutritionSection[]>([
   {
-    name: 'Общие советы',
-    // description: 'Описание категории Общие советы', // Можно добавить описание или оставить без него
-    posts: [
-      {
-        title: 'Азы питания',
-        content:
-            'Питание играет определяющую роль при правильных тренировках, но начинающим достаточно немного привести питание в порядок и усердно тренироваться.\n' +
-            'Вот несколько простых рекомендаций, как наладить питание:\n' +
-            '- Ешьте побольше белковой пищи (яйца, курица, говядина, рыба и любые морепродукты, творог)\n' +
-            '- Уберите из рациона пищевой мусор (сахар в чае, хлеб к основному блюду, выпечку, майонез, газировки и т.д.)\n' +
-            '- Не забывайте пить воду (около литра в день будет вполне достаточно)\n' +
-            '- Кушайте 3 раза в день основательно (завтрак, обед, ужин), допускается 1-2 перекуса (желательно тем же белком). Основные приемы пищи должны содержать крупу + белок\n' +
-            '- Кушайте зелёные овощи (огурцы, помидоры, перец и т.д.)',
-      },
-      {
-        title: 'Питание и тренировки',
-        content:
-            '- Перед тренировкой нужно обязательно покушать любую крупу с белком за 1.5-2ч до тренировки.\n' +
-            '- Не рекомендуется кушать жирное.\n' +
-            '- Если не успели покушать – съешьте что-нибудь углеводное (фрукты, йогурты со вкусами).\n' +
-            '- Если чувствуете себя уставшим, выпейте чашку кофе за полчаса до тренировки.',
-      },
-    ],
-  },
-  {
-    name: 'Цели',
-    // description: 'Описание категории Цели', // Можно добавить описание или оставить без него
-    posts: [
+    title: 'Мужчинам',
+    description: 'Подборка рационов с учётом мужского метаболизма и энергозатрат.',
+    items: [
       {
         title: 'Похудение',
-        content:
-            'Рацион выглядит так:\n' +
-            '- Завтрак (крупа+белок)\n' +
-            '- Обед (крупа+белок)\n' +
-            '- Перекус (белок)\n' +
-            '- Ужин (крупа+белок)\n' +
-            '- Возможен еще один перекус белком.',
+        shortDescription: 'Рацион для снижения веса без потери мышечной массы.',
+        content: `
+          - Завтрак: Омлет из 2 яиц, овсянка на воде...
+          - Обед: Гречка, куриная грудка...
+          - Ужин: Тушёная рыба, брокколи...
+          <br><br>
+          Рекомендации: пейте достаточно воды...
+        `
       },
       {
-        title: 'Удержание',
-        content:
-            'Питание для удержания:\n' +
-            '- 3 основных приема пищи\n' +
-            '- Легкие перекусы по необходимости.',
+        title: 'Удержание веса',
+        shortDescription: 'Примерный план для сохранения формы.',
+        content: `
+          - Завтрак: Каша с фруктами...
+          - Перекус: Орехи или творог...
+          - Обед: Суп на нежирном бульоне...
+        `
       },
       {
         title: 'Набор массы',
-        content:
-            'Рацион на набор массы:\n' +
-            '- Основные приемы пищи: крупа + белок\n' +
-            '- Перекусы: орехи, фрукты\n' +
-            '- Мужчинам нужно 2г белка на кг веса, женщинам — 1.5г.',
-      },
-    ],
+        shortDescription: 'Повышенная калорийность + правильные белки и углеводы.',
+        content: `
+          - Завтрак: Омлет из 3 яиц, сыр, тосты...
+          - Обед: Макароны из твёрдых сортов, говядина...
+          - Ужин: Рис, красная рыба...
+        `
+      }
+    ]
   },
   {
-    name: 'Пол',
-    // description: 'Описание категории Пол', // Можно добавить описание или оставить без него
-    posts: [
+    title: 'Женщинам',
+    description: 'Примеры рационов для женского организма.',
+    items: [
       {
-        title: 'Мужчинам',
-        content:
-            'Примерный рацион:\n' +
-            '- Завтрак: белок + немного углеводов\n' +
-            '- Обед: мясо/птица/рыба + гарнир 50/50\n' +
-            '- Перекус: творог или протеин + фрукты\n' +
-            '- Ужин: мясо/птица/рыба + гарнир 50/50.',
+        title: 'Похудение',
+        shortDescription: 'Сбалансированный дефицит калорий.',
+        content: `
+          - Завтрак: Творог с ягодами...
+          - Обед: Запечённая куриная грудка, овощи...
+        `
       },
       {
-        title: 'Женщинам',
-        content:
-            'Примерный рацион:\n' +
-            '- Завтрак: белок + немного углеводов\n' +
-            '- Обед: мясо/птица/рыба + гарнир 50/50\n' +
-            '- Перекус: творог или протеин + фрукты\n' +
-            '- Ужин: мясо/птица/рыба + гарнир 50/50.',
+        title: 'Удержание формы',
+        content: `
+          - Утром: Злаковые хлебцы, растительный омлет...
+        `
       },
-    ],
+      {
+        title: 'Набор массы',
+        content: `
+          - Белковые продукты: яйца, рыба, курица...
+          - Сложные углеводы: гречка, киноа...
+        `
+      }
+    ]
   },
-]);
+  {
+    title: 'Питание до тренировки',
+    items: [
+      {
+        title: 'За 1-2 часа до',
+        content: `
+          - Овсяная каша с ягодами...
+          - Фрукты (банан, яблоко)...
+        `
+      }
+    ]
+  },
+  {
+    title: 'Питание после тренировки',
+    items: [
+      {
+        title: 'Через 30-60 минут',
+        content: `
+          - Протеиновый коктейль, творог с ягодами...
+          - Рис/гречка, куриная грудка, овощи...
+        `
+      }
+    ]
+  }
+])
 
-/**
- * Состояния для управления BottomSheet.
- */
-const bottomSheet = ref(false);
-const selectedItem = ref<Post | null>(null);
+/** Состояние для BottomSheet */
+const bottomSheet = ref(false)
+const selectedItem = ref<NutritionExample | null>(null)
 
-/**
- * Функция для открытия BottomSheet с выбранным постом.
- */
-function openBottomSheet(post: Post) {
-  selectedItem.value = post;
-  bottomSheet.value = true;
+/** Функция для открытия BottomSheet с выбранным постом */
+function openBottomSheet(item: NutritionExample) {
+  selectedItem.value = item
+  bottomSheet.value = true
 }
 
-/**
- * Приводим текст к HTML с нужными переносами строк и списками.
- */
+/** Форматирование контента для BottomSheet */
 const formattedContent = computed(() => {
-  if (!selectedItem.value) return '';
+  if (!selectedItem.value) return ''
   return selectedItem.value.content
       .replace(/\n/g, '<br>')
       .replace(/-\s+/g, '<li style="margin-left: 20px;">')
       .replace(/<br>\s*<li/g, '<ul><li')
       .replace(/<\/li>\s*<br>/g, '</li></ul>')
       .replace(/<br><ul>/g, '<ul>')
-      .replace(/<br>/g, '<p style="margin-left: 20px;">');
-});
-
-/**
- * Функция для логирования и проверки элемента категории.
- * @param item - текущий элемент категории
- * @returns boolean - возвращает true, если item валиден, иначе false
- */
-function logAndCheckItem(item: Category | undefined) {
-  if (!item) {
-    console.error('Категория не определена:', item);
-    return false;
-  }
-
-  if (typeof item.name !== 'string') {
-    console.error('Категория имеет некорректное имя:', item);
-    return false;
-  }
-
-  if (!Array.isArray(item.posts)) {
-    console.error('Категория имеет некорректные посты:', item);
-    return false;
-  }
-
-  if (item.description && typeof item.description !== 'string') {
-    console.error('Категория имеет некорректное описание:', item);
-    return false;
-  }
-
-  console.log('Категория валидна:', item.name);
-  return true;
-}
-
-// Дополнительный лог при монтировании компонента
-console.log('Инициализация категорий:', categories.value);
+      .replace(/<br>/g, '<p style="margin-left: 20px;">')
+})
 </script>
 
 <style scoped>
@@ -249,11 +197,6 @@ console.log('Инициализация категорий:', categories.value);
   padding: 16px;
 }
 
-.my-4 {
-  margin: 16px 0;
-}
-
-/* Для текста, чтобы переносился по словам */
 .py-2.px-4 {
   white-space: normal !important;
   word-break: break-word;

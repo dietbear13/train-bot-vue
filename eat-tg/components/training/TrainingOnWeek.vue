@@ -90,14 +90,14 @@
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted, watch } from 'vue'
 import { retrieveLaunchParams } from '@telegram-apps/sdk'
-import { useUserStore } from '~/stores/userStore'
-import { useApi } from '~/composables/useApi'
-import useSplitGenerator from '~/composables/useSplitGenerator'
+import { useUserStore } from '../../stores/userStore'
+import { useApi } from '../../composables/useApi'
+import useSplitGenerator from '../../composables/useSplitGenerator'
 
 // Дочерние компоненты
-import TrainingOnWeekInputs from '~/components/training/week/TrainingOnWeekInputs.vue'
-import TrainingOnWeekResult from '~/components/training/week/TrainingOnWeekResult.vue'
-import ExerciseInfo from '~/components/training/ExerciseInfo.vue'
+import TrainingOnWeekInputs from '../../components/training/week/TrainingOnWeekInputs.vue'
+import TrainingOnWeekResult from '../../components/training/week/TrainingOnWeekResult.vue'
+import ExerciseInfo from '../../components/training/ExerciseInfo.vue'
 
 // Типы
 interface SnackbarState {

@@ -259,12 +259,12 @@
 import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue';
 import { retrieveLaunchParams } from "@telegram-apps/sdk";
 import Chart from 'chart.js/auto';
-import { useApi } from '~/composables/useApi';
-import { useKbzhu } from '~/composables/useKbzhu'; // Хук для расчёта КБЖУ
-import { useKbzhuAnalytics } from '~/composables/analytics/usersKbzhu'; // Хук для аналитики
+import { useApi } from '../../composables/useApi';
+import { useKbzhu } from '../../composables/useKbzhu'; // Хук для расчёта КБЖУ
+import { useKbzhuAnalytics } from '../../composables/analytics/usersKbzhu'; // Хук для аналитики
 import BottomSheetWithClose from '../shared/BottomSheetWithClose.vue';
 import KbzhuCalculatorTest from './KbzhuCalculatorTest.vue';
-import { useUserStore } from '@/stores/userStore';
+import { useUserStore } from '../../stores/userStore';
 
 // ------------------ Интерфейсы ------------------
 interface FormData {
@@ -296,6 +296,13 @@ interface KbzhuResult {
 }
 
 // ------------------ Инициализация ------------------
+
+defineProps({
+  tab: {
+    type: String,
+    default: 'kbzhu-calculator'
+  }
+})
 
 // Telegram user ID
 const telegramUserId = ref<number | null>(null);
