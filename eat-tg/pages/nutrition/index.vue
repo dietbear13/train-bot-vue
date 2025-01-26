@@ -1,15 +1,6 @@
 <template>
   <NutritionTabs />
 
-  <!-- Кнопка, видимая только если у пользователя роль admin -->
-  <v-btn
-      v-if="isAdmin"
-      color="primary"
-      class="ma-2"
-      @click="openAdminPanel"
-  >
-    Открыть Админку Блога
-  </v-btn>
 </template>
 
 <script setup lang="ts">
@@ -48,11 +39,6 @@ onMounted(async () => {
   }
 })
 
-// Нажатие на кнопку «Открыть Админку Блога»
-function openAdminPanel() {
-  // Переходим на маршрут, где расположен ваш админ-компонент (например, /blog-admin)
-  router.push('/blog-admin')
-}
 </script>
 
 <style scoped>

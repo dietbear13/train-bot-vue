@@ -1,30 +1,26 @@
 <template>
   <v-app>
-    <!-- Шапка с названием блога -->
-    <v-app-bar
-        color="primary"
-        dark
-        elevated
-    >
+    <!-- Шапка блога -->
+    <v-app-bar color="primary" dark elevated>
+      <v-toolbar-title>Блог</v-toolbar-title>
+      <!-- Кнопка доступна только админу -->
+      <v-btn
+          v-if="isAdmin"
+          color="secondary"
+          class="ma-2"
+          @click="toggleAdmin"
+      >
+        <!-- В зависимости от showAdminPanel меняем подпись кнопки -->
+        {{ showAdminPanel ? 'Закрыть админку' : 'Открыть админку' }}
+      </v-btn>
     </v-app-bar>
 
     <!-- Основная часть -->
     <v-main>
       <v-container class="py-4">
         <v-row>
-          <!-- Отображение дочернего компонента BlogCard -->
-          <v-toolbar-title>Блог</v-toolbar-title>
-          <!-- Кнопка видима только для admin -->
-          <v-btn
-              v-if="isAdmin"
-              color="primary"
-              class="ma-2"
-              @click="openAdminPanel"
-          >
-            Открыть Админку Блога
-          </v-btn>
-
-    <BlogCard />
+          <BlogAdmin v-if="showAdminPanel" />
+          <BlogCard v-else />
         </v-row>
       </v-container>
     </v-main>
@@ -32,20 +28,24 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useUserStore } from '../stores/userStore'; // Импорт вашего Pinia-хранилища
-import BlogCard from '../components/blog/BlogCard.vue';
+import { ref, computed } from 'vue'
+import { useUserStore } from '../stores/userStore'
 
-// Подключаем хранилище
-const userStore = useUserStore();
+// Импортируем ваши компоненты
+import BlogCard from '../components/blog/BlogCard.vue'
+import BlogAdmin from '../components/userAndAdmin/BlogAdmin.vue'
 
-// Проверяем, является ли пользователь администратором
-const isAdmin = computed(() => userStore.role === 'admin');
+// Достаём хранилище пользователя (Pinia)
+const userStore = useUserStore()
+const isAdmin = computed(() => userStore.role === 'admin')
 
-// Метод для открытия админки
-const openAdminPanel = () => {
-  console.log('Админка открыта!'); // Замените на ваш функционал, например, переход на страницу админки
-};
+// Управляем видимостью админки
+const showAdminPanel = ref(false)
+
+// Клик по кнопке — переключаем флаг
+function toggleAdmin() {
+  showAdminPanel.value = !showAdminPanel.value
+}
 </script>
 
 <style scoped>
