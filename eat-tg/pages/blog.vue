@@ -6,7 +6,6 @@
         dark
         elevated
     >
-      <v-toolbar-title>Блог</v-toolbar-title>
     </v-app-bar>
 
     <!-- Основная часть -->
@@ -14,7 +13,18 @@
       <v-container class="py-4">
         <v-row>
           <!-- Отображение дочернего компонента BlogCard -->
-          <BlogCard />
+          <v-toolbar-title>Блог</v-toolbar-title>
+          <!-- Кнопка видима только для admin -->
+          <v-btn
+              v-if="isAdmin"
+              color="primary"
+              class="ma-2"
+              @click="openAdminPanel"
+          >
+            Открыть Админку Блога
+          </v-btn>
+
+    <BlogCard />
         </v-row>
       </v-container>
     </v-main>
@@ -22,7 +32,20 @@
 </template>
 
 <script setup lang="ts">
-import BlogCard from './components/blog/BlogCard.vue' // Убедитесь, что путь корректен
+import { computed } from 'vue';
+import { useUserStore } from '../stores/userStore'; // Импорт вашего Pinia-хранилища
+import BlogCard from '../components/blog/BlogCard.vue';
+
+// Подключаем хранилище
+const userStore = useUserStore();
+
+// Проверяем, является ли пользователь администратором
+const isAdmin = computed(() => userStore.role === 'admin');
+
+// Метод для открытия админки
+const openAdminPanel = () => {
+  console.log('Админка открыта!'); // Замените на ваш функционал, например, переход на страницу админки
+};
 </script>
 
 <style scoped>

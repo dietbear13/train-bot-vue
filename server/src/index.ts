@@ -14,8 +14,12 @@ import usersRoutes from './routes/users';
 import exercisesRoutes from './routes/exercises';
 import exerciseRoutes from './routes/exercise';
 import patternsRoutes from './routes/patterns';
-// import donationsRoutes from './routes/donations';
 import analyticsMainRoutes from './routes/analytics/analyticsMain';
+import blogMainRoutes from './routes/blogMain';
+
+// Импортируем НОВЫЙ маршрут для лайков блога
+import blogLikesRoutes from './routes/blogLikes';
+
 import referralRouter from './routes/referral';
 
 dotenv.config();
@@ -41,9 +45,9 @@ app.use(express.json());
 // Подключение к MongoDB
 mongoose
     .connect('mongodb://frobot1519dpf:2!L8ys9U)(rK@mongodb:27017/fitness-app', {
-        authSource: 'fitness-app', // Указываем базу данных для аутентификации
-        useNewUrlParser: true, // Для поддержки новых парсеров URL
-        useUnifiedTopology: true, // Для использования нового механизма мониторинга серверов
+        authSource: 'fitness-app',
+        useNewUrlParser: true,
+        useUnifiedTopology: true,
     } as mongoose.ConnectOptions)
     .then(() => {
         console.log('Connected to MongoDB');
@@ -52,7 +56,6 @@ mongoose
         console.error('Error connecting to MongoDB:', error);
     });
 
-
 // Подключаем основные роуты
 app.use('/api', splitsRoutes);
 app.use('/api', botRoutes);
@@ -60,13 +63,16 @@ app.use('/api', usersRoutes);
 app.use('/api', exercisesRoutes);
 app.use('/api', patternsRoutes);
 app.use('/api', exerciseRoutes);
-// app.use('/api', donationsRoutes);
 
-// <-- Подключаем наш новый маршрут Analytics
+// Подключаем маршрут Analytics
 app.use('/api', analyticsMainRoutes);
+app.use('/api', blogMainRoutes);
 
-// Подключаем новый маршрут Referral
-// app.use('/api', referralRouter);
+// Подключаем маршрут BlogLikes
+app.use('/api', blogLikesRoutes);
+
+// Подключаем новый маршрут Referral (если нужно)
+app.use('/api', referralRouter);
 
 // Запускаем сервер
 app.listen(port, () => {

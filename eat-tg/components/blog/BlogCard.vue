@@ -58,13 +58,12 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { retrieveLaunchParams } from '@telegram-apps/sdk'
 // Импортируем наш composable для работы с API
-import { useApi } from '~/composables/useApi'
+import { useApi } from '../../composables/useApi'
 
-// Структура постов — пример
 interface Post {
-  id: number
+  id: string            // <-- теперь string, т.к. будет хранить _id из Mongo
   title: string
-  text: string
+  text: string          // body из базы
   likesCount: number
   userLiked: boolean
 }
@@ -75,6 +74,13 @@ const { apiRequest } = useApi()
 // telegramUserId
 const telegramUserId = ref<number | null>(null)
 
+// Главный список статей
+const posts = ref<Post[]>([])
+
+// Поисковая строка
+const searchQuery = ref('')
+
+// ========= onMounted =============
 onMounted(async () => {
   if (process.client) {
     const launchParams = retrieveLaunchParams()
@@ -87,62 +93,74 @@ onMounted(async () => {
       }
     }
 
-    // 1) Пример: при монтировании компонента можем сразу загрузить актуальные лайки пользователя
-    //    (если у вас на бэкенде предусмотрен GET /api/blog-likes?telegramId=...)
-    if (telegramUserId.value) {
-      try {
-        const likesData = await apiRequest<{ postId: number }[]>(
+    // 1) Загружаем реальные статьи из базы (GET /api/blog)
+    try {
+      const blogData = await apiRequest<any[]>('GET', '/blog')
+      // blogData — массив объектов из MongoDB: [{_id, title, body, likesCount, publishedAt }, ...]
+      // Преобразуем их под структуру Post
+      const mappedPosts = blogData.map(item => ({
+        id: item._id,
+        title: item.title,
+        text: item.body,
+        likesCount: item.likesCount,
+        userLiked: false,  // по умолчанию false, дальше уточним
+      })) as Post[]
+
+      // Устанавливаем начальные посты
+      posts.value = mappedPosts
+
+      // 2) Загружаем лайки пользователя
+      if (telegramUserId.value) {
+        const likesData = await apiRequest<{ postId: number | string }[]>(
             'GET',
             '/blog-likes',
-            null, // data для GET обычно не нужен
-            { telegramId: telegramUserId.value } // передаём query-параметры
+            null,
+            { telegramId: telegramUserId.value }
         )
-
-        // likesData может быть массивом постов, которые пользователь лайкнул
-        // здесь просто проставляем userLiked = true, если пост есть в likesData
+        // likesData — массив объектов { postId }, которые пользователь лайкнул
+        // user.blogLikes хранит postId как Number, а у нас сейчас id = string
+        // Для совместимости приведём к строке.
         posts.value = posts.value.map(post => {
-          const isLiked = likesData.some(like => like.postId === post.id)
+          // likesData.postId может быть сохранён как число в базе у User
+          const found = likesData.find(l => String(l.postId) === post.id)
           return {
             ...post,
-            userLiked: isLiked,
+            userLiked: Boolean(found),
           }
         })
-      } catch (error) {
-        console.error('Не удалось загрузить лайки пользователя:', error)
       }
+
+    } catch (error) {
+      console.error('Ошибка при загрузке статей или лайков:', error)
     }
   }
 })
 
-// Пример массива постов (будут подгружаться с сервера или пока заглушка)
-const posts = ref<Post[]>([
-  {
-    id: 1,
-    title: 'Первая статья',
-    text: 'Здесь будет основной текст статьи (пример: 800-1300 слов)...',
-    likesCount: 10,
-    userLiked: false,
-  },
-  {
-    id: 2,
-    title: 'Вторая статья',
-    text: 'Еще один текст небольшой статьи...',
-    likesCount: 5,
-    userLiked: false,
-  },
-  {
-    id: 3,
-    title: 'Третья статья',
-    text: 'Заготовка для демонстрации...',
-    likesCount: 2,
-    userLiked: false,
-  },
-])
+// ======== (Закомментировано) Пример массива постов (были в тестовом варианте) =====
+// const posts = ref<Post[]>([
+//   {
+//     id: 1,
+//     title: 'Первая статья',
+//     text: 'Здесь будет основной текст статьи (пример: 800-1300 слов)...',
+//     likesCount: 10,
+//     userLiked: false,
+//   },
+//   {
+//     id: 2,
+//     title: 'Вторая статья',
+//     text: 'Еще один текст небольшой статьи...',
+//     likesCount: 5,
+//     userLiked: false,
+//   },
+//   {
+//     id: 3,
+//     title: 'Третья статья',
+//     text: 'Заготовка для демонстрации...',
+//     likesCount: 2,
+//     userLiked: false,
+//   },
+// ])
 
-// Поисковая строка
-const searchQuery = ref('')
-
-// Фильтрованные посты
 const filteredPosts = computed(() => {
   if (!searchQuery.value) return posts.value
   const query = searchQuery.value.toLowerCase()
@@ -153,7 +171,7 @@ const filteredPosts = computed(() => {
 })
 
 // Клик по лайку (локально обновляем UI — увеличиваем/уменьшаем счётчик)
-function toggleLike(postId: number) {
+function toggleLike(postId: string) {
   const post = posts.value.find(p => p.id === postId)
   if (!post) return
 
@@ -163,6 +181,7 @@ function toggleLike(postId: number) {
   } else {
     post.userLiked = false
     post.likesCount--
+    if (post.likesCount < 0) post.likesCount = 0
   }
 }
 
@@ -188,12 +207,11 @@ watch(
 // Отправка данных о лайке на бэкенд
 async function sendLikeToServer(
     telegramId: string | null,
-    postId: number,
+    postId: string,
     like: boolean
 ) {
   if (!telegramId) return
   try {
-    // Используем наш composable useApi
     await apiRequest('POST', '/blog-likes', {
       telegramId,
       postId,
