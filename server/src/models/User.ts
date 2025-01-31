@@ -38,7 +38,7 @@ export interface IReferral {
 
 // Новая структура для лайков
 export interface IBlogLike {
-    postId: number;
+    postId: string;
     liked: boolean;     // true (лайк) или false (анлайк)
     date: number;       // время, когда пользователь изменил лайк
 }
@@ -53,8 +53,8 @@ export interface IUser extends Document {
     trainingHistory?: ITrainingHistory[];
     referrals: IReferral[];
 
-    // Новое поле для лайков
-    blogLikes?: IBlogLike[];
+    // Обязательное поле для лайков
+    blogLikes: IBlogLike[];
 }
 
 const UserSchema: Schema = new Schema<IUser>({
@@ -103,11 +103,11 @@ const UserSchema: Schema = new Schema<IUser>({
         ],
         default: [],
     },
-    // Новое поле для хранения лайков блога
+    // Обязательное поле для хранения лайков блога
     blogLikes: {
         type: [
             {
-                postId: { type: Number, required: true },
+                postId: { type: String, required: true },
                 liked: { type: Boolean, default: true },
                 date: { type: Number, required: true },
             }

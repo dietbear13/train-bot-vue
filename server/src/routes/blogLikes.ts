@@ -25,10 +25,9 @@ router.get('/blog-likes', async (req: Request, res: Response) => {
             });
         }
 
-        // Предположим, что в user.blogLikes хранятся объекты { postId, liked, date }
-        // Возвращаем только те, где liked === true
+        // Возвращаем только те посты, где liked === true
         const likedPosts = user.blogLikes
-            ?.filter(item => item.liked)
+            .filter(item => item.liked)
             .map(item => ({ postId: item.postId })) || [];
 
         return res.json(likedPosts);
@@ -63,20 +62,27 @@ router.post('/blog-likes', async (req: Request, res: Response) => {
         }
 
         // Проверяем, есть ли уже запись про этот postId
-        const existingLike = user.blogLikes?.find(likeObj => likeObj.postId === postId);
+        const existingLike = user.blogLikes.find(likeObj => likeObj.postId === postId);
 
         if (!existingLike) {
-            // Если нет записи, а пользователь ставит like = true, добавляем
-            // если like = false, можно просто ничего не делать, или тоже сохранять запись
-            user.blogLikes?.push({
-                postId,
-                liked: like,
-                date: Date.now(),
-            });
+            if (like) {
+                // Добавляем новый лайк
+                user.blogLikes.push({
+                    postId: postId, // Используем строку напрямую
+                    liked: like,
+                    date: Date.now(),
+                });
+            }
+            // Если like = false и записи нет, ничего не делаем
         } else {
-            // Если запись уже есть, обновляем поле liked
-            existingLike.liked = like;
-            existingLike.date = Date.now(); // Обновляем время
+            if (like) {
+                // Обновляем существующий лайк на true
+                existingLike.liked = true;
+                existingLike.date = Date.now();
+            } else {
+                // Удаляем лайк, если пользователь анлайкает
+                user.blogLikes = user.blogLikes.filter(likeObj => likeObj.postId !== postId);
+            }
         }
 
         await user.save();
@@ -89,6 +95,44 @@ router.post('/blog-likes', async (req: Request, res: Response) => {
         console.error('Ошибка в POST /blog-likes:', error);
         return res.status(500).json({
             error: 'Внутренняя ошибка сервера при обновлении лайка',
+        });
+    }
+});
+
+/**
+ * GET /api/blog-likes/all
+ * Возвращает агрегированное число лайков для каждого postId,
+ * формируя массив вида [{ postId: <значение>, count: <число> }, ...].
+ */
+router.get('/blog-likes/all', async (req: Request, res: Response) => {
+    try {
+        // Разворачиваем массив blogLikes у каждого пользователя
+        // и считаем общее кол-во лайков (liked = true) для каждого postId
+        const pipeline = [
+            { $unwind: '$blogLikes' },
+            { $match: { 'blogLikes.liked': true } },
+            {
+                $group: {
+                    _id: '$blogLikes.postId',
+                    count: { $sum: 1 },
+                },
+            },
+        ];
+
+        const results = await User.aggregate(pipeline);
+        console.log('Aggregated likes:', results);
+
+        // Преобразуем _id в postId
+        const counts = results.map(r => ({
+            postId: r._id, // Уже строка, преобразование не требуется
+            count: r.count,
+        }));
+
+        return res.json(counts);
+    } catch (error) {
+        console.error('Ошибка в GET /blog-likes/all:', error);
+        return res.status(500).json({
+            error: 'Внутренняя ошибка сервера при агрегации лайков',
         });
     }
 });

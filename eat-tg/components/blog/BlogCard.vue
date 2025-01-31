@@ -1,3 +1,4 @@
+<!-- components/blog/BlogCard.vue -->
 <template>
   <v-col cols="12">
     <!-- Поисковая строка -->
@@ -7,30 +8,30 @@
         placeholder="Поиск..."
         hide-details
         dense
-        width="100%"
+        width="'100%'"
         prepend-inner-icon="mdi-magnify"
-        class="ma-2"
+        class="mx-0 mb-2 shrink"
     />
 
     <!-- Перебираем посты и выводим карточки -->
-    <v-row>
+    <v-row class="mt-3">
       <v-col
           v-for="post in filteredPosts"
           :key="post.id"
           cols="12"
+          style="padding: 8px"
       >
         <v-card
-            class="mb-0"
+            class="post-card"
             outlined
             max-width="600"
-            style="margin: 0 auto; border-radius: 16px"
         >
           <v-card-title class="text-truncate text-break">
             {{ post.title }}
           </v-card-title>
 
-          <!-- Оборачиваем контент в контейнер для применения глобальных стилей -->
           <v-card-text>
+            <!-- Просто выводим HTML контент -->
             <div class="blog-content" v-html="post.text"></div>
           </v-card-text>
 
@@ -42,9 +43,7 @@
                 @click="toggleLike(post.id)"
                 class="ma-2"
             >
-              <v-icon class="mr-1" left>
-                mdi-heart
-              </v-icon>
+              <v-icon class="mr-1" left>mdi-heart</v-icon>
               {{ post.likesCount }}
             </v-btn>
           </v-card-actions>
@@ -54,170 +53,188 @@
   </v-col>
 </template>
 
-
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { retrieveLaunchParams } from '@telegram-apps/sdk'
-// Импортируем наш composable для работы с API
 import { useApi } from '../../composables/useApi'
+import type { LikeResponse } from '../../types/LikeResponse' // Убедитесь, что путь корректен
 
 interface Post {
-  id: string            // <-- теперь string, т.к. будет хранить _id из Mongo
+  id: string
   title: string
-  text: string          // body из базы
+  text: string
   likesCount: number
   userLiked: boolean
 }
 
-// Получаем функцию для работы с API
 const { apiRequest } = useApi()
-
-// telegramUserId
 const telegramUserId = ref<number | null>(null)
-
-// Главный список статей
 const posts = ref<Post[]>([])
-
-// Поисковая строка
 const searchQuery = ref('')
 
-// ========= onMounted =============
+// Логирование для отладки
+const debug = true
+
+// Функция для логирования, если включён режим отладки
+function log(...args: any[]) {
+  if (debug) {
+    console.log(...args)
+  }
+}
+
 onMounted(async () => {
-  if (process.client) {
-    const launchParams = retrieveLaunchParams()
-    if (launchParams && launchParams.initData && launchParams.initData.user) {
-      const user = launchParams.initData.user
-      if (user && user.id) {
-        telegramUserId.value = Number(user.id)
-      } else {
-        console.error('Не удалось получить данные пользователя из Telegram.')
-      }
+  if (!process.client) return
+
+  // 0) Получаем данные Telegram-пользователя
+  const launchParams = retrieveLaunchParams()
+  if (launchParams?.initData?.user?.id) {
+    telegramUserId.value = Number(launchParams.initData.user.id)
+  } else {
+    console.error('Не удалось получить данные пользователя из Telegram.')
+  }
+
+  try {
+    // 1) Список постов из /blog
+    const blogData = await apiRequest<any[]>('GET', '/blog')
+    log('blogData =>', blogData)
+
+    // Маппим для удобства
+    const mappedPosts = blogData.map(item => ({
+      id: item._id.toString(), // Убедитесь, что id строка
+      title: item.title,
+      text: item.body,
+      // likesCount и userLiked позже
+      likesCount: 0,
+      userLiked: false,
+    })) as Post[]
+
+    // 2) Загружаем ЛИЧНЫЕ лайки пользователя (если есть telegramUserId)
+    let userLikes: { postId: string | number }[] = []
+    if (telegramUserId.value) {
+      userLikes = await apiRequest<{ postId: string | number }[]>('GET', '/blog-likes', undefined, {
+        telegramId: telegramUserId.value
+      })
+      log('userLikes =>', userLikes)
     }
 
-    // 1) Загружаем реальные статьи из базы (GET /api/blog)
-    try {
-      const blogData = await apiRequest<any[]>('GET', '/blog')
-      // blogData — массив объектов из MongoDB: [{_id, title, body, likesCount, publishedAt }, ...]
-      // Преобразуем их под структуру Post
-      const mappedPosts = blogData.map(item => ({
-        id: item._id,
-        title: item.title,
-        text: item.body,
-        likesCount: item.likesCount,
-        userLiked: false,  // по умолчанию false, дальше уточним
-      })) as Post[]
+    // 3) Загружаем агрегированное число лайков по всем пользователям
+    //    Формат ответа: [{ postId: 'xyz', count: 5 }, ...]
+    const allLikesStats = await apiRequest<{ postId: string; count: number }[]>('GET', '/blog-likes/all')
+    log('allLikesStats =>', allLikesStats)
 
-      // Устанавливаем начальные посты
-      posts.value = mappedPosts
+    // Превратим в объект вида { [postId]: count }
+    const likeCountsMap: Record<string, number> = {}
+    allLikesStats.forEach(item => {
+      likeCountsMap[item.postId] = item.count
+    })
+    log('likeCountsMap =>', likeCountsMap)
 
-      // 2) Загружаем лайки пользователя
-      if (telegramUserId.value) {
-        const likesData = await apiRequest<{ postId: number | string }[]>(
-            'GET',
-            '/blog-likes',
-            null,
-            { telegramId: telegramUserId.value }
-        )
-        // likesData — массив объектов { postId }, которые пользователь лайкнул
-        // user.blogLikes хранит postId как Number, а у нас сейчас id = string
-        // Для совместимости приведём к строке.
-        posts.value = posts.value.map(post => {
-          // likesData.postId может быть сохранён как число в базе у User
-          const found = likesData.find(l => String(l.postId) === post.id)
-          return {
-            ...post,
-            userLiked: Boolean(found),
-          }
-        })
+    // 4) Склеиваем данные: likesCount из allLikesStats, userLiked из userLikes
+    posts.value = mappedPosts.map(post => {
+      const foundLike = userLikes.find(l => String(l.postId) === post.id)
+      const aggregatedCount = likeCountsMap[post.id] || 0
+      return {
+        ...post,
+        userLiked: Boolean(foundLike),
+        likesCount: aggregatedCount,
       }
+    })
 
-    } catch (error) {
-      console.error('Ошибка при загрузке статей или лайков:', error)
-    }
+    log('posts (final) =>', posts.value)
+  } catch (error) {
+    console.error('Ошибка при загрузке статей или лайков:', error)
   }
 })
 
-
+// Фильтрация
 const filteredPosts = computed(() => {
-  if (!searchQuery.value) return posts.value
   const query = searchQuery.value.toLowerCase()
+  if (!query) return posts.value
   return posts.value.filter(post =>
       post.title.toLowerCase().includes(query) ||
       post.text.toLowerCase().includes(query)
   )
 })
 
-// Клик по лайку (локально обновляем UI — увеличиваем/уменьшаем счётчик)
+// При клике на лайк: локально меняем userLiked и likesCount,
+// а потом отправляем POST-запрос, чтобы записать в базу
 function toggleLike(postId: string) {
   const post = posts.value.find(p => p.id === postId)
   if (!post) return
 
-  if (!post.userLiked) {
-    post.userLiked = true
-    post.likesCount++
-  } else {
-    post.userLiked = false
-    post.likesCount--
-    if (post.likesCount < 0) post.likesCount = 0
-  }
+  // Смена локального статуса
+  post.userLiked = !post.userLiked
+
+  // Локальный инкремент/декремент счётчика
+  post.likesCount += post.userLiked ? 1 : -1
+  if (post.likesCount < 0) post.likesCount = 0 // на всякий случай
+
+  log(`Post ${postId} liked: ${post.userLiked}, new likesCount: ${post.likesCount}`)
 }
 
-// Следим за изменениями лайков во всех постах (deep: true)
+// Отслеживаем изменения userLiked, отправляем запрос
 watch(
-    () => posts.value,
-    (newVal, oldVal) => {
-      newVal.forEach((newPost, index) => {
-        const oldPost = oldVal?.[index]
-        if (oldPost && newPost.userLiked !== oldPost.userLiked) {
-          // Если статус userLiked изменился – отправляем запрос на сервер
+    () => posts.value.map(post => post.userLiked),
+    (newLikes, oldLikes) => {
+      newLikes.forEach((liked, index) => {
+        const oldLiked = oldLikes[index]
+        if (liked !== oldLiked) {
+          const postId = posts.value[index].id
           sendLikeToServer(
               telegramUserId.value ? telegramUserId.value.toString() : null,
-              newPost.id,
-              newPost.userLiked
+              postId,
+              liked
           )
         }
       })
-    },
-    { deep: true }
+    }
 )
 
-// Отправка данных о лайке на бэкенд
+// Запрос на сервер, чтобы создать/обновить запись лайка в User.blogLikes
 async function sendLikeToServer(
     telegramId: string | null,
     postId: string,
     like: boolean
 ) {
-  if (!telegramId) return
+  if (!telegramId) {
+    console.error('sendLikeToServer: нет telegramId')
+    return
+  }
   try {
-    await apiRequest('POST', '/blog-likes', {
+    // Указываем тип ответа как LikeResponse
+    const response = await apiRequest<LikeResponse>('POST', '/blog-likes', {
       telegramId,
       postId,
       like,
     })
+    log('sendLikeToServer response =>', response)
+
+    if (!response.success) {
+      console.error('Ошибка при обновлении лайка на сервере:', response.message)
+      // Возвращаем предыдущий статус
+      const post = posts.value.find(p => p.id === postId)
+      if (post) {
+        post.userLiked = !like
+        post.likesCount += like ? -1 : 1
+        if (post.likesCount < 0) post.likesCount = 0
+      }
+    }
   } catch (error) {
     console.error('Ошибка при отправке лайка:', error)
+    // Возвращаем предыдущий статус
+    const post = posts.value.find(p => p.id === postId)
+    if (post) {
+      post.userLiked = !like
+      post.likesCount += like ? -1 : 1
+      if (post.likesCount < 0) post.likesCount = 0
+    }
   }
 }
 </script>
 
 <style scoped>
-
-/* Стилизация нумерованных списков с эмодзи */
-.custom-ol {
-  counter-reset: custom-counter;
-  list-style: none;
-  padding-left: 1.5em;
-}
-
-.custom-ol li::before {
-  counter-increment: custom-counter;
-  content: counter(custom-counter) "️⃣ ";
-  margin-right: 0.5em;
-}
-
-/* Стилизация маркированных списков с небольшими отступами */
-.custom-ul {
-  list-style: disc;
-  padding-left: 1.5em;
+.post-card {
+  margin: 0 auto;
+  border-radius: 16px;
 }
 </style>

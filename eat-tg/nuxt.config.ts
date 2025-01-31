@@ -33,6 +33,7 @@ export default defineNuxtConfig({
       fallbackBaseURL: process.env.VITE_API_BASE_URL_FALLBACK_PROD || '',
       // Если нужно и на клиенте
       telegramBotApiKey: process.env.TELEGRAM_BOT_API_KEY || '',
+      tinyMceKey: process.env.TinyMCE_KEY || '',
     },
   },
 
