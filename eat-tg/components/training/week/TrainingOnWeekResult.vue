@@ -172,9 +172,9 @@
 
 <script lang="ts">
 import { defineComponent, ref, PropType } from 'vue'
-import BottomSheetWithClose from '~/components/shared/BottomSheetWithClose.vue'
-import AdminExerciseButton from '~/components/userAndAdmin/AdminExerciseButton.vue'
-import ExerciseInfo from '~/components/training/ExerciseInfo.vue'
+import BottomSheetWithClose from '../../../components/shared/BottomSheetWithClose.vue'
+import AdminExerciseButton from '../../../components/userAndAdmin/AdminExerciseButton.vue'
+import ExerciseInfo from '../../../components/training/ExerciseInfo.vue'
 import { useApi } from '~/composables/useApi'
 
 interface Exercise {

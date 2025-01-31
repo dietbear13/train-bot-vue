@@ -103,7 +103,7 @@ export function useKbzhu() {
             }
 
             // Коэффициент активности (примерно)
-            const activityCoefficient = 1.45
+            const activityCoefficient = 1.55
 
             // Расчёт TDEE
             let TDEE = BMR * activityCoefficient
@@ -132,14 +132,14 @@ export function useKbzhu() {
             // Коэффициенты для белков и жиров в зависимости от пола и телосложения
             const proteinFatCoefficients: Record<string, Record<string, { protein: number; fat: number }>> = {
                 'мужчина': {
-                    'худощавое': { protein: 1.9, fat: 1.03 },
+                    'худощавое': { protein: 1.9, fat: 1.0 },
                     'среднее': { protein: 2.0, fat: 1.0 },
-                    'плотное': { protein: 2.1, fat: 0.97 },
+                    'плотное': { protein: 2.1, fat: 1.0 },
                 },
                 'женщина': {
-                    'худощавое': { protein: 1.7, fat: 1.13 },
+                    'худощавое': { protein: 1.7, fat: 1.1 },
                     'среднее': { protein: 1.8, fat: 1.1 },
-                    'плотное': { protein: 1.9, fat: 1.07 },
+                    'плотное': { protein: 1.9, fat: 1.1 },
                 },
             }
 

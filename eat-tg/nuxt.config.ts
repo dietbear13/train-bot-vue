@@ -29,15 +29,10 @@ export default defineNuxtConfig({
   runtimeConfig: {
     telegramBotApiKey: process.env.TELEGRAM_BOT_API_KEY || '',
     public: {
-      apiBaseUrl:
-          process.env.NODE_ENV === 'production'
-              ? process.env.VITE_API_BASE_URL_PROD
-              : process.env.VITE_API_BASE_URL_DEV,
-      fallbackBaseURL:
-          process.env.NODE_ENV === 'production'
-              ? process.env.VITE_API_BASE_URL_FALLBACK_PROD
-              : process.env.VITE_API_BASE_URL_FALLBACK_DEV,
-      telegramBotApiKey: process.env.TELEGRAM_BOT_API_KEY || '', // Делаем доступным публично
+      apiBaseUrl: process.env.VITE_API_BASE_URL_PROD || '',
+      fallbackBaseURL: process.env.VITE_API_BASE_URL_FALLBACK_PROD || '',
+      // Если нужно и на клиенте
+      telegramBotApiKey: process.env.TELEGRAM_BOT_API_KEY || '',
     },
   },
 

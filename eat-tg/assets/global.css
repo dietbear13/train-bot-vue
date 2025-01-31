@@ -179,6 +179,77 @@ body {
     scrollbar-width: none;
 }
 
+/* assets/styles/global.css */
+
+/* Абзацы */
+.blog-content p {
+    font-size: 1rem;
+    line-height: 1.6;
+    margin-bottom: 0.5em;
+}
+
+/* Нумерованные списки с эмодзи */
+.blog-content .custom-ol {
+    counter-reset: custom-counter;
+    list-style: none;
+    margin-bottom: 1em;
+
+}
+
+.blog-content .custom-ol li::before {
+    counter-increment: custom-counter;
+    content: counter(custom-counter) "️⃣ ";
+    margin-right: 0.5em;
+}
+
+/* Маркированные списки с небольшими отступами */
+.blog-content .custom-ul {
+    list-style: disc;
+    padding-left: 1.5em;
+    margin-bottom: 1em;
+}
+
+/* Цитаты */
+.blog-content blockquote {
+    border-left: 4px solid #1976d2;
+    padding-left: 1em;
+    color: #bababa;
+    font-style: italic;
+    margin: 1em 0;
+    border-radius: 14px;
+
+}
+
+/* Ссылки */
+.blog-content a {
+    color: #1e88e5;
+    text-decoration: none;
+}
+
+.blog-content a:hover {
+    text-decoration: underline;
+}
+
+/* Жирный текст */
+.blog-content b, .blog-content strong {
+    font-weight: bold;
+}
+
+/* Курсивный текст */
+.blog-content i, .blog-content em {
+    font-style: italic;
+}
+
+/* Подчеркнутый текст */
+.blog-content u {
+    text-decoration: underline;
+}
+
+/* Зачеркнутый текст */
+.blog-content s, .blog-content strike {
+    text-decoration: line-through;
+}
+
 
 /* Адаптивность для мобильных устройств */
 @media (max-width: 800px) {

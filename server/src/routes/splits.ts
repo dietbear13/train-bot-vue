@@ -1,5 +1,5 @@
 // routes/splits.ts
-import { Router, Request, Response } from 'express';
+import {Router, Request, Response} from 'express';
 import SplitModel from '../models/Split';
 
 const router = Router();

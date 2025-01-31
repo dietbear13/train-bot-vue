@@ -1,146 +1,261 @@
-<!-- components/AdminInfo.vue -->
-
+<!-- AdminInfo.vue (Vuetify 3, Nuxt 3) -->
 <template>
   <v-container fluid>
     <v-card class="pa-4">
-      <!-- Поиск по Telegram ID -->
+
+      <!-- Заголовок и кнопка обновления -->
+      <v-app-bar color="transparent" flat>
+        <v-toolbar-title>Админ-панель: список пользователей</v-toolbar-title>
+        <v-spacer />
+        <v-btn color="primary" :loading="loading" @click="fetchUsers">
+          <v-icon icon="mdi-reload" class="me-2" />
+          Обновить
+        </v-btn>
+      </v-app-bar>
+
+      <!-- Поле поиска по Telegram ID -->
       <v-text-field
           v-model="searchId"
           label="Поиск по Telegram ID"
-          @input="searchUser"
           clearable
           variant="outlined"
-          prepend-icon="mdi-magnify"
-          class="mb-4"
-      ></v-text-field>
+          :prepend-inner-icon="'mdi-magnify'"
+          class="my-4"
+          @input="searchUser"
+      />
 
       <!-- Таблица пользователей -->
       <v-data-table
-          :headers="combinedHeaders"
-          :items="processedUsers"
-          :loading="loading"
+          :headers="userHeaders"
+          :items="filteredUsers"
           :items-per-page="10"
+          :loading="loading"
           class="elevation-1"
-          hide-default-footer
-          dense
       >
-        <!-- Шаблон для форматирования поля dateAdded -->
+        <!-- Вывод dateAdded -->
         <template #item.dateAdded="{ item }">
           {{ formatDate(item.dateAdded) }}
         </template>
 
-        <!-- Шаблон для действий -->
+        <!-- Действия (глаз / удалить) -->
         <template #item.actions="{ item }">
-          <v-btn
-              icon
-              @click="viewUser(item)"
-              :disabled="loading"
-          >
-            <v-icon>mdi-eye</v-icon>
+          <v-btn icon variant="text" color="primary" @click="openUserDialog(item)">
+            <v-icon icon="mdi-eye" />
           </v-btn>
-          <!-- Добавьте другие действия (например, редактирование, удаление) здесь -->
+          <v-btn icon variant="text" color="error" @click="deleteUser(item._id)">
+            <v-icon icon="mdi-delete" />
+          </v-btn>
         </template>
       </v-data-table>
 
-      <!-- Диалог для отображения информации о пользователе -->
-      <v-dialog v-model="userDialog" max-width="800px">
+      <!-- Пагинация -->
+      <v-pagination
+          v-model="pagination.page"
+          :length="pageCount"
+          class="mt-4 d-flex justify-center"
+      />
+
+      <!-- Диалог редактирования пользователя -->
+      <v-dialog v-model="userDialog" max-width="1000px" persistent>
         <v-card>
-          <v-card-title class="headline">
-            Информация о Пользователе
-          </v-card-title>
-          <v-card-text>
-            <div v-if="selectedUser">
-              <!-- Основная информация -->
-              <v-row>
-                <v-col cols="12" sm="6">
-                  <p><strong>Telegram ID:</strong> {{ selectedUser.telegramId }}</p>
-                  <p><strong>Имя:</strong> {{ selectedUser.firstName || 'Не указано' }}</p>
-                  <p><strong>Фамилия:</strong> {{ selectedUser.lastName || 'Не указано' }}</p>
-                  <p>
-                    <strong>Username:</strong>
-                    <span v-if="selectedUser.username">
-                      <a
-                          :href="`https://t.me/${selectedUser.username}`"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                      >
-                        {{ selectedUser.username }}
-                      </a>
-                    </span>
-                    <span v-else>Не указано</span>
-                  </p>
-                </v-col>
-                <v-col cols="12" sm="6">
-                  <p><strong>Роль:</strong> {{ selectedUser.role }}</p>
-                  <p><strong>Дата Добавления:</strong> {{ formatDate(selectedUser.dateAdded) }}</p>
-                </v-col>
-              </v-row>
+          <v-card-title class="text-h6">Управление пользователем</v-card-title>
 
-              <v-divider class="my-4"></v-divider>
+          <!-- Основное содержимое диалога -->
+          <v-card-text v-if="selectedUser && editingUser">
+            <!-- Первый блок вкладок (только названия вкладок) -->
+            <v-tabs
+                v-model="activeTab"
+                align-tabs="center"
+                color="deep-purple-accent-4"
+                background-color="transparent"
+                class="mb-4"
+            >
+              <v-tab value="main">Основное</v-tab>
+              <v-tab value="kbzhu">История КБЖУ</v-tab>
+              <v-tab value="training">История тренировок</v-tab>
+              <v-tab value="referrals">Referrals</v-tab>
+              <v-tab value="likes">Blog Likes</v-tab>
+            </v-tabs>
 
-              <!-- История КБЖУ -->
-              <div>
-                <h3>История КБЖУ</h3>
+            <!-- Второй блок заменён на v-tabs-window -->
+            <v-tabs-window v-model="activeTab">
+              <!-- TAB: Основное -->
+              <v-tabs-window-item value="main">
+                <v-row>
+                  <v-col cols="12" sm="6">
+                    <v-text-field
+                        label="Telegram ID"
+                        v-model="editingUser.telegramId"
+                        variant="filled"
+                        readonly
+                    />
+                    <v-text-field
+                        label="Имя (из Telegram)"
+                        v-model="editingUser.firstName"
+                        variant="filled"
+                        readonly
+                        class="mt-3"
+                    />
+                    <v-text-field
+                        label="Фамилия (из Telegram)"
+                        v-model="editingUser.lastName"
+                        variant="filled"
+                        readonly
+                        class="mt-3"
+                    />
+                    <v-text-field
+                        label="Username (из Telegram)"
+                        v-model="editingUser.username"
+                        variant="filled"
+                        readonly
+                        class="mt-3"
+                    />
+                  </v-col>
+                  <v-col cols="12" sm="6">
+                    <v-select
+                        :items="roleItems"
+                        v-model="editingUser.role"
+                        label="Роль"
+                        variant="filled"
+                        class="mt-3"
+                    />
+                    <p class="mt-6">
+                      <strong>Дата добавления:</strong>
+                      {{ formatDate(editingUser.dateAdded) }}
+                    </p>
+                  </v-col>
+                </v-row>
+              </v-tabs-window-item>
+
+              <!-- TAB: История КБЖУ -->
+              <v-tabs-window-item value="kbzhu">
                 <v-data-table
                     :headers="kbzhuHeaders"
-                    :items="selectedUser.kbzhuHistory"
-                    :loading="kbzhuLoading"
-                    :items-per-page="5"
+                    :items="editingUser.kbzhuHistory ?? []"
                     class="elevation-1"
-                    hide-default-footer
                     dense
+                    hide-default-footer
                 >
-                  <!-- Шаблон для форматирования поля timestamp -->
                   <template #item.timestamp="{ item }">
-                    {{ formatDate(item.timestamp) }}
+                    {{ formatTimestamp(item.timestamp) }}
                   </template>
-                  <template #item.gender="{ item }">
-                    {{ item.formData.gender }}
+                  <template #item.formData="{ item }">
+                    Пол: {{ item.formData.gender }},
+                    Телосложение: {{ item.formData.bodyType }},
+                    Возраст: {{ item.formData.age }},
+                    Рост: {{ item.formData.height }},
+                    Вес: {{ item.formData.weight }},
+                    Цель: {{ item.formData.goal }},
+                    Тренировок: {{ item.formData.workoutsPerWeek }}
                   </template>
-                  <template #item.bodyType="{ item }">
-                    {{ item.formData.bodyType }}
+                  <template #item.kbzhuResult="{ item }">
+                    Кал: {{ item.kbzhuResult.calories }},
+                    Доп.ккал: {{ item.kbzhuResult.extraCalories }},
+                    Б: {{ item.kbzhuResult.proteins }},
+                    Ж: {{ item.kbzhuResult.fats }},
+                    У: {{ item.kbzhuResult.carbs }}
                   </template>
-                  <template #item.age="{ item }">
-                    {{ item.formData.age }} лет
-                  </template>
-                  <template #item.height="{ item }">
-                    {{ item.formData.height }} см
-                  </template>
-                  <template #item.weight="{ item }">
-                    {{ item.formData.weight }} кг
-                  </template>
-                  <template #item.goal="{ item }">
-                    {{ item.formData.goal }}
-                  </template>
-                  <template #item.workoutsPerWeek="{ item }">
-                    {{ item.formData.workoutsPerWeek }}
-                  </template>
-                  <template #item.calories="{ item }">
-                    {{ item.kbzhuResult.calories }} ккал
-                  </template>
-                  <template #item.extraCalories="{ item }">
-                    {{ item.kbzhuResult.extraCalories }} ккал
-                  </template>
-                  <template #item.proteins="{ item }">
-                    {{ item.kbzhuResult.proteins }} г
-                  </template>
-                  <template #item.fats="{ item }">
-                    {{ item.kbzhuResult.fats }} г
-                  </template>
-                  <template #item.carbs="{ item }">
-                    {{ item.kbzhuResult.carbs }} г
+                  <template #item.actions="{ item }">
+                    <v-btn
+                        icon
+                        color="error"
+                        variant="text"
+                        @click="deleteKbzhuEntry(item._id)"
+                    >
+                      <v-icon icon="mdi-delete" />
+                    </v-btn>
                   </template>
                 </v-data-table>
-              </div>
-            </div>
-            <div v-else>
-              <v-progress-circular indeterminate color="primary"></v-progress-circular>
-            </div>
+              </v-tabs-window-item>
+
+              <!-- TAB: История тренировок -->
+              <v-tabs-window-item value="training">
+                <v-data-table
+                    :headers="trainingHeaders"
+                    :items="editingUser.trainingHistory ?? []"
+                    class="elevation-1"
+                    dense
+                    hide-default-footer
+                >
+                  <template #item.timestamp="{ item }">
+                    {{ formatTimestamp(item.timestamp) }}
+                  </template>
+                  <template #item.formData="{ item }">
+                    Пол: {{ item.formData.gender }}<br />
+                    Сплит: {{ item.formData.splitType }}<br />
+                    ID Сплита: {{ item.formData.splitId }}
+                  </template>
+                  <template #item.actions="{ item }">
+                    <v-btn
+                        icon
+                        color="error"
+                        variant="text"
+                        @click="deleteTrainingEntry(item._id)"
+                    >
+                      <v-icon icon="mdi-delete" />
+                    </v-btn>
+                  </template>
+                </v-data-table>
+              </v-tabs-window-item>
+
+              <!-- TAB: Referrals -->
+              <v-tabs-window-item value="referrals">
+                <div>
+                  <p v-if="editingUser.referrals && editingUser.referrals.length">
+                    Список рефералов:
+                  </p>
+                  <p v-else>Нет рефералов</p>
+                  <ul>
+                    <li
+                        v-for="(ref, index) in editingUser.referrals || []"
+                        :key="index"
+                    >
+                      {{ ref }}
+                    </li>
+                  </ul>
+                </div>
+              </v-tabs-window-item>
+
+              <!-- TAB: Blog Likes -->
+              <v-tabs-window-item value="likes">
+                <div>
+                  <p v-if="editingUser.blogLikes && editingUser.blogLikes.length">
+                    Посты, которым пользователь поставил лайк:
+                  </p>
+                  <p v-else>Нет лайков</p>
+                  <ul>
+                    <li
+                        v-for="(like, index) in editingUser.blogLikes || []"
+                        :key="index"
+                    >
+                      postId: {{ like.postId }} - liked: {{ like.liked }}
+                      ({{ formatTimestamp(like.date) }})
+                    </li>
+                  </ul>
+                </div>
+              </v-tabs-window-item>
+            </v-tabs-window>
           </v-card-text>
+
+          <!-- Прелоадер, если selectedUser ещё не загрузился -->
+          <v-card-text v-else class="d-flex justify-center">
+            <v-progress-circular indeterminate color="primary" />
+          </v-card-text>
+
           <v-card-actions>
-            <v-spacer></v-spacer>
-            <v-btn color="blue darken-1" text @click="closeUserDialog">
+            <v-spacer />
+            <v-btn color="secondary" variant="text" @click="closeUserDialog">
               Закрыть
+            </v-btn>
+            <v-btn
+                color="primary"
+                variant="tonal"
+                :loading="saving"
+                :disabled="saving"
+                @click="saveUserChanges"
+            >
+              <v-icon icon="mdi-content-save" class="me-2" />
+              Сохранить
             </v-btn>
           </v-card-actions>
         </v-card>
@@ -150,42 +265,25 @@
       <v-alert
           v-if="userError"
           type="error"
-          dismissible
+          variant="tonal"
           class="mt-4"
-          @input="userError = null"
+          closable
+          @click:close="userError = null"
       >
         {{ userError }}
       </v-alert>
+
     </v-card>
   </v-container>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
-import { useApi } from '~/composables/useApi';
-import { useUserStore } from '~/stores/userStore';
+import { ref, computed, onMounted, watch } from 'vue'
+import { useUserStore } from '~/stores/userStore'
+import { useApi } from '~/composables/useApi'
 
-// Интерфейсы
-interface User {
-  _id: string;
-  telegramId: number;
-  firstName?: string;
-  lastName?: string;
-  username?: string;
-  languageCode?: string;
-  role: 'admin' | 'freeUser' | 'paidUser';
-  dateAdded: number; // Unix timestamp (секунды)
-  kbzhuHistory: KbzhuHistoryEntry[];
-}
-
-interface KbzhuHistoryEntry {
-  formData: FormData;
-  kbzhuResult: KbzhuResult;
-  timestamp: number; // Unix timestamp в миллисекундах
-  _id: string;
-}
-
-interface FormData {
+/** ====== Типы ====== */
+interface IKbzhuFormData {
   gender: string;
   bodyType: string;
   age: number;
@@ -194,13 +292,53 @@ interface FormData {
   goal: string;
   workoutsPerWeek: number;
 }
-
-interface KbzhuResult {
+interface IKbzhuResult {
   calories: number;
   extraCalories: number;
   proteins: number;
   fats: number;
   carbs: number;
+}
+interface IKbzhuHistory {
+  _id?: string;
+  formData: IKbzhuFormData;
+  kbzhuResult: IKbzhuResult;
+  timestamp: number; // в миллисекундах
+}
+
+interface ITrainingFormData {
+  gender: string;
+  splitType: string;
+  splitId: string;
+}
+interface ITrainingHistory {
+  _id?: string;
+  formData: ITrainingFormData;
+  timestamp: number;
+}
+
+interface IBlogLike {
+  postId: number;
+  liked: boolean;
+  date: number;
+}
+
+interface IUser {
+  _id: string;
+  telegramId: number;
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  role: 'admin' | 'freeUser' | 'paidUser';
+  dateAdded: number;
+  kbzhuHistory?: IKbzhuHistory[];
+  trainingHistory?: ITrainingHistory[];
+  referrals?: string[];
+  blogLikes?: IBlogLike[];
+}
+
+interface IApiUsersResponse {
+  users: IUser[];
 }
 
 interface TelegramGetChatResponse {
@@ -210,270 +348,224 @@ interface TelegramGetChatResponse {
     first_name?: string;
     last_name?: string;
     username?: string;
-    // Дополнительные поля при необходимости
   };
 }
 
-const config = useRuntimeConfig();
-const TELEGRAM_BOT_API_KEY = config.public.telegramBotApiKey;
-
-// Реактивные переменные
+/** ====== Основная логика ====== */
 const userStore = useUserStore();
-const users = ref<User[]>([]);
-const loading = ref<boolean>(false);
-const userError = ref<string | null>(null);
-const searchId = ref<string>('');
-const filteredUsers = ref<User[]>([]);
-const userDialog = ref<boolean>(false);
-const selectedUser = ref<User | null>(null);
-const kbzhuLoading = ref<boolean>(false);
-
-// Заголовки таблицы пользователей
-const userHeaders = [
-  { text: 'Telegram ID', value: 'telegramId' },
-  { text: 'Роль', value: 'role' },
-  { text: 'Дата Добавления', value: 'dateAdded' },
-  // KbzhuHeaders будут добавлены динамически
-  { text: 'Действия', value: 'actions', sortable: false },
-
-];
-
-// Заголовки таблицы КБЖУ (для диалога)
-const kbzhuHeaders = [
-  { text: 'Дата', value: 'timestamp' },
-  { text: 'Пол', value: 'gender' },
-  { text: 'Телосложение', value: 'bodyType' },
-  { text: 'Возраст', value: 'age' },
-  { text: 'Рост (см)', value: 'height' },
-  { text: 'Вес (кг)', value: 'weight' },
-  { text: 'Цель', value: 'goal' },
-  { text: 'Тренировок в неделю', value: 'workoutsPerWeek' },
-  { text: 'Калории (ккал)', value: 'calories' },
-  { text: 'Доп. Калории (ккал)', value: 'extraCalories' },
-  { text: 'Белки (г)', value: 'proteins' },
-  { text: 'Жиры (г)', value: 'fats' },
-  { text: 'Углеводы (г)', value: 'carbs' },
-];
-
-// Динамическое объединение заголовков
-const combinedHeaders = computed(() => {
-  // Добавляем KbzhuHeaders к userHeaders, исключая последний элемент ('Действия')
-  const kbzhuFields = [
-    'gender',
-    'bodyType',
-    'age',
-    'height',
-    'weight',
-    'goal',
-    'workoutsPerWeek',
-    'calories',
-    'extraCalories',
-    'proteins',
-    'fats',
-    'carbs',
-  ];
-
-  const kbzhuColumns = kbzhuFields.map((field) => ({
-    text: getHeaderText(field),
-    value: field,
-  }));
-
-  return [...userHeaders.slice(0, -1), ...kbzhuColumns, userHeaders[userHeaders.length - 1]];
-});
-
-// Функция для получения текстовых меток заголовков на русском языке
-const getHeaderText = (field: string): string => {
-  const mapping: Record<string, string> = {
-    gender: 'Пол',
-    bodyType: 'Телосложение',
-    age: 'Возраст',
-    height: 'Рост (см)',
-    weight: 'Вес (кг)',
-    goal: 'Цель',
-    workoutsPerWeek: 'Тренировок в неделю',
-    calories: 'Калории (ккал)',
-    extraCalories: 'Доп. Калории (ккал)',
-    proteins: 'Белки (г)',
-    fats: 'Жиры (г)',
-    carbs: 'Углеводы (г)',
-  };
-
-  return mapping[field] || field.charAt(0).toUpperCase() + field.slice(1);
-};
-
-// Обработка пользователей для отображения в таблице
-const processedUsers = computed(() => {
-  return filteredUsers.value.map((user) => {
-    // Извлекаем последнюю запись KbzhuHistory
-    const latestKbzhu = user.kbzhuHistory.reduce((latest, current) => {
-      return current.timestamp > (latest?.timestamp || 0) ? current : latest;
-    }, null as KbzhuHistoryEntry | null);
-
-    return {
-      ...user,
-      // Добавляем поля Kbzhu
-      gender: latestKbzhu ? latestKbzhu.formData.gender : '',
-      bodyType: latestKbzhu ? latestKbzhu.formData.bodyType : '',
-      age: latestKbzhu ? latestKbzhu.formData.age : '',
-      height: latestKbzhu ? latestKbzhu.formData.height : '',
-      weight: latestKbzhu ? latestKbzhu.formData.weight : '',
-      goal: latestKbzhu ? latestKbzhu.formData.goal : '',
-      workoutsPerWeek: latestKbzhu ? latestKbzhu.formData.workoutsPerWeek : '',
-      calories: latestKbzhu ? latestKbzhu.kbzhuResult.calories : '',
-      extraCalories: latestKbzhu ? latestKbzhu.kbzhuResult.extraCalories : '',
-      proteins: latestKbzhu ? latestKbzhu.kbzhuResult.proteins : '',
-      fats: latestKbzhu ? latestKbzhu.kbzhuResult.fats : '',
-      carbs: latestKbzhu ? latestKbzhu.kbzhuResult.carbs : '',
-    };
-  });
-});
-
-// Используем composable для API-запросов
 const { apiRequest } = useApi();
 
-// Фильтрация пользователей на основе введённого ID
+const users = ref<IUser[]>([]);
+const loading = ref(false);
+const saving = ref(false);
+const userError = ref<string|null>(null);
+
+// Для поиска / пагинации
+const searchId = ref('');
+const filteredUsers = ref<IUser[]>([]);
+const pagination = ref({ page: 1 });
+const pageCount = computed(() => Math.ceil(filteredUsers.value.length / 10));
+
+// Диалог + выбранный пользователь
+const userDialog = ref(false);
+const selectedUser = ref<IUser|null>(null);
+// editingUser — копия, которую редактируем
+const editingUser = ref<IUser|null>(null);
+
+// Текущая вкладка
+const activeTab = ref<string>('main');
+
+// Заголовки для таблиц
+const userHeaders = [
+  { text: 'Telegram ID', value: 'telegramId', width: 150 },
+  { text: 'Роль', value: 'role', width: 100 },
+  { text: 'Дата Добавления', value: 'dateAdded', width: 150 },
+  { text: 'Действия', value: 'actions', sortable: false, width: 100 },
+];
+
+const kbzhuHeaders = [
+  { text: 'Дата (timestamp)', value: 'timestamp', width: 140 },
+  { text: 'Данные формы', value: 'formData' },
+  { text: 'Результат КБЖУ', value: 'kbzhuResult' },
+  { text: 'Действия', value: 'actions', sortable: false, width: 80 },
+];
+
+const trainingHeaders = [
+  { text: 'Дата (timestamp)', value: 'timestamp', width: 140 },
+  { text: 'Данные формы', value: 'formData' },
+  { text: 'Действия', value: 'actions', sortable: false, width: 80 },
+];
+
+const roleItems = ['admin', 'freeUser', 'paidUser'];
+
+/** ====== Computed & Watch ====== */
 const computedFilteredUsers = computed(() => {
-  if (searchId.value.trim() === '') {
-    return users.value;
+  const search = searchId.value.trim();
+  if (!search) return users.value;
+  const idNum = parseInt(search);
+  if (!isNaN(idNum)) {
+    return users.value.filter(u => u.telegramId === idNum);
   }
-  const id = parseInt(searchId.value);
-  if (!isNaN(id)) {
-    return users.value.filter((user) => user.telegramId === id);
-  }
-  return users.value;
+  return users.value; // Или поиск по другим критериям
 });
 
-// Обновляем filteredUsers при изменении computedFilteredUsers
 watch(computedFilteredUsers, (newVal) => {
-  filteredUsers.value = newVal;
+  // При изменении фильтра сбрасываем пагинацию
+  pagination.value.page = 1;
+  filteredUsers.value = newVal.slice(0, 10);
 });
 
-// Получает информацию о пользователе напрямую из Telegram Bot API,
-// используя getChat?chat_id={telegramId}
-const fetchUserInfo = async (userId: number) => {
-  // Строим URL для запроса к Telegram Bot API
-  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_API_KEY}/getChat?chat_id=${userId}`;
-
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      // Если статус не 200, выдаём ошибку
-      throw new Error(`Telegram API ответил со статусом ${response.status}`);
+// Следим за сменой страницы
+watch(
+    () => pagination.value.page,
+    (newPage) => {
+      const start = (newPage - 1) * 10;
+      const end = start + 10;
+      filteredUsers.value = computedFilteredUsers.value.slice(start, end);
     }
+);
 
-    // Парсим JSON
-    const data: TelegramGetChatResponse = await response.json();
+/** ====== Методы ====== */
+function searchUser() {
+  // При любом вводе сбрасываем страницу
+  pagination.value.page = 1;
+}
 
-    // Если ответ валиден, возвращаем то, что пришло от Telegram
-    if (data.ok && data.result) {
-      return {
-        firstName: data.result.first_name ?? 'Неизвестно',
-        lastName: data.result.last_name ?? '',
-        username: data.result.username ?? 'unknown',
-      };
-    } else {
-      throw new Error('Неверный ответ от Telegram API');
-    }
-  } catch (error: any) {
-    console.error('Ошибка при получении данных пользователя из Telegram:', error);
-    throw new Error('Не удалось получить данные пользователя из Telegram.');
-  }
-};
+function formatDate(timestamp: number) {
+  if (!timestamp) return '—';
+  const date = new Date(timestamp * 1000); // если timestamp в секундах
+  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+function formatTimestamp(ts: number) {
+  if (!ts) return '—';
+  const date = new Date(ts); // тут предполагаем, что ts в мс
+  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+}
 
-// Функция для получения списка пользователей из бэкенда
-const fetchUsers = async () => {
-  loading.value = true;
-  userError.value = null;
+async function fetchUserInfo(telegramId: number) {
   try {
-    // Предполагается, что у вас есть эндпоинт GET /api/users
-    const data = await apiRequest('GET', 'users');
-    console.log('Полученные данные пользователей:', data);
-
-    // Проверяем, что data.users является массивом
-    if (data && Array.isArray(data.users)) {
-      users.value = data.users;
-    } else if (Array.isArray(data)) {
-      // Альтернативный случай, если API вернёт просто массив
-      users.value = data;
-    } else if (data && Array.isArray(data.data)) {
-      // Дополнительная проверка на наличие data.data
-      users.value = data.data;
-    } else {
-      throw new Error('Неизвестный формат данных от API');
-    }
-
-    filteredUsers.value = users.value;
-  } catch (err: any) {
-    console.error('Ошибка при загрузке пользователей:', err);
-    userError.value = 'Не удалось загрузить пользователей.';
-  } finally {
-    loading.value = false;
-  }
-};
-
-// Поиск пользователей по Telegram ID
-const searchUser = () => {
-  // Фильтрация происходит через computed
-};
-
-// При нажатии на иконку "глаз" загружаем информацию из Telegram
-const viewUser = async (user: User) => {
-  loading.value = true;
-  userError.value = null;
-  kbzhuLoading.value = true;
-  try {
-    const userInfo = await fetchUserInfo(user.telegramId);
-    // Обновляем выбранного пользователя с дополнительными данными
-    selectedUser.value = {
-      ...user,
-      firstName: userInfo.firstName,
-      lastName: userInfo.lastName,
-      username: userInfo.username,
-      // Здесь мы не выбираем только latestKbzhu, а оставляем всю историю
+    const key = useRuntimeConfig().public.telegramBotApiKey;
+    const url = `https://api.telegram.org/bot${key}/getChat?chat_id=${telegramId}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Telegram API вернул статус ${res.status}`);
+    const data: TelegramGetChatResponse = await res.json();
+    if (!data.ok || !data.result) return {};
+    return {
+      firstName: data.result.first_name,
+      lastName: data.result.last_name,
+      username: data.result.username,
     };
-    userDialog.value = true;
-  } catch (error: any) {
-    console.error('Ошибка при загрузке информации о пользователе:', error);
-    userError.value = error.message || 'Не удалось загрузить информацию о пользователе.';
+  } catch (err) {
+    console.error('fetchUserInfo Error:', err);
+    return {};
+  }
+}
+
+async function fetchUsers() {
+  loading.value = true;
+  userError.value = null;
+  try {
+    const data = await apiRequest<IApiUsersResponse>('GET', 'users');
+    users.value = data.users;
+    filteredUsers.value = users.value.slice(0, 10);
+    pagination.value.page = 1;
+  } catch (err: any) {
+    userError.value = 'Не удалось загрузить пользователей: ' + err.message;
   } finally {
     loading.value = false;
-    kbzhuLoading.value = false;
   }
-};
+}
 
-// Форматируем дату (timestamp в секундах) в вид "23 сентября 2024"
-const formatDate = (timestamp: number): string => {
-  const date = new Date(timestamp * 1000);
-  return date.toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-};
+function openUserDialog(user: IUser) {
+  userError.value = null;
+  loading.value = true;
+  fetchUserInfo(user.telegramId)
+      .then(info => {
+        // Создаём копию
+        editingUser.value = {
+          ...user,
+          firstName: info.firstName ?? user.firstName,
+          lastName: info.lastName ?? user.lastName,
+          username: info.username ?? user.username,
+        };
+        selectedUser.value = editingUser.value;
+        activeTab.value = 'main';
+        userDialog.value = true;
+      })
+      .catch(err => {
+        userError.value = `Ошибка при открытии пользователя: ${err.message}`;
+      })
+      .finally(() => {
+        loading.value = false;
+      });
+}
 
-// Форматируем timestamp в миллисекундах для KbzhuHistory
-const formatTimestamp = (timestamp: number): string => {
-  const date = new Date(timestamp);
-  return date.toLocaleDateString('ru-RU', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-};
-
-// Закрытие диалога пользователя
-const closeUserDialog = () => {
+function closeUserDialog() {
   userDialog.value = false;
   selectedUser.value = null;
-};
+  editingUser.value = null;
+}
 
-// Загрузка пользователей при монтировании компонента, только для администраторов
+async function saveUserChanges() {
+  if (!editingUser.value) return;
+  saving.value = true;
+  userError.value = null;
+  try {
+    const payload = {
+      role: editingUser.value.role,
+      // добавьте другие поля, если хотите редактировать
+    };
+    await apiRequest('PATCH', `users/${editingUser.value._id}`, payload);
+    // Обновляем в списке
+    const idx = users.value.findIndex(u => u._id === editingUser.value?._id);
+    if (idx !== -1 && editingUser.value) {
+      users.value[idx].role = editingUser.value.role;
+    }
+    closeUserDialog();
+  } catch (err: any) {
+    userError.value = 'Ошибка при сохранении: ' + err.message;
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function deleteUser(userId: string) {
+  if (!confirm('Удалить пользователя?')) return;
+  try {
+    await apiRequest('DELETE', `users/${userId}`);
+    users.value = users.value.filter(u => u._id !== userId);
+    filteredUsers.value = computedFilteredUsers.value.slice(0, 10);
+  } catch (err: any) {
+    userError.value = 'Не удалось удалить: ' + err.message;
+  }
+}
+
+async function deleteKbzhuEntry(kbzhuId?: string) {
+  if (!editingUser.value || !kbzhuId) return;
+  if (!confirm('Удалить запись из КБЖУ?')) return;
+  try {
+    await apiRequest('DELETE', `users/${editingUser.value._id}/kbzhu/${kbzhuId}`);
+    editingUser.value.kbzhuHistory = editingUser.value.kbzhuHistory?.filter(e => e._id !== kbzhuId);
+  } catch (err: any) {
+    userError.value = 'Ошибка при удалении КБЖУ: ' + err.message;
+  }
+}
+
+async function deleteTrainingEntry(trainId?: string) {
+  if (!editingUser.value || !trainId) return;
+  if (!confirm('Удалить запись из тренировок?')) return;
+  try {
+    await apiRequest('DELETE', `users/${editingUser.value._id}/training/${trainId}`);
+    editingUser.value.trainingHistory = editingUser.value.trainingHistory?.filter(e => e._id !== trainId);
+  } catch (err: any) {
+    userError.value = 'Ошибка при удалении тренировки: ' + err.message;
+  }
+}
+
+/** Хук onMounted */
 onMounted(() => {
   if (userStore.role === 'admin') {
-    fetchUsers().then(() => {
-      console.log('Combined Headers:', combinedHeaders.value);
-      console.log('Processed Users:', processedUsers.value);
-    });
+    fetchUsers();
   } else {
     userError.value = 'У вас нет доступа к этой странице.';
   }
@@ -481,102 +573,31 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Дополнительные стили для тёмной темы */
-.dark-background {
-  background-color: #121212 !important;
+/* Пример под тёмную тему Vuetify 3 + небольшие правки */
+.v-application .v-card,
+.v-application .v-dialog,
+.v-application .v-data-table {
+  background-color: #1e1e1e !important;
+  color: #fff !important;
 }
 
-/* Стили для кнопок */
-.gender-button,
-.group-button {
-  min-width: 45%;
+.v-application .v-toolbar-title {
+  font-weight: 600;
+  color: #fff;
 }
 
-.selected-button {
-  background-color: var(--v-primary-base);
-  color: white;
+.v-application .v-icon {
+  color: #fff;
 }
 
-/* Стили для ссылок */
-a {
+.v-application .v-tabs {
+  background-color: transparent;
+}
+.v-application .v-tab {
+  color: #fff;
+}
+.v-application .v-tab--selected {
   color: #1976d2;
-  text-decoration: none;
-}
-a:hover {
-  text-decoration: underline;
-}
-
-/* Стили для иконок */
-.v-icon {
-  margin-right: 4px;
-}
-
-/* Стили для таблицы */
-.v-data-table {
-  background-color: #1e1e1e;
-}
-
-.v-data-table-header th {
-  color: #fff;
-}
-
-.v-data-table tbody tr {
-  color: #fff;
-}
-
-.v-data-table .v-data-table__wrapper {
-  max-height: 400px; /* Ограничение высоты таблицы */
-}
-
-/* Стили для диалога */
-.v-dialog .v-card {
-  background-color: #1e1e1e;
-  color: #fff;
-}
-
-/* Стили для заголовка */
-.headline {
-  font-weight: bold;
-  color: #fff;
-}
-
-/* Стили для alert */
-.v-alert {
-  background-color: #d32f2f;
-  color: #fff;
-}
-
-/* Прочие стили */
-.my-4 {
-  margin-top: 16px;
-  margin-bottom: 16px;
-}
-
-.v-card {
-  /* Удаляем выравнивание элементов, чтобы контент отображался корректно */
-  display: block;
-}
-
-.chart-container {
-  max-width: 300px;
-  margin: 20px auto;
-}
-
-.rounded-bottom-sheet {
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
-  overflow: hidden;
-}
-
-.text-center .v-btn {
-  min-width: 150px;
-}
-
-.v-btn .v-icon {
-  margin-right: 0;
-}
-
-.dragging {
-  opacity: 0.5;
+  font-weight: 500;
 }
 </style>

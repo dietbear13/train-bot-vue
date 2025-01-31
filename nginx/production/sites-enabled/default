@@ -10,6 +10,11 @@ map $sent_http_content_type $expires {
     default                     off; # set this to your needs
 }
 
+map $http_authorization $block_public_auth {
+  default 1;
+  "jjk37Gj34HKVvd8234gFcvKqw67fAw" 0;
+}
+
 server {
     listen       80;
     server_name  fitnesstgbot.ru www.fitnesstgbot.ru;
@@ -55,8 +60,12 @@ server {
     }
 
     location /api/ {
+        if ($block_public_auth) {
+            return 403;
+        }
         try_files $uri @api;
     }
+
 
     location / {
         expires $expires;
@@ -108,6 +117,7 @@ server {
         proxy_set_header X-Real-IP          $remote_addr;
         proxy_set_header X-Forwarded-For    $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto  $scheme;
+        proxy_cache                         api-cache;
         proxy_ignore_headers                Cache-Control;
         proxy_read_timeout                  1m;
         proxy_connect_timeout               1m;

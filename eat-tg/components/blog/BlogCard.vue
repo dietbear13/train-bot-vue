@@ -7,9 +7,9 @@
         placeholder="Поиск..."
         hide-details
         dense
+        width="100%"
         prepend-inner-icon="mdi-magnify"
         class="ma-2"
-        style="max-width: 200px;"
     />
 
     <!-- Перебираем посты и выводим карточки -->
@@ -25,22 +25,22 @@
             max-width="600"
             style="margin: 0 auto; border-radius: 16px"
         >
-          <v-card-title>
+          <v-card-title class="text-truncate text-break">
             {{ post.title }}
           </v-card-title>
 
-          <v-card-text class="text-justify">
-            {{ post.text }}
+          <!-- Оборачиваем контент в контейнер для применения глобальных стилей -->
+          <v-card-text>
+            <div class="blog-content" v-html="post.text"></div>
           </v-card-text>
 
-          <v-card-actions>
+          <v-card-actions class="text-right">
             <!-- Кнопка лайка -->
             <v-btn
                 :color="post.userLiked ? 'red darken-3' : 'grey darken-1'"
                 variant="tonal"
                 @click="toggleLike(post.id)"
                 class="ma-2"
-                right
             >
               <v-icon class="mr-1" left>
                 mdi-heart
@@ -53,6 +53,7 @@
     </v-row>
   </v-col>
 </template>
+
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
@@ -136,30 +137,6 @@ onMounted(async () => {
   }
 })
 
-// ======== (Закомментировано) Пример массива постов (были в тестовом варианте) =====
-// const posts = ref<Post[]>([
-//   {
-//     id: 1,
-//     title: 'Первая статья',
-//     text: 'Здесь будет основной текст статьи (пример: 800-1300 слов)...',
-//     likesCount: 10,
-//     userLiked: false,
-//   },
-//   {
-//     id: 2,
-//     title: 'Вторая статья',
-//     text: 'Еще один текст небольшой статьи...',
-//     likesCount: 5,
-//     userLiked: false,
-//   },
-//   {
-//     id: 3,
-//     title: 'Третья статья',
-//     text: 'Заготовка для демонстрации...',
-//     likesCount: 2,
-//     userLiked: false,
-//   },
-// ])
 
 const filteredPosts = computed(() => {
   if (!searchQuery.value) return posts.value
@@ -224,7 +201,23 @@ async function sendLikeToServer(
 </script>
 
 <style scoped>
-.text-justify {
-  text-align: justify;
+
+/* Стилизация нумерованных списков с эмодзи */
+.custom-ol {
+  counter-reset: custom-counter;
+  list-style: none;
+  padding-left: 1.5em;
+}
+
+.custom-ol li::before {
+  counter-increment: custom-counter;
+  content: counter(custom-counter) "️⃣ ";
+  margin-right: 0.5em;
+}
+
+/* Стилизация маркированных списков с небольшими отступами */
+.custom-ul {
+  list-style: disc;
+  padding-left: 1.5em;
 }
 </style>

@@ -8,6 +8,7 @@ const primaryBaseURL = 'https://fitnesstgbot.ru/api/'
 const axiosInstance: AxiosInstance = axios.create({
     baseURL: primaryBaseURL,
     timeout: 15000,
+    headers: {"Authorization": `jjk37Gj34HKVvd8234gFcvKqw67fAw`},
 })
 
 

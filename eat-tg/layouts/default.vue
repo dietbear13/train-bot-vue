@@ -19,8 +19,9 @@
           :value="item.name"
           @click="navigate(item.path)"
           icon
+
       >
-        <v-icon size="x-large">{{ item.icon }}</v-icon>
+        <v-icon size="large" :class="{ 'selected-icon': currentTab === item.name }">{{ item.icon }}</v-icon>
       </v-btn>
     </v-bottom-navigation>
   </v-app>
@@ -143,5 +144,11 @@ watch(
   left: 0;
   right: 0;
   z-index: 10;
+}
+
+/* Новый стиль для увеличенной иконки выбранного пункта */
+.selected-icon {
+  font-size: 40px; /* Увеличьте значение по необходимости */
+  transition: font-size 0.2s ease;
 }
 </style>

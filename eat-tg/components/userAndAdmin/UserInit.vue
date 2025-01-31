@@ -6,9 +6,9 @@
 
 <script setup lang="ts">
 import { onMounted } from 'vue';
-import { useUserStore } from '~/stores/userStore';
-import { useApi } from '~/composables/useApi';
-import { useSubscription } from '~/composables/useSubscription';
+import { useUserStore } from '../../stores/userStore';
+import { useApi } from '../../composables/useApi';
+import { useSubscription } from '../../composables/useSubscription';
 
 const { apiRequest } = useApi();
 const { checkSubscription } = useSubscription();

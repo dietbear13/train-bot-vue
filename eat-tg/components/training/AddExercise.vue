@@ -35,7 +35,7 @@
 
         >
           <v-list-item class="mx-0">
-            <v-list-item-title class="exercise-title">
+            <v-list-item-title class="text-truncate text-break">
               {{ formatExerciseName(exercise.name) }}
             </v-list-item-title>
             <v-list-item-subtitle class="exercise-subtitle">
@@ -95,11 +95,11 @@
 
 <script lang="ts">
 import { defineComponent, ref, computed, watch } from 'vue';
-import { useExerciseFilter } from '~/composables/useExerciseFilter';
-import { useApi } from '~/composables/useApi'; // Импортируем общий API-сервис
-import type { Exercise, WorkoutResult, RepetitionLevels } from '~/composables/types';
-import ExerciseInfo from '~/components/training/ExerciseInfo.vue';
-import BottomSheetWithClose from '~/components/shared/BottomSheetWithClose.vue';
+import { useExerciseFilter } from '../../composables/useExerciseFilter';
+import { useApi } from '../../composables/useApi'; // Импортируем общий API-сервис
+import type { Exercise, WorkoutResult, RepetitionLevels } from '../../composables/types';
+import ExerciseInfo from '../../components/training/ExerciseInfo.vue';
+import BottomSheetWithClose from '../../components/shared/BottomSheetWithClose.vue';
 
 export default defineComponent({
   name: 'AddExercise',
@@ -325,14 +325,6 @@ export default defineComponent({
 .rounded-t-xl {
   border-top-left-radius: 16px;
   border-top-right-radius: 16px;
-}
-
-.exercise-title {
-  white-space: normal; /* Разрешаем перенос текста */
-  overflow: hidden;
-  text-overflow: ellipsis; /* Добавить многоточие при переполнении */
-  word-break: break-word; /* Перенос слов при необходимости */
-  overflow-wrap: break-word; /* Перенос длинных слов */
 }
 
 .exercise-subtitle {

@@ -35,10 +35,10 @@
             :isGenerating="isGenerating"
             :errorMessages="errorMessages"
             :isAnimating="isAnimating"
-        @update:gender="gender = $event"
-        @update:selectedSplitType="selectedSplitType = $event"
-        @update:selectedSplitId="onSelectSplitId"
-        @generateSplitWorkout="generateSplitWorkout"
+            @update:gender="gender = $event"
+            @update:selectedSplitType="selectedSplitType = $event"
+            @update:selectedSplitId="onSelectSplitId"
+            @generateSplitWorkout="generateSplitWorkout"
         />
 
         <!-- Компонент результата (сплит на неделю) -->
