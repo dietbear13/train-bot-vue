@@ -1,4 +1,3 @@
-<!-- pages/landingsOutside/donatStars.vue -->
 <template>
   <v-container>
     <v-row justify="center">
@@ -44,14 +43,11 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-// Импортируем наш composable
-import { useApi } from '~/composables/useApi'
+import { useApi } from '../../composables/useApi'
 
 /**
- * Здесь предположим, что userId вы получаете
- * либо из initData Telegram WebApp,
- * либо каким-то другим образом.
- * В примере захардкожено:
+ * Пример: userId можно получить из данных Telegram WebApp или другим способом.
+ * В данном примере используется захардкоженное значение.
  */
 const userId = ref<number>(123456789)
 const stars = ref<number>(1)
@@ -59,12 +55,12 @@ const error = ref<string>('')
 const success = ref<string>('')
 const isLoading = ref<boolean>(false)
 
-// Регистрируем Telegram WebApp (если нужно)
+// Инициализация Telegram WebApp
 const tgWebApp = ref<any>(null)
-
 onMounted(() => {
-  if (window.Telegram?.WebApp) {
-    tgWebApp.value = window.Telegram.WebApp
+  const telegram = (window as any).Telegram
+  if (telegram?.WebApp) {
+    tgWebApp.value = telegram.WebApp
     tgWebApp.value.ready()
     console.log('Telegram WebApp инициализирован:', tgWebApp.value)
   } else {
@@ -73,8 +69,14 @@ onMounted(() => {
   }
 })
 
+// Получаем функцию для API-запросов
 const { apiRequest } = useApi()
 
+/**
+ * Функция для обработки оплаты:
+ * 1. Отправляем POST-запрос на сервер для генерации ссылки на инвойс.
+ * 2. Получаем invoiceLink и открываем его через Telegram WebApp (или в новой вкладке).
+ */
 const handleDonateStars = async () => {
   error.value = ''
   success.value = ''
@@ -87,27 +89,39 @@ const handleDonateStars = async () => {
 
   isLoading.value = true
   try {
-    /**
-     * Отправляем POST-запрос на сервер
-     * Ваш useApi уже настроен на базовый URL 'https://fitnesstgbot.ru/api/'
-     * поэтому здесь пишем 'donations/stars' без /api в начале.
-     */
+    // Отправляем запрос на сервер (базовый URL уже задан в useApi)
     const response = await apiRequest<{
-      message: string;
-      invoiceLink: string;
+      message: string
+      invoiceLink: string
     }>('POST', 'donations/stars', {
       userId: userId.value,
-      stars: stars.value
+      stars: stars.value,
     })
 
-    // Проверяем, что ссылка получена
     if (!response || !response.invoiceLink) {
       throw new Error('Ссылка на инвойс не получена')
     }
 
-    // Открываем инвойс в новой вкладке (или в том же WebView)
-    window.open(response.invoiceLink, '_blank')
-    success.value = 'Ссылка на оплату получена! Открываем...'
+    // Используем полученную ссылку на инвойс
+    const invoiceLink = response.invoiceLink
+    console.log('Полученная ссылка на инвойс:', invoiceLink)
+
+    // Если Telegram WebApp поддерживает openInvoice, используем его для открытия платежного окна
+    if (tgWebApp.value && typeof tgWebApp.value.openInvoice === 'function') {
+      tgWebApp.value.openInvoice(invoiceLink)
+
+      // (Опционально) обработка события закрытия инвойса
+      tgWebApp.value.onEvent('invoiceClosed', (data: any) => {
+        console.log('Событие закрытия инвойса:', data)
+        // Здесь можно добавить дополнительную логику после оплаты
+      })
+
+      success.value = 'Ссылка на оплату получена! Открываем инвойс в Telegram...'
+    } else {
+      // Фолбэк: открываем ссылку в новой вкладке
+      window.open(invoiceLink, '_blank')
+      success.value = 'Ссылка на оплату получена! Открываем в новой вкладке...'
+    }
   } catch (err: any) {
     console.error('Ошибка при получении ссылки на инвойс:', err)
     error.value = err?.message || 'Произошла ошибка при запросе к серверу.'

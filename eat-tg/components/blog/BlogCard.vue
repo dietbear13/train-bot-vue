@@ -10,7 +10,7 @@
         dense
         width="'100%'"
         prepend-inner-icon="mdi-magnify"
-        class="mx-0 mb-2 shrink"
+        class="ma-0 shrink"
     />
 
     <!-- Перебираем посты и выводим карточки -->
@@ -26,22 +26,23 @@
             outlined
             max-width="600"
         >
-          <v-card-title class="text-truncate text-break">
+          <v-card-text class="text-h6 blog-content d-block px-4 pt-4 pb-0">
             {{ post.title }}
-          </v-card-title>
-
-          <v-card-text>
-            <!-- Просто выводим HTML контент -->
-            <div class="blog-content" v-html="post.text"></div>
           </v-card-text>
 
-          <v-card-actions class="text-right">
+          <v-card-text class="pb-0">
+            <!-- Просто выводим HTML контент -->
+            <div class="blog-content d-block" v-html="post.text"></div>
+          </v-card-text>
+
+          <v-card-actions>
             <!-- Кнопка лайка -->
+            <v-spacer></v-spacer>
             <v-btn
                 :color="post.userLiked ? 'red darken-3' : 'grey darken-1'"
                 variant="tonal"
                 @click="toggleLike(post.id)"
-                class="ma-2"
+                class="mx-2 mb-2 mt-0"
             >
               <v-icon class="mr-1" left>mdi-heart</v-icon>
               {{ post.likesCount }}

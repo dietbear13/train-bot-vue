@@ -51,7 +51,7 @@
             >
               <v-btn
                   :value="option"
-                  class="group-button mx-auto my-1 px-2"
+                  class="group-button mx-auto my-1 px-2 text-break"
                   style="min-width: 100%;"
                   :class="{ 'selected-button': muscleGroup === option }"
                   @click="selectMuscleGroup(option)"
@@ -80,7 +80,7 @@
             >
               <v-btn
                   :value="option"
-                  class="group-button wrap-text mx-auto my-1 py-1 px-2"
+                  class="group-button text-break mx-auto my-1 py-1 px-2"
                   style="min-width: 100%;"
                   :class="{ 'selected-button': muscleSubgroup === option }"
                   @click="selectMuscleSubgroup(option)"

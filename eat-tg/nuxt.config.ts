@@ -34,6 +34,7 @@ export default defineNuxtConfig({
       // Если нужно и на клиенте
       telegramBotApiKey: process.env.TELEGRAM_BOT_API_KEY || '',
       tinyMceKey: process.env.TinyMCE_KEY || '',
+      kassaKey: process.env.KASSA_KEY || '',
     },
   },
 
