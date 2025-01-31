@@ -2,38 +2,31 @@
   <v-container>
     <v-row justify="center">
       <v-col cols="12" md="8">
-        <v-card class="pa-5" elevation="4">
+        <v-card class="pa-2" elevation="4">
           <v-card-title class="justify-center">
-            <v-icon large color="primary">mdi-star</v-icon>
-            <span class="ml-3">Отправить Stars</span>
+            <v-icon large color="#ffd700">mdi-star</v-icon>
+            <span class="ml-1">Донаты в Telegram Stars</span>
           </v-card-title>
-          <v-card-subtitle class="text-center">
-            Поддержите наш проект, отправив Telegram Stars!
-          </v-card-subtitle>
+          <v-card-text>
+            Telegram Stars можно купить через Apple Pay на МТС или за криптовалюту TON на <a target="_blank" href="https://fragment.com/">Fragment</a>, который требует верификации по паспорту.
+          </v-card-text>
           <v-card-text>
             <v-form @submit.prevent="handleDonateStars">
               <v-text-field
                   v-model="stars"
                   label="Количество звёзд"
                   type="number"
-                  required
-                  variant="outlined"
-                  min="1"
-                  :rules="[v => v >= 1 || 'Минимум звёзд — 1']"
-                  prepend-icon="mdi-star"
+                  inputmode="numeric"
+              pattern="[0-9]*"
+              required
+              variant="outlined"
+              min="1"
+              :rules="[v => v >= 1 || 'Минимум звёзд — 1']"
               />
               <v-btn color="primary" type="submit" :loading="isLoading" block>
-                Отправить звёзды
+                Отправить ⭐
               </v-btn>
             </v-form>
-
-            <v-alert v-if="error" type="error" dismissible class="mt-4">
-              {{ error }}
-            </v-alert>
-
-            <v-alert v-if="success" type="success" dismissible class="mt-4">
-              {{ success }}
-            </v-alert>
           </v-card-text>
         </v-card>
       </v-col>
@@ -62,7 +55,6 @@ onMounted(() => {
   if (telegram?.WebApp) {
     tgWebApp.value = telegram.WebApp
     tgWebApp.value.ready()
-    console.log('Telegram WebApp инициализирован:', tgWebApp.value)
   } else {
     error.value = 'Этот функционал доступен только в Telegram.'
     console.error('Telegram WebApp недоступен.')
@@ -83,7 +75,6 @@ const handleDonateStars = async () => {
 
   if (stars.value < 1) {
     error.value = 'Минимальное количество звёзд — 1.'
-    console.error('Недопустимое количество звёзд:', stars.value)
     return
   }
 
@@ -104,7 +95,6 @@ const handleDonateStars = async () => {
 
     // Используем полученную ссылку на инвойс
     const invoiceLink = response.invoiceLink
-    console.log('Полученная ссылка на инвойс:', invoiceLink)
 
     // Если Telegram WebApp поддерживает openInvoice, используем его для открытия платежного окна
     if (tgWebApp.value && typeof tgWebApp.value.openInvoice === 'function') {
@@ -112,7 +102,6 @@ const handleDonateStars = async () => {
 
       // (Опционально) обработка события закрытия инвойса
       tgWebApp.value.onEvent('invoiceClosed', (data: any) => {
-        console.log('Событие закрытия инвойса:', data)
         // Здесь можно добавить дополнительную логику после оплаты
       })
 
@@ -123,7 +112,6 @@ const handleDonateStars = async () => {
       success.value = 'Ссылка на оплату получена! Открываем в новой вкладке...'
     }
   } catch (err: any) {
-    console.error('Ошибка при получении ссылки на инвойс:', err)
     error.value = err?.message || 'Произошла ошибка при запросе к серверу.'
   } finally {
     isLoading.value = false
