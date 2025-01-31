@@ -1,8 +1,7 @@
-<!-- AdminInfo.vue (Vuetify 3, Nuxt 3) -->
+<!-- AdminInfo.vue (Vuetify 3, Nuxt 3, с новым столбцом "TG Username") -->
 <template>
   <v-container fluid>
     <v-card class="pa-4">
-
       <!-- Заголовок и кнопка обновления -->
       <v-app-bar color="transparent" flat>
         <v-toolbar-title>Админ-панель: список пользователей</v-toolbar-title>
@@ -272,7 +271,6 @@
       >
         {{ userError }}
       </v-alert>
-
     </v-card>
   </v-container>
 </template>
@@ -323,6 +321,7 @@ interface IBlogLike {
   date: number;
 }
 
+/** Добавляем telegramUsername, чтобы хранить результирующий @username из Telegram API */
 interface IUser {
   _id: string;
   telegramId: number;
@@ -335,6 +334,7 @@ interface IUser {
   trainingHistory?: ITrainingHistory[];
   referrals?: string[];
   blogLikes?: IBlogLike[];
+  telegramUsername?: string; // Добавили поле
 }
 
 interface IApiUsersResponse {
@@ -375,9 +375,14 @@ const editingUser = ref<IUser|null>(null);
 // Текущая вкладка
 const activeTab = ref<string>('main');
 
-// Заголовки для таблиц
+/** Обновляем заголовки: добавляем новый столбец для вывода @username */
 const userHeaders = [
   { text: 'Telegram ID', value: 'telegramId', width: 150 },
+  {
+    text: 'TG Username',   // название столбца
+    value: 'telegramUsername', // свойство у пользователя
+    width: 150
+  },
   { text: 'Роль', value: 'role', width: 100 },
   { text: 'Дата Добавления', value: 'dateAdded', width: 150 },
   { text: 'Действия', value: 'actions', sortable: false, width: 100 },
@@ -406,7 +411,7 @@ const computedFilteredUsers = computed(() => {
   if (!isNaN(idNum)) {
     return users.value.filter(u => u.telegramId === idNum);
   }
-  return users.value; // Или поиск по другим критериям
+  return users.value; // Или расширить поиск по другим критериям
 });
 
 watch(computedFilteredUsers, (newVal) => {
@@ -438,18 +443,32 @@ function formatDate(timestamp: number) {
 }
 function formatTimestamp(ts: number) {
   if (!ts) return '—';
-  const date = new Date(ts); // тут предполагаем, что ts в мс
+  const date = new Date(ts); // предполагаем, что ts в мс
   return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
+/** Метод для запроса инфы по одному Telegram ID */
 async function fetchUserInfo(telegramId: number) {
+  const runtimeConfig = useRuntimeConfig();
+  const key = runtimeConfig.public.telegramBotApiKey;
+
+  // Проверим, что ключ считался
+  if (!key) {
+    console.error('TELEGRAM_BOT_API_KEY отсутствует или не передан в Nuxt!');
+    return {};
+  }
+
+  const url = `https://api.telegram.org/bot${key}/getChat?chat_id=${telegramId}`;
+
   try {
-    const key = useRuntimeConfig().public.telegramBotApiKey;
-    const url = `https://api.telegram.org/bot${key}/getChat?chat_id=${telegramId}`;
     const res = await fetch(url);
-    if (!res.ok) throw new Error(`Telegram API вернул статус ${res.status}`);
+    if (!res.ok) {
+      throw new Error(`Telegram API вернул статус ${res.status}`);
+    }
     const data: TelegramGetChatResponse = await res.json();
-    if (!data.ok || !data.result) return {};
+    if (!data.ok || !data.result) {
+      return {};
+    }
     return {
       firstName: data.result.first_name,
       lastName: data.result.last_name,
@@ -461,12 +480,28 @@ async function fetchUserInfo(telegramId: number) {
   }
 }
 
+/**
+ * Загружаем пользователей с бэкенда, затем
+ * в цикле запрашиваем их username у Telegram
+ * и сохраняем в поле user.telegramUsername = '@username'.
+ */
 async function fetchUsers() {
   loading.value = true;
   userError.value = null;
   try {
+    // 1. Получаем список пользователей
     const data = await apiRequest<IApiUsersResponse>('GET', 'users');
     users.value = data.users;
+
+    // 2. Запрашиваем Telegram usernames для всех (параллельно или по очереди)
+    const requests = users.value.map(async (user) => {
+      const info = await fetchUserInfo(user.telegramId);
+      // Если info.username есть, добавим "@" перед ним
+      user.telegramUsername = info.username ? `@${info.username}` : '';
+    });
+    await Promise.all(requests);
+
+    // 3. Заполняем таблицу
     filteredUsers.value = users.value.slice(0, 10);
     pagination.value.page = 1;
   } catch (err: any) {
@@ -479,9 +514,9 @@ async function fetchUsers() {
 function openUserDialog(user: IUser) {
   userError.value = null;
   loading.value = true;
+  // Здесь уже отдельный запрос для одной карточки (если нужно)
   fetchUserInfo(user.telegramId)
       .then(info => {
-        // Создаём копию
         editingUser.value = {
           ...user,
           firstName: info.firstName ?? user.firstName,
@@ -565,6 +600,7 @@ async function deleteTrainingEntry(trainId?: string) {
 /** Хук onMounted */
 onMounted(() => {
   if (userStore.role === 'admin') {
+    // При загрузке компонента сразу получаем всех пользователей и их TG usernames
     fetchUsers();
   } else {
     userError.value = 'У вас нет доступа к этой странице.';
