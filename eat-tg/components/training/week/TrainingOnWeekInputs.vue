@@ -37,7 +37,6 @@
       <v-card-text class="pa-1">
         <v-slide-group
             v-model="formData.goal"
-            show-arrows
             class="flex-nowrap"
             center-active
             mandatory

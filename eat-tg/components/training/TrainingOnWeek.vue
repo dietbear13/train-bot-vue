@@ -1,6 +1,5 @@
 <!-- training/TrainingOnWeek.vue -->
 <template>
-  <div>
     <!-- Проверка роли (roleLoading) -->
     <div v-if="roleLoading">
       <v-skeleton-loader type="ossein" height="60px" class="mx-auto" />
@@ -87,7 +86,6 @@
         v-model="showExerciseInfo"
         :exercise="selectedExercise"
     />
-  </div>
 </template>
 
 <script lang="ts">

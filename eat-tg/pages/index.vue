@@ -39,13 +39,13 @@
     </v-tabs>
 
     <v-tabs-window class="mt-2" v-model="activeTab">
-      <v-tabs-window-item>
+      <v-tabs-window-item class="pa-0" style="background-color: #121212;">
         <TrainingOnWeek />
       </v-tabs-window-item>
-      <v-tabs-window-item>
+      <v-tabs-window-item class="pa-0"  style="background-color: #121212;">
         <TrainingByMuscles />
       </v-tabs-window-item>
-      <v-tabs-window-item>
+      <v-tabs-window-item class="pa-0"  style="background-color: #121212;">
         <ExerciseSearch />
       </v-tabs-window-item>
     </v-tabs-window>

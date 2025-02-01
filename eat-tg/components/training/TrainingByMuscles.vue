@@ -1,8 +1,15 @@
 <!--/components/nutrition/TrainingByMuscles.vue-->
 <template>
-  <v-form @submit.prevent="generateWorkout">
+  <v-form
+      @submit.prevent="generateWorkout"
+      style="background-color: #121212;"
+  >
     <!-- Выбор пола пользователя -->
-    <v-card class="mb-2 dark-background" variant="tonal">
+    <v-card
+        class="mb-2 dark-background"
+        variant="tonal"
+        style="background-color: #121212;"
+    >
       <v-card-text class="pa-1">
         <v-slide-group
             v-model="gender"
@@ -32,7 +39,11 @@
     </v-card>
 
     <!-- Выбор основной мышечной группы -->
-    <v-card class="my-2 dark-background pa-3" variant="tonal">
+    <v-card
+        class="my-2 dark-background pa-3"
+        variant="tonal"
+        style="background-color: #121212;"
+    >
       <v-card-text class="pa-1">
         <template v-if="isDataLoading">
           <v-row>
@@ -69,7 +80,11 @@
 
     <!-- Выбор подгруппы мышц -->
     <template v-if="!isDataLoading && muscleSubgroups.length > 0">
-      <v-card class="my-2 dark-background pa-3" variant="tonal">
+      <v-card
+          class="my-2 dark-background pa-3"
+          variant="tonal"
+          style="background-color: #121212;"
+      >
         <v-card-text class="pa-1">
           <v-row>
             <v-col

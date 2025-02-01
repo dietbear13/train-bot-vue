@@ -1,6 +1,8 @@
 <!-- components/ExerciseSearch.vue -->
 <template>
-  <div>
+  <div
+      style="background-color: #121212"
+  >
     <!-- Поисковая строка -->
     <v-text-field
         v-model="searchQuery"
