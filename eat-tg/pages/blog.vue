@@ -1,4 +1,4 @@
-<!-- pages/index.vue -->
+<!-- pages/blog.vue -->
 <template>
   <v-app>
     <v-app-bar color="primary" dark elevated>

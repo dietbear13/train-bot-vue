@@ -18,6 +18,7 @@ import analyticsMainRoutes from './routes/analytics/analyticsMain';
 import blogMainRoutes from './routes/blogMain';
 import starsRoutes from './routes/donations/stars'
 import adminUsersEdit from './routes/adminUsersEdit'
+import dietsListRoutes from './routes/dietsList'
 
 // Импортируем НОВЫЙ маршрут для лайков блога
 import blogLikesRoutes from './routes/blogLikes';
@@ -77,6 +78,7 @@ app.use('/api', blogLikesRoutes);
 app.use('/api', referralRouter);
 app.use('/api', starsRoutes);
 app.use('/api', adminUsersEdit);
+app.use('/api', dietsListRoutes);
 
 // Запускаем сервер
 app.listen(port, () => {

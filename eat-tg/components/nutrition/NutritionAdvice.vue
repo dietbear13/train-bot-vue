@@ -1,71 +1,98 @@
 <!-- components/nutrition/NutritionAdvice.vue -->
 <template>
-  <div class="nutrition-advice" style="border-radius: 16px">
-    <v-card style="border-radius: 16px">
-      <v-card-title class="text-h5 font-weight-bold">
-        Примеры питания
-      </v-card-title>
-      <v-card-text>
-        Ниже вы найдёте готовые варианты рационов для мужчин и женщин под разные цели,
-        а также советы по питанию до и после тренировки.
-      </v-card-text>
+  <!-- Заворачиваем в <v-app>, чтобы сохранить логику, аналогичную pages/blog.vue -->
+  <v-app>
+    <!-- Верхняя панель с заголовком и кнопкой админки (только для администратора) -->
+    <v-app-bar color="primary" dark elevated>
+      <v-toolbar-title>Рационы питания</v-toolbar-title>
 
-      <v-expansion-panels multiple>
-        <v-expansion-panel
-            v-for="(section, index) in allSections"
-            :key="index"
-        >
-          <v-expansion-panel-title class="text-h6" color="#2f4f4f">
-            {{ section.title }}
-          </v-expansion-panel-title>
-          <v-expansion-panel-text>
-            <p v-if="section.description">
-              {{ section.description }}
-            </p>
+      <v-btn
+          v-if="isAdmin"
+          color="secondary"
+          class="ma-2"
+          @click="toggleAdmin"
+      >
+        {{ showAdminPanel ? 'Закрыть админку' : 'Открыть админку' }}
+      </v-btn>
+    </v-app-bar>
 
-            <v-row class="py-2" dense>
-              <v-col
-                  v-for="(item, i) in section.items"
-                  :key="i"
-                  cols="12"
-                  md="6"
-                  class="mb-2 d-flex"
-              >
-                <v-card outlined variant="tonal" class="w-100" style="border-radius: 16px">
-                  <v-card-title>{{ item.title }}</v-card-title>
-                  <v-card-text v-if="item.shortDescription">
-                    {{ item.shortDescription }}
-                  </v-card-text>
-                  <v-card-actions>
-                    <v-spacer></v-spacer>
-                    <v-btn color="primary" @click="openBottomSheet(item)">
-                      Пример рациона
-                    </v-btn>
-                  </v-card-actions>
-                </v-card>
-              </v-col>
-            </v-row>
-          </v-expansion-panel-text>
-        </v-expansion-panel>
-      </v-expansion-panels>
-    </v-card>
+    <v-main>
+      <v-container class="py-4">
+        <!-- Если включён режим админки, показываем DietsAdmin -->
+        <DietsAdmin v-if="showAdminPanel" />
+        <!-- Иначе показываем нашу страницу с советами по питанию -->
+        <div v-else>
+          <div class="nutrition-advice" style="border-radius: 16px">
+            <v-card style="border-radius: 16px">
+              <v-card-title class="text-h5 font-weight-bold">
+                Примеры питания
+              </v-card-title>
+              <v-card-text>
+                Ниже вы найдёте готовые варианты рационов для мужчин и женщин под разные цели,
+                а также советы по питанию до и после тренировки.
+              </v-card-text>
 
-    <!-- Модальное окно (BottomSheet) для подробного просмотра -->
-    <BottomSheetWithClose
-        v-model="bottomSheet"
-        :title="selectedItem?.title"
-    >
-      <div v-html="formattedContent" class="py-2 px-4"></div>
-    </BottomSheetWithClose>
+              <v-expansion-panels multiple>
+                <v-expansion-panel
+                    v-for="(section, index) in allSections"
+                    :key="index"
+                >
+                  <v-expansion-panel-title class="text-h6" color="#2f4f4f">
+                    {{ section.title }}
+                  </v-expansion-panel-title>
+                  <v-expansion-panel-text>
+                    <p v-if="section.description">
+                      {{ section.description }}
+                    </p>
 
-    <ReferralLink />
-  </div>
+                    <v-row class="py-2" dense>
+                      <v-col
+                          v-for="(item, i) in section.items"
+                          :key="i"
+                          cols="12"
+                          md="6"
+                          class="mb-2 d-flex"
+                      >
+                        <v-card outlined variant="tonal" class="w-100" style="border-radius: 16px">
+                          <v-card-title>{{ item.title }}</v-card-title>
+                          <v-card-text v-if="item.shortDescription">
+                            {{ item.shortDescription }}
+                          </v-card-text>
+                          <v-card-actions>
+                            <v-spacer></v-spacer>
+                            <v-btn color="primary" @click="openBottomSheet(item)">
+                              Пример рациона
+                            </v-btn>
+                          </v-card-actions>
+                        </v-card>
+                      </v-col>
+                    </v-row>
+                  </v-expansion-panel-text>
+                </v-expansion-panel>
+              </v-expansion-panels>
+            </v-card>
+
+            <!-- Модальное окно (BottomSheet) для подробного просмотра -->
+            <BottomSheetWithClose
+                v-model="bottomSheet"
+                :title="selectedItem?.title"
+            >
+              <div v-html="formattedContent" class="py-2 px-4"></div>
+            </BottomSheetWithClose>
+
+            <!-- <ReferralLink /> если нужно -->
+          </div>
+        </div>
+      </v-container>
+    </v-main>
+  </v-app>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import BottomSheetWithClose from '../../components/shared/BottomSheetWithClose.vue';
-import ReferralLink from '../../components/shared/ReferralLink.vue';
+import { useUserStore } from '~/stores/userStore'; // путь скорректируйте под свой проект
+import DietsAdmin from '../userAndAdmin/DietsAdmin.vue';
 
 /** Структуры данных */
 interface NutritionExample {
@@ -83,7 +110,7 @@ interface NutritionSection {
 /** Примерные данные для аккордеона */
 const allSections = ref<NutritionSection[]>([
   {
-    title: 'Мужчинам',
+    title: '!!Мужчинам',
     description: 'Подборка рационов с учётом мужского метаболизма и энергозатрат.',
     items: [
       {
@@ -118,7 +145,7 @@ const allSections = ref<NutritionSection[]>([
     ]
   },
   {
-    title: 'Женщинам',
+    title: '!!Женщинам',
     description: 'Примеры рационов для женского организма.',
     items: [
       {
@@ -191,6 +218,15 @@ const formattedContent = computed(() => {
       .replace(/<br><ul>/g, '<ul>')
       .replace(/<br>/g, '<p style="margin-left: 20px;">')
 })
+
+/** Управление режимом админки */
+const userStore = useUserStore()
+const isAdmin = computed(() => userStore.role === 'admin')
+const showAdminPanel = ref(false)
+
+function toggleAdmin() {
+  showAdminPanel.value = !showAdminPanel.value
+}
 </script>
 
 <style scoped>
