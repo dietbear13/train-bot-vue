@@ -62,7 +62,10 @@
 
     <!-- Если данных нет -->
     <v-card-text v-else>
-      <p>Данные о КБЖУ не найдены.</p>
+      <p>Чтобы отобразились данные, сделайте расчёт в калькуляторе.</p>
+      <v-btn class="mt-2" to="/nutrition" color="primary">
+        Перейти в калькулятор
+      </v-btn>
     </v-card-text>
   </v-card>
 </template>

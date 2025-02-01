@@ -3,7 +3,7 @@
   <!-- Заворачиваем в <v-app>, чтобы сохранить логику, аналогичную pages/blog.vue -->
   <v-app>
     <!-- Верхняя панель с заголовком и кнопкой админки (только для администратора) -->
-    <v-app-bar color="primary" dark elevated>
+    <v-app-bar v-if="isAdmin" color="primary" dark elevated>
       <v-toolbar-title>Рационы питания</v-toolbar-title>
 
       <v-btn
