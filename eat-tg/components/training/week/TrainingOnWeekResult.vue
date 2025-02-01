@@ -171,11 +171,11 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, PropType } from 'vue'
+import {defineComponent, PropType, ref} from 'vue'
 import BottomSheetWithClose from '../../../components/shared/BottomSheetWithClose.vue'
 import AdminExerciseButton from '../../../components/userAndAdmin/AdminExerciseButton.vue'
 import ExerciseInfo from '../../../components/training/ExerciseInfo.vue'
-import { useApi } from '~/composables/useApi'
+import {useApi} from '~/composables/useApi'
 
 interface Exercise {
   _id: string
@@ -246,8 +246,7 @@ export default defineComponent({
 
     const openExerciseInfo = async (exercise: Exercise) => {
       try {
-        const fullExercise = await apiRequest<Exercise>('get', `exercises/${exercise._id}`)
-        selectedExerciseForGif.value = fullExercise
+        selectedExerciseForGif.value = await apiRequest<Exercise>('get', `exercises/${exercise._id}`)
         showExerciseInfo.value = true
       } catch (err) {
         console.error('Ошибка при загрузке упражнения:', err)

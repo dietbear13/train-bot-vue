@@ -20,12 +20,42 @@
             <v-btn
                 variant="text"
                 outlined
-                class="group-button mx-auto"
+                class="mx-auto"
                 :class="{ 'selected-button': formData.gender === option }"
                 @click="selectGender(option)"
                 rounded="lg"
             >
               {{ option }}
+            </v-btn>
+          </v-slide-group-item>
+        </v-slide-group>
+      </v-card-text>
+    </v-card>
+
+    <!-- Выбор цели тренировок (отображается после выбора пола) -->
+    <v-card v-if="formData.gender" class="mb-2 dark-background" variant="tonal">
+      <v-card-text class="pa-1">
+        <v-slide-group
+            v-model="formData.goal"
+            show-arrows
+            class="flex-nowrap"
+            center-active
+            mandatory
+        >
+          <v-slide-group-item
+              v-for="goal in trainingGoals"
+              :key="goal"
+              :value="goal"
+          >
+            <v-btn
+                variant="text"
+                outlined
+                class="mx-auto py-2 px-4"
+                :class="{ 'selected-button': formData.goal === goal }"
+                @click="selectGoal(goal)"
+                rounded="lg"
+            >
+              {{ goal }}
             </v-btn>
           </v-slide-group-item>
         </v-slide-group>
@@ -172,6 +202,7 @@
 <script lang="ts">
 import { defineComponent, ref, reactive, watch, onMounted, PropType } from 'vue'
 import { retrieveLaunchParams } from '@telegram-apps/sdk'
+import { useApi } from '~/composables/useApi';
 
 interface Split {
   _id: string;
@@ -188,6 +219,11 @@ export default defineComponent({
       required: true
     },
     gender: {
+      type: String,
+      required: false,
+      default: ''
+    },
+    goal: {
       type: String,
       required: false,
       default: ''
@@ -232,18 +268,24 @@ export default defineComponent({
   },
   emits: [
     'update:gender',
+    'update:goal',
     'update:selectedSplitType',
-    'update:selectedSplitId',
-    // Родитель получит это, чтобы сам "включить анимацию" и т.д.
-    'generateSplitWorkout'
+    'generateSplitWorkout',
+    // Добавляем, чтобы родитель мог отслеживать выбранный splitId (как в старой версии)
+    'update:selectedSplitId'
   ],
   setup(props, { emit }) {
-    // formData: локальное хранилище выбранных опций (gender, splitType, splitId)
+    const { apiRequest } = useApi();
+
+    // formData: локальное хранилище выбранных опций (gender, splitType, splitId, goal)
     const formData = reactive({
       gender: props.gender || '',
       splitType: props.selectedSplitType || '',
-      splitId: props.selectedSplitId || ''
+      splitId: props.selectedSplitId || '',
+      goal: props.goal || '',
     })
+
+    const trainingGoals = ref<string[]>(['Похудение', 'Общие', 'Массонабор']);
 
     // Следим за formData
     watch(formData, (newVal) => {
@@ -274,6 +316,12 @@ export default defineComponent({
       console.log('Selected gender:', option)
     }
 
+    const selectGoal = (goal: string) => {
+      formData.goal = goal;
+      emit('update:goal', goal);
+      console.log('Selected training goal:', goal);
+    };
+
     const selectSplitType = (type: string) => {
       formData.splitType = type
       emit('update:selectedSplitType', type)
@@ -287,14 +335,40 @@ export default defineComponent({
     }
 
     // Когда пользователь жмёт "Создать" (Сгенерировать)
-    const onGenerateSplit = () => {
-      // Мы просто говорим родителю: "Пользователь хочет сгенерировать"
-      // Родитель уже решит, как включать/выключать анимацию.
-      console.log('onGenerateSplit: emit generateSplitWorkout')
+    const onGenerateSplit = async () => {
+      console.log('onGenerateSplit: попытка отправить данные на сервер и затем emit(generateSplitWorkout)')
+
+      // Если есть ошибки - выходим
       if (props.errorMessages.length > 0) {
         console.warn('Есть ошибки, не генерируем тренировку.')
         return
       }
+
+      // Отправляем данные на сервер (как в старой версии, с помощью useApi)
+      try {
+        if (!telegramUserId.value) {
+          console.warn('Нет telegramUserId, данные не будут сохранены в базу.')
+        } else {
+          const payload = {
+            userId: telegramUserId.value,
+            gender: formData.gender,
+            goal: formData.goal,
+            splitType: formData.splitType,
+            splitId: formData.splitId,
+            timestamp: Date.now(), // можем передать для порядка
+          }
+
+          const response = await apiRequest<any>('POST', '/analytics/save-workout', payload)
+          console.log('Ответ от /analytics/save-workout:', response)
+        }
+      } catch (err) {
+        console.error('Ошибка при сохранении тренировки:', err)
+        props.errorMessages.push('Ошибка при сохранении тренировки на сервере.')
+        return
+      }
+
+      // После успешной попытки отправки данных (или если нет telegramUserId),
+      // продолжаем как в текущей логике — говорим родителю сгенерировать тренировку
       emit('generateSplitWorkout')
     }
 
@@ -342,7 +416,9 @@ export default defineComponent({
       selectSplit,
       onGenerateSplit,
       getDifficultyColor,
-      getDifficultyLabel
+      getDifficultyLabel,
+      trainingGoals,
+      selectGoal,
     }
   }
 })

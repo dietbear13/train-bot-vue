@@ -181,6 +181,7 @@
                   </template>
                   <template #item.formData="{ item }">
                     Пол: {{ item.formData.gender }}<br />
+                    Цель: {{ item.formData.goal }}<br />
                     Сплит: {{ item.formData.splitType }}<br />
                     ID Сплита: {{ item.formData.splitId }}
                   </template>
@@ -588,7 +589,7 @@ async function deleteKbzhuEntry(kbzhuId?: string) {
 
 async function deleteTrainingEntry(trainId?: string) {
   if (!editingUser.value || !trainId) return;
-  if (!confirm('Удалить запись из тренировок?')) return;
+  if (!confirm('Удалить запись?')) return;
   try {
     await apiRequest('DELETE', `users/${editingUser.value._id}/training/${trainId}`);
     editingUser.value.trainingHistory = editingUser.value.trainingHistory?.filter(e => e._id !== trainId);

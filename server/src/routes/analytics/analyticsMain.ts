@@ -72,10 +72,10 @@ router.post('/analytics/save-kbzhu', async (req: Request, res: Response) => {
  */
 router.post('/analytics/save-workout', async (req: Request, res: Response) => {
     try {
-        const { userId, gender, splitType, splitId, timestamp } = req.body;
-
+        const { userId, gender, goal, splitType, splitId, timestamp } = req.body;
+        console.log("/analytics/save-workout req",userId, gender, goal, splitType, splitId, timestamp)
         // Проверка входных данных
-        if (!userId || !gender || !splitType || !splitId) {
+        if (!userId || !goal || !gender || !splitType || !splitId) {
             return res.status(400).json({
                 error: 'Отсутствуют необходимые поля (userId, gender, splitType, splitId) в теле запроса',
             });
@@ -93,6 +93,7 @@ router.post('/analytics/save-workout', async (req: Request, res: Response) => {
         const newWorkoutEntry = {
             formData: {
                 gender,
+                goal,
                 splitType,
                 splitId,
             },

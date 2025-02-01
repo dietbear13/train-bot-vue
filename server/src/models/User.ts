@@ -22,9 +22,14 @@ export interface IKbzhuHistory {
     timestamp: number; // UNIX timestamp
 }
 
+/**
+ * Добавляем поле goal в интерфейс ITrainingHistory,
+ * чтобы оно сохранялось вместе с другими данными тренировок.
+ */
 export interface ITrainingHistory {
     formData: {
         gender: string;
+        goal: string;       // Новое поле для цели (Похудение, Общие, Массонабор и т.д.)
         splitType: string;
         splitId: string;
     };
@@ -52,9 +57,7 @@ export interface IUser extends Document {
     kbzhuHistory?: IKbzhuHistory[];
     trainingHistory?: ITrainingHistory[];
     referrals: IReferral[];
-
-    // Обязательное поле для лайков
-    blogLikes: IBlogLike[];
+    blogLikes: IBlogLike[]; // Обязательное поле для лайков
 }
 
 const UserSchema: Schema = new Schema<IUser>({
@@ -88,6 +91,7 @@ const UserSchema: Schema = new Schema<IUser>({
         {
             formData: {
                 gender: { type: String, required: true },
+                goal: { type: String, required: false },
                 splitType: { type: String, required: true },
                 splitId: { type: String, required: true },
             },
@@ -103,7 +107,6 @@ const UserSchema: Schema = new Schema<IUser>({
         ],
         default: [],
     },
-    // Обязательное поле для хранения лайков блога
     blogLikes: {
         type: [
             {

@@ -1,6 +1,6 @@
 <!-- components/nutrition/NutritionAdvice.vue -->
 <template>
-  <div class="nutrition-advice">
+  <div class="nutrition-advice" style="border-radius: 16px">
     <v-card style="border-radius: 16px">
       <v-card-title class="text-h5 font-weight-bold">
         Примеры питания

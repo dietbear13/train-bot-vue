@@ -31,7 +31,7 @@
           :class="{ 'active-tab': activeTab === 1 }"
           @click="changeTab('diets')"
       >
-        Советы
+        Рационы
       </v-tab>
     </v-tabs>
 

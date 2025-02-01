@@ -2,7 +2,7 @@
   <v-container>
     <v-row justify="center">
       <v-col cols="12" md="8">
-        <v-card class="pa-2" elevation="4">
+        <v-card class="pa-2" elevation="4" style="border-radius: 16px;">
           <v-card-title class="justify-center">
             <v-icon large color="#ffd700">mdi-star</v-icon>
             <span class="ml-1">Донаты в Telegram Stars</span>
@@ -127,6 +127,7 @@ definePageMeta({
 <style scoped>
 .v-card {
   max-width: 500px;
+  border-radius: 16px;
 }
 .v-card-title {
   align-items: center;
