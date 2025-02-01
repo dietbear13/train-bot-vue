@@ -41,11 +41,11 @@ router.get('/blog/:id', async (req: Request, res: Response) => {
 /**
  * POST /api/blog
  * Создаём новую статью
- * Тело запроса: { title, body, publishedAt? }
+ * Тело запроса: { title, body, publishedAt?, telegramPostUrl? }
  */
 router.post('/blog', async (req: Request, res: Response) => {
     try {
-        const { title, body, publishedAt } = req.body;
+        const { title, body, publishedAt, telegramPostUrl } = req.body;
         if (!title || !body) {
             return res.status(400).json({ error: 'Необходимо передать title и body' });
         }
@@ -54,6 +54,7 @@ router.post('/blog', async (req: Request, res: Response) => {
             title,
             body,
             publishedAt: publishedAt ? publishedAt : Date.now(),
+            telegramPostUrl: telegramPostUrl ? telegramPostUrl : '',
         });
         await newPost.save();
 
@@ -69,12 +70,12 @@ router.post('/blog', async (req: Request, res: Response) => {
 
 /**
  * PUT /api/blog/:id
- * Обновляем статью (title, body)
+ * Обновляем статью (title, body, telegramPostUrl)
  */
 router.put('/blog/:id', async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { title, body } = req.body;
+        const { title, body, telegramPostUrl } = req.body;
 
         const post = await BlogPost.findById(id);
         if (!post) {
@@ -84,6 +85,7 @@ router.put('/blog/:id', async (req: Request, res: Response) => {
         // Обновляем поля, если они переданы
         if (typeof title === 'string') post.title = title;
         if (typeof body === 'string') post.body = body;
+        if (typeof telegramPostUrl === 'string') post.telegramPostUrl = telegramPostUrl;
 
         await post.save();
 

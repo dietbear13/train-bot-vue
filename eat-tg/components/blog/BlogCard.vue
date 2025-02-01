@@ -14,18 +14,14 @@
     />
 
     <!-- Перебираем посты и выводим карточки -->
-    <v-row class="mt-3">
+    <v-row class="mt-1">
       <v-col
           v-for="post in filteredPosts"
           :key="post.id"
           cols="12"
           style="padding: 8px"
       >
-        <v-card
-            class="post-card"
-            outlined
-            max-width="600"
-        >
+        <v-card class="post-card" outlined max-width="600">
           <v-card-text class="text-h6 blog-content d-block px-4 pt-4 pb-0">
             {{ post.title }}
           </v-card-text>
@@ -36,13 +32,26 @@
           </v-card-text>
 
           <v-card-actions>
-            <!-- Кнопка лайка -->
             <v-spacer></v-spacer>
+
+            <!-- Кнопка "Поделиться" через Telegram -->
+            <v-btn
+                color="primary"
+                variant="tonal"
+                :href="getTelegramShareUrl(post)"
+                target="_blank"
+                class="mr-2 mb-2 mt-0"
+            >
+              <v-icon left>mdi-send</v-icon>
+              Поделиться
+            </v-btn>
+
+            <!-- Кнопка лайка -->
             <v-btn
                 :color="post.userLiked ? 'red darken-3' : 'grey darken-1'"
                 variant="tonal"
                 @click="toggleLike(post.id)"
-                class="mx-2 mb-2 mt-0"
+                class="mr-2 mb-2 mt-0"
             >
               <v-icon class="mr-1" left>mdi-heart</v-icon>
               {{ post.likesCount }}
@@ -58,12 +67,14 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { retrieveLaunchParams } from '@telegram-apps/sdk'
 import { useApi } from '../../composables/useApi'
-import type { LikeResponse } from '../../types/LikeResponse' // Убедитесь, что путь корректен
+import type { LikeResponse } from '../../types/LikeResponse' // Проверьте корректность пути
 
+// Интерфейс поста с новым полем для Telegram-ссылки
 interface Post {
   id: string
   title: string
   text: string
+  telegramPostUrl?: string
   likesCount: number
   userLiked: boolean
 }
@@ -73,14 +84,10 @@ const telegramUserId = ref<number | null>(null)
 const posts = ref<Post[]>([])
 const searchQuery = ref('')
 
-// Логирование для отладки
+// Режим отладки
 const debug = true
-
-// Функция для логирования, если включён режим отладки
 function log(...args: any[]) {
-  if (debug) {
-    console.log(...args)
-  }
+  if (debug) console.log(...args)
 }
 
 onMounted(async () => {
@@ -95,21 +102,21 @@ onMounted(async () => {
   }
 
   try {
-    // 1) Список постов из /blog
+    // 1) Получаем список постов из /blog
     const blogData = await apiRequest<any[]>('GET', '/blog')
     log('blogData =>', blogData)
 
-    // Маппим для удобства
+    // Маппим данные, включая новое поле telegramPostUrl
     const mappedPosts = blogData.map(item => ({
-      id: item._id.toString(), // Убедитесь, что id строка
+      id: item._id.toString(),
       title: item.title,
       text: item.body,
-      // likesCount и userLiked позже
+      telegramPostUrl: item.telegramPostUrl || '',
       likesCount: 0,
       userLiked: false,
     })) as Post[]
 
-    // 2) Загружаем ЛИЧНЫЕ лайки пользователя (если есть telegramUserId)
+    // 2) Загружаем ЛИЧНЫЕ лайки пользователя (если telegramUserId есть)
     let userLikes: { postId: string | number }[] = []
     if (telegramUserId.value) {
       userLikes = await apiRequest<{ postId: string | number }[]>('GET', '/blog-likes', undefined, {
@@ -119,18 +126,15 @@ onMounted(async () => {
     }
 
     // 3) Загружаем агрегированное число лайков по всем пользователям
-    //    Формат ответа: [{ postId: 'xyz', count: 5 }, ...]
     const allLikesStats = await apiRequest<{ postId: string; count: number }[]>('GET', '/blog-likes/all')
     log('allLikesStats =>', allLikesStats)
-
-    // Превратим в объект вида { [postId]: count }
     const likeCountsMap: Record<string, number> = {}
     allLikesStats.forEach(item => {
       likeCountsMap[item.postId] = item.count
     })
     log('likeCountsMap =>', likeCountsMap)
 
-    // 4) Склеиваем данные: likesCount из allLikesStats, userLiked из userLikes
+    // 4) Объединяем данные: userLiked и likesCount
     posts.value = mappedPosts.map(post => {
       const foundLike = userLikes.find(l => String(l.postId) === post.id)
       const aggregatedCount = likeCountsMap[post.id] || 0
@@ -140,14 +144,24 @@ onMounted(async () => {
         likesCount: aggregatedCount,
       }
     })
-
     log('posts (final) =>', posts.value)
   } catch (error) {
     console.error('Ошибка при загрузке статей или лайков:', error)
   }
 })
 
-// Фильтрация
+// Функция для генерации ссылки для Telegram share
+function getTelegramShareUrl(post: Post): string {
+  // Если заполнено поле telegramPostUrl, используем его, иначе — текущий URL страницы
+  const urlToShare =
+      post.telegramPostUrl && post.telegramPostUrl.length > 0
+          ? post.telegramPostUrl
+          : window.location.href
+  const textToShare = post.title
+  return `https://t.me/share/url?url=${encodeURIComponent(urlToShare)}&text=${encodeURIComponent(textToShare)}`
+}
+
+// Фильтрация постов по поисковому запросу
 const filteredPosts = computed(() => {
   const query = searchQuery.value.toLowerCase()
   if (!query) return posts.value
@@ -157,23 +171,17 @@ const filteredPosts = computed(() => {
   )
 })
 
-// При клике на лайк: локально меняем userLiked и likesCount,
-// а потом отправляем POST-запрос, чтобы записать в базу
+// Обработка клика по кнопке лайка
 function toggleLike(postId: string) {
   const post = posts.value.find(p => p.id === postId)
   if (!post) return
-
-  // Смена локального статуса
   post.userLiked = !post.userLiked
-
-  // Локальный инкремент/декремент счётчика
   post.likesCount += post.userLiked ? 1 : -1
-  if (post.likesCount < 0) post.likesCount = 0 // на всякий случай
-
+  if (post.likesCount < 0) post.likesCount = 0
   log(`Post ${postId} liked: ${post.userLiked}, new likesCount: ${post.likesCount}`)
 }
 
-// Отслеживаем изменения userLiked, отправляем запрос
+// Отслеживаем изменения лайков и отправляем их на сервер
 watch(
     () => posts.value.map(post => post.userLiked),
     (newLikes, oldLikes) => {
@@ -191,7 +199,7 @@ watch(
     }
 )
 
-// Запрос на сервер, чтобы создать/обновить запись лайка в User.blogLikes
+// Отправка данных лайка на сервер
 async function sendLikeToServer(
     telegramId: string | null,
     postId: string,
@@ -202,17 +210,14 @@ async function sendLikeToServer(
     return
   }
   try {
-    // Указываем тип ответа как LikeResponse
     const response = await apiRequest<LikeResponse>('POST', '/blog-likes', {
       telegramId,
       postId,
       like,
     })
     log('sendLikeToServer response =>', response)
-
     if (!response.success) {
       console.error('Ошибка при обновлении лайка на сервере:', response.message)
-      // Возвращаем предыдущий статус
       const post = posts.value.find(p => p.id === postId)
       if (post) {
         post.userLiked = !like
@@ -222,7 +227,6 @@ async function sendLikeToServer(
     }
   } catch (error) {
     console.error('Ошибка при отправке лайка:', error)
-    // Возвращаем предыдущий статус
     const post = posts.value.find(p => p.id === postId)
     if (post) {
       post.userLiked = !like

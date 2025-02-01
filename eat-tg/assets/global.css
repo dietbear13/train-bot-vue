@@ -61,10 +61,6 @@ body {
     background-color: #1976d2 !important; /* Синий цвет для кнопки "Отправить себе" */
 }
 
-/* Стили для текстовых полей */
-.v-text-field {
-    margin-bottom: 8px !important;
-}
 
 .v-text-field .v-label {
     color: #b0b0b0 !important; /* Цвет метки */

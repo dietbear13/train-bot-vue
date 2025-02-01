@@ -13,15 +13,15 @@
           <v-card-text>
             <v-form @submit.prevent="handleDonateStars">
               <v-text-field
-                  v-model="stars"
-                  label="Количество звёзд"
-                  type="number"
-                  inputmode="numeric"
-              pattern="[0-9]*"
-              required
-              variant="outlined"
-              min="1"
-              :rules="[v => v >= 1 || 'Минимум звёзд — 1']"
+                v-model="stars"
+                label="Количество звёзд"
+                type="number"
+                inputmode="numeric"
+                pattern="[0-9]*"
+                required
+                variant="outlined"
+                min="1"
+                :rules="[v => v >= 1 || 'Минимум звёзд — 1']"
               />
               <v-btn color="primary" type="submit" :loading="isLoading" block>
                 Отправить ⭐

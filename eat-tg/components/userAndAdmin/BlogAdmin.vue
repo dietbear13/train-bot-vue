@@ -1,8 +1,7 @@
 <!-- components/userAndAdmin/BlogAdmin.vue -->
 <template>
   <v-app>
-
-    <!-- Боковая панель (СПИСОК СТАТЕЙ) -->
+    <!-- Боковая панель (Список статей) -->
     <v-navigation-drawer
         permanent
         width="400"
@@ -10,7 +9,6 @@
         theme="dark"
     >
       <v-list color="transparent">
-
         <v-list-subheader class="text-h6 text-white">
           Список статей
         </v-list-subheader>
@@ -50,8 +48,6 @@
     <!-- Основная часть -->
     <v-main>
       <v-container fluid class="py-2">
-        <!-- Можно использовать row/col,
-             но для наглядности покажу всю ширину -->
         <v-row>
           <v-col>
             <v-card elevation="3">
@@ -71,7 +67,16 @@
                     class="mb-4"
                 />
 
-                <!-- TinyMCE Editor -->
+                <!-- Новое поле: Ссылка на пост в Telegram -->
+                <v-text-field
+                    label="Ссылка на пост в Telegram"
+                    v-model="form.telegramPostUrl"
+                    variant="outlined"
+                    class="mb-4"
+                    placeholder="https://t.me/training_health/54"
+                />
+
+                <!-- TinyMCE Editor для тела поста -->
                 <Editor
                     :api-key="tinyMceKey"
                     :init="tinymceInit"
@@ -96,7 +101,6 @@
         </v-row>
       </v-container>
     </v-main>
-
   </v-app>
 </template>
 
@@ -107,33 +111,34 @@ import Editor from '@tinymce/tinymce-vue'
 import { useRuntimeConfig } from '#imports'
 import { useApi } from '../../composables/useApi'
 
-// Интерфейс для статьи
+// Интерфейс для статьи (с новым полем)
 interface IBlogItem {
   _id: string
   title: string
   body: string
+  telegramPostUrl?: string
   likesCount: number
   publishedAt: string // или Date
 }
 
-// Состояния
-const drawer = ref(true) // хотя permanent=true, но пусть будет
+const drawer = ref(true)
 const selectedPostId = ref<string | null>(null)
 const posts = ref<IBlogItem[]>([])
 
+// Форма с добавленным полем telegramPostUrl
 const form = ref({
   title: '',
   body: '',
+  telegramPostUrl: '',
 })
 
 const router = useRouter()
 
-// Вытаскиваем ключ из конфигурации
+// Чтение ключа TinyMCE из runtimeConfig
 const config = useRuntimeConfig()
-const tinyMceKey = config.public.tinyMceKey  // <-- считываем из public runtimeConfig
+const tinyMceKey = config.public.tinyMceKey
 console.log('TinyMCE_KEY from config:', tinyMceKey)
 
-// Настройка TinyMCE
 const tinymceInit = {
   height: 400,
   menubar: true,
@@ -163,7 +168,7 @@ onMounted(async () => {
   await loadPosts()
 })
 
-// Загрузка списка статей
+// Загрузка списка постов
 async function loadPosts() {
   try {
     const data = await apiRequest<IBlogItem[]>('GET', '/blog')
@@ -173,11 +178,12 @@ async function loadPosts() {
   }
 }
 
-// Выбор статьи
+// Выбор статьи для редактирования
 function selectPost(item: IBlogItem) {
   selectedPostId.value = item._id
   form.value.title = item.title
   form.value.body = item.body
+  form.value.telegramPostUrl = item.telegramPostUrl || ''
 }
 
 // Создание новой статьи
@@ -185,9 +191,10 @@ function newPost() {
   selectedPostId.value = null
   form.value.title = ''
   form.value.body = ''
+  form.value.telegramPostUrl = ''
 }
 
-// Сохранение статьи
+// Сохранение статьи (создание или обновление)
 async function savePost() {
   try {
     if (!form.value.title || !form.value.body) {
@@ -196,16 +203,18 @@ async function savePost() {
     }
 
     if (selectedPostId.value) {
-      // Обновление
+      // Обновление существующей статьи
       await apiRequest('PUT', `/blog/${selectedPostId.value}`, {
         title: form.value.title,
         body: form.value.body,
+        telegramPostUrl: form.value.telegramPostUrl,
       })
     } else {
-      // Создание
+      // Создание новой статьи
       await apiRequest('POST', '/blog', {
         title: form.value.title,
         body: form.value.body,
+        telegramPostUrl: form.value.telegramPostUrl,
       })
     }
     await loadPosts()
@@ -229,9 +238,8 @@ async function deletePost() {
   }
 }
 
-// Выход из системы
+// Выход из админки
 function logout() {
-  // Пример базовой логики выхода: очистка токена и переход на /login
   localStorage.removeItem('authToken')
   router.push('/login')
 }
@@ -239,7 +247,7 @@ function logout() {
 
 <style scoped>
 .drawer-bg {
-  background-color: #4527a0 !important; /* deep-purple darken-3 */
+  background-color: #6b41e6 !important; /* deep-purple darken-3 */
 }
 .text-white {
   color: #ffffff !important;

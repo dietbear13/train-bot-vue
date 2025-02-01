@@ -59,56 +59,62 @@
       </v-card-text>
     </v-card>
 
-    <!-- Ввод роста, веса и возраста с помощью v-select -->
+    <!-- Ввод роста, веса и возраста с клавиатурой -->
     <v-row class="no-gutters">
       <!-- Ввод роста -->
       <v-col cols="4" class="pr-1">
         <v-card class="my-0 dark-background pa-2" variant="tonal">
-          <v-select
-              :items="heightOptions"
-              label="Рост"
-              variant="outlined"
-              v-model.number="formData.height"
-              item-title="text"
-              item-value="value"
-              dense
-              hide-details
-              :return-object="false"
-          ></v-select>
+          <v-text-field
+            v-model.number="formData.height"
+            label="Рост (см)"
+            type="number"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            required
+            variant="outlined"
+            min="150"
+            :rules="[v => v >= 150 || 'от 150 см']"
+            hide-details
+            class="mb-0"
+          />
         </v-card>
       </v-col>
 
       <!-- Ввод веса -->
       <v-col cols="4" class="px-1">
         <v-card class="my-0 dark-background pa-2" variant="tonal">
-          <v-select
-              :items="weightOptions"
-              label="Вес"
-              variant="outlined"
+          <v-text-field
               v-model.number="formData.weight"
-              item-title="text"
-              item-value="value"
-              dense
+              label="Вес (кг)"
+              type="number"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              required
+              variant="outlined"
+              min="40"
+              :rules="[v => v >= 40 || 'от 40 кг']"
               hide-details
-              :return-object="false"
-          ></v-select>
+              class="mb-0"
+          />
         </v-card>
       </v-col>
 
       <!-- Ввод возраста -->
       <v-col cols="4" class="pl-1">
         <v-card class="my-0 dark-background pa-2" variant="tonal">
-          <v-select
-              :items="ageOptions"
-              label="Возраст"
-              variant="outlined"
+          <v-text-field
               v-model.number="formData.age"
-              item-title="text"
-              item-value="value"
-              dense
+              label="Возраст (лет)"
+              type="number"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              required
+              variant="outlined"
+              min="10"
+              :rules="[v => v >= 18 || 'от 18 лет']"
               hide-details
-              :return-object="false"
-          ></v-select>
+              class="mb-0"
+          />
         </v-card>
       </v-col>
     </v-row>
@@ -159,6 +165,7 @@
             required
             class="mb-0 pl-3"
             hide-details="auto"
+            color="primary"
         ></v-slider>
       </v-card-text>
     </v-card>
