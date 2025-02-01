@@ -159,15 +159,15 @@
         <v-alert type="warning" border="left" outlined>
           Не является медицинской рекомендацией, при травмах стоит обратиться к врачу.
         </v-alert>
-
-      <!-- Индикатор загрузки -->
-      <v-card v-else class="mx-auto" max-width="700" outlined>
-        <v-card-text class="d-flex justify-center py-10">
-          <v-progress-circular indeterminate color="primary" size="48"></v-progress-circular>
-        </v-card-text>
       </v-card>
-    </v-container>
-  </BottomSheetWithClose>
+        <!-- Индикатор загрузки -->
+        <v-card v-else class="mx-auto" max-width="700" outlined>
+          <v-card-text class="d-flex justify-center py-10">
+            <v-progress-circular indeterminate color="primary" size="48"></v-progress-circular>
+          </v-card-text>
+        </v-card>
+      </v-container>
+    </BottomSheetWithClose>
 </template>
 
 <script lang="ts">

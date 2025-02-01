@@ -30,6 +30,7 @@
           :items-per-page="10"
           :loading="loading"
           class="elevation-1"
+          hide-default-footer
       >
         <!-- Вывод dateAdded -->
         <template #item.dateAdded="{ item }">
@@ -365,7 +366,7 @@ const userError = ref<string|null>(null);
 const searchId = ref('');
 const filteredUsers = ref<IUser[]>([]);
 const pagination = ref({ page: 1 });
-const pageCount = computed(() => Math.ceil(filteredUsers.value.length / 10));
+const pageCount = computed(() => Math.ceil(computedFilteredUsers.value.length / 10));
 
 // Диалог + выбранный пользователь
 const userDialog = ref(false);
@@ -378,28 +379,28 @@ const activeTab = ref<string>('main');
 
 /** Обновляем заголовки: добавляем новый столбец для вывода @username */
 const userHeaders = [
-  { text: 'Telegram ID', value: 'telegramId', width: 150 },
+  { title: 'Telegram ID', key: 'telegramId', width: 150 },
   {
-    text: 'TG Username',   // название столбца
-    value: 'telegramUsername', // свойство у пользователя
+    title: 'TG Username',   // название столбца
+    key: 'telegramUsername', // свойство у пользователя
     width: 150
   },
-  { text: 'Роль', value: 'role', width: 100 },
-  { text: 'Дата Добавления', value: 'dateAdded', width: 150 },
-  { text: 'Действия', value: 'actions', sortable: false, width: 100 },
+  { title: 'Роль', key: 'role', width: 100 },
+  { title: 'Дата Добавления', key: 'dateAdded', width: 150 },
+  { title: 'Действия', key: 'actions', sortable: false, width: 100 },
 ];
 
 const kbzhuHeaders = [
-  { text: 'Дата (timestamp)', value: 'timestamp', width: 140 },
-  { text: 'Данные формы', value: 'formData' },
-  { text: 'Результат КБЖУ', value: 'kbzhuResult' },
-  { text: 'Действия', value: 'actions', sortable: false, width: 80 },
+  { title: 'Дата (timestamp)', key: 'timestamp', width: 140 },
+  { title: 'Данные формы', key: 'formData' },
+  { title: 'Результат КБЖУ', key: 'kbzhuResult' },
+  { title: 'Действия', key: 'actions', sortable: false, width: 80 },
 ];
 
 const trainingHeaders = [
-  { text: 'Дата (timestamp)', value: 'timestamp', width: 140 },
-  { text: 'Данные формы', value: 'formData' },
-  { text: 'Действия', value: 'actions', sortable: false, width: 80 },
+  { title: 'Дата (timestamp)', key: 'timestamp', width: 140 },
+  { title: 'Данные формы', key: 'formData' },
+  { title: 'Действия', key: 'actions', sortable: false, width: 80 },
 ];
 
 const roleItems = ['admin', 'freeUser', 'paidUser'];

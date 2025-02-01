@@ -43,10 +43,10 @@ onMounted(() => {
     e.preventDefault();
   }, false);
 
-  // Отключение контекстного меню (частично для защиты от скриншотов)
-  document.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-  }, false);
+  // TODO ВКЛЮЧИТЬ! Отключение контекстного меню (частично для защиты от скриншотов)
+  // document.addEventListener('contextmenu', (e) => {
+  //   e.preventDefault();
+  // }, false);
 
   // После инициализации приложения скрываем загрузку
   loading.value = false;

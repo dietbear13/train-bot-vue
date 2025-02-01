@@ -13,52 +13,80 @@
         class="ma-0 shrink"
     />
 
-    <!-- Перебираем посты и выводим карточки -->
+    <!-- Контент: если данные ещё загружаются, показываем скелетоны,
+         иначе – реальные карточки -->
     <v-row class="mt-1">
-      <v-col
-          v-for="post in filteredPosts"
-          :key="post.id"
-          cols="12"
-          style="padding: 8px"
-      >
-        <v-card class="post-card" outlined max-width="600">
-          <v-card-text class="text-h6 blog-content d-block px-4 pt-4 pb-0">
-            {{ post.title }}
-          </v-card-text>
+      <template v-if="loading">
+        <!-- Два скелетона карточки -->
+        <v-col v-for="n in 2" :key="n" cols="12" style="padding: 8px">
+          <v-card class="post-card" outlined max-width="600">
+            <v-card-text class="px-4 pt-4 pb-0">
+              <!-- Скелетон для заголовка -->
+              <v-skeleton-loader type="heading" width="60%" />
+            </v-card-text>
 
-          <v-card-text class="pb-0">
-            <!-- Просто выводим HTML контент -->
-            <div class="blog-content d-block" v-html="post.text"></div>
-          </v-card-text>
+            <v-card-text class="pb-0">
+              <!-- Скелетоны для текста -->
+              <v-skeleton-loader type="text" width="90%" class="mb-2" />
+              <v-skeleton-loader type="text" width="80%" />
+            </v-card-text>
 
-          <v-card-actions>
-            <v-spacer></v-spacer>
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <!-- Скелетоны для кнопок -->
+              <v-skeleton-loader type="button" width="30%" class="mr-2 mb-2 mt-0" />
+              <v-skeleton-loader type="button" width="20%" class="mr-2 mb-2 mt-0" />
+            </v-card-actions>
+          </v-card>
+        </v-col>
+      </template>
+      <template v-else>
+        <!-- Перебираем посты и выводим карточки -->
+        <v-col
+            v-for="post in filteredPosts"
+            :key="post.id"
+            cols="12"
+            style="padding: 8px"
+        >
+          <v-card class="post-card" outlined max-width="600">
+            <v-card-text class="text-h6 blog-content d-block px-4 pt-4 pb-0">
+              {{ post.title }}
+            </v-card-text>
 
-            <!-- Кнопка "Поделиться" через Telegram -->
-            <v-btn
-                color="primary"
-                variant="tonal"
-                :href="getTelegramShareUrl(post)"
-                target="_blank"
-                class="mr-2 mb-2 mt-0"
-            >
-              <v-icon left>mdi-send</v-icon>
-              Поделиться
-            </v-btn>
+            <v-card-text class="pb-0">
+              <!-- Просто выводим HTML контент -->
+              <div class="blog-content d-block" v-html="post.text"></div>
+            </v-card-text>
 
-            <!-- Кнопка лайка -->
-            <v-btn
-                :color="post.userLiked ? 'red darken-3' : 'grey darken-1'"
-                variant="tonal"
-                @click="toggleLike(post.id)"
-                class="mr-2 mb-2 mt-0"
-            >
-              <v-icon class="mr-1" left>mdi-heart</v-icon>
-              {{ post.likesCount }}
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-col>
+            <v-card-actions>
+              <v-spacer></v-spacer>
+
+              <!-- Кнопка "Поделиться" через Telegram -->
+              <v-btn
+                  color="primary"
+                  variant="tonal"
+                  :href="getTelegramShareUrl(post)"
+                  target="_blank"
+                  class="mr-2 mb-2 mt-0"
+              >
+                <v-icon left>mdi-send</v-icon>
+                Поделиться
+              </v-btn>
+
+              <!-- Кнопка лайка -->
+              <v-btn
+                  :color="post.userLiked ? 'red darken-3' : 'grey darken-1'"
+                  variant="tonal"
+                  @click="toggleLike(post.id)"
+                  class="mr-2 mb-2 mt-0"
+              >
+                <v-icon class="mr-1" left>mdi-heart</v-icon>
+                {{ post.likesCount }}
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-col>
+      </template>
     </v-row>
   </v-col>
 </template>
@@ -83,6 +111,7 @@ const { apiRequest } = useApi()
 const telegramUserId = ref<number | null>(null)
 const posts = ref<Post[]>([])
 const searchQuery = ref('')
+const loading = ref(true) // Состояние загрузки
 
 // Режим отладки
 const debug = true
@@ -147,6 +176,8 @@ onMounted(async () => {
     log('posts (final) =>', posts.value)
   } catch (error) {
     console.error('Ошибка при загрузке статей или лайков:', error)
+  } finally {
+    loading.value = false // Выключаем состояние загрузки вне зависимости от результата
   }
 })
 
