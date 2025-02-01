@@ -10,6 +10,7 @@
         v-model="currentTab"
         color="primary"
         app
+        height="62"
         class="bottom-navigation"
         grow
     >

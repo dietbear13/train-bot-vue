@@ -1,63 +1,65 @@
-// src/models/User.ts
-
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose'
 
 export interface IKbzhuHistory {
     formData: {
-        gender: string;
-        bodyType: string;
-        age: number | null;
-        height: number | null;
-        weight: number | null;
-        goal: string;
-        workoutsPerWeek: number;
-    };
+        gender: string
+        bodyType: string
+        age: number | null
+        height: number | null
+        weight: number | null
+        goal: string
+        workoutsPerWeek: number
+    }
     kbzhuResult: {
-        calories: number;
-        extraCalories: number;
-        proteins: number;
-        fats: number;
-        carbs: number;
-    };
-    timestamp: number; // UNIX timestamp
+        calories: number
+        extraCalories: number
+        proteins: number
+        fats: number
+        carbs: number
+    }
+    timestamp: number // UNIX timestamp
 }
 
-/**
- * Добавляем поле goal в интерфейс ITrainingHistory,
- * чтобы оно сохранялось вместе с другими данными тренировок.
- */
 export interface ITrainingHistory {
     formData: {
-        gender: string;
-        goal: string;       // Новое поле для цели (Похудение, Общие, Массонабор и т.д.)
-        splitType: string;
-        splitId: string;
-    };
-    timestamp: number; // UNIX timestamp
+        gender: string
+        goal: string       // Цель (Похудение, Общие, Массонабор и т.д.)
+        splitType: string
+        splitId: string
+    }
+    timestamp: number // UNIX timestamp
 }
 
 export interface IReferral {
-    inviteeId: number;
-    date: number; // UNIX timestamp
+    inviteeId: number
+    date: number // UNIX timestamp
 }
 
-// Новая структура для лайков
 export interface IBlogLike {
-    postId: string;
-    liked: boolean;     // true (лайк) или false (анлайк)
-    date: number;       // время, когда пользователь изменил лайк
+    postId: string
+    liked: boolean     // true (лайк) или false (анлайк)
+    date: number       // время, когда пользователь изменил лайк
+}
+
+// Новая структура для истории нажатий на кнопку "донат звёзд"
+export interface IStarDonationPress {
+    telegramId: number
+    stars: number
+    timestamp: number // UNIX timestamp
 }
 
 export interface IUser extends Document {
-    telegramId: number;
-    role: 'admin' | 'freeUser' | 'paidUser';
-    dateAdded: number; // UNIX timestamp
-    datePaid?: number; // UNIX timestamp
-    datePaidUntil?: number; // UNIX timestamp
-    kbzhuHistory?: IKbzhuHistory[];
-    trainingHistory?: ITrainingHistory[];
-    referrals: IReferral[];
-    blogLikes: IBlogLike[]; // Обязательное поле для лайков
+    telegramId: number
+    role: 'admin' | 'freeUser' | 'paidUser'
+    dateAdded: number // UNIX timestamp
+    datePaid?: number // UNIX timestamp
+    datePaidUntil?: number // UNIX timestamp
+    kbzhuHistory?: IKbzhuHistory[]
+    trainingHistory?: ITrainingHistory[]
+    referrals: IReferral[]
+    blogLikes: IBlogLike[]
+    // Новое необязательное поле для хранения нажатий по звёздному донату
+    starDonationHistory?: IStarDonationPress[]
 }
 
 const UserSchema: Schema = new Schema<IUser>({
@@ -103,7 +105,7 @@ const UserSchema: Schema = new Schema<IUser>({
             {
                 inviteeId: { type: Number, required: true },
                 date: { type: Number, required: true },
-            }
+            },
         ],
         default: [],
     },
@@ -113,10 +115,21 @@ const UserSchema: Schema = new Schema<IUser>({
                 postId: { type: String, required: true },
                 liked: { type: Boolean, default: true },
                 date: { type: Number, required: true },
-            }
+            },
         ],
         default: [],
     },
-});
+    // Новое поле для записи истории нажатий
+    starDonationHistory: {
+        type: [
+            {
+                telegramId: { type: Number, required: true },
+                stars: { type: Number, required: true },
+                timestamp: { type: Number, required: true },
+            },
+        ],
+        default: [],
+    },
+})
 
-export default mongoose.model<IUser>('User', UserSchema);
+export default mongoose.model<IUser>('User', UserSchema)
