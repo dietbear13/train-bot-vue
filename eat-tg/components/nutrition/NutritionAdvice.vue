@@ -1,21 +1,21 @@
 <!-- components/nutrition/NutritionAdvice.vue -->
 <template>
   <div class="nutrition-advice">
-    <v-card class="pa-4">
+    <v-card style="border-radius: 16px">
       <v-card-title class="text-h5 font-weight-bold">
         Примеры питания
       </v-card-title>
-      <v-card-subtitle>
+      <v-card-text>
         Ниже вы найдёте готовые варианты рационов для мужчин и женщин под разные цели,
         а также советы по питанию до и после тренировки.
-      </v-card-subtitle>
+      </v-card-text>
 
       <v-expansion-panels multiple>
         <v-expansion-panel
             v-for="(section, index) in allSections"
             :key="index"
         >
-          <v-expansion-panel-title>
+          <v-expansion-panel-title class="text-h6" color="#2f4f4f">
             {{ section.title }}
           </v-expansion-panel-title>
           <v-expansion-panel-text>
@@ -23,7 +23,7 @@
               {{ section.description }}
             </p>
 
-            <v-row dense>
+            <v-row class="py-2" dense>
               <v-col
                   v-for="(item, i) in section.items"
                   :key="i"
@@ -31,14 +31,15 @@
                   md="6"
                   class="mb-2 d-flex"
               >
-                <v-card outlined class="w-100">
+                <v-card outlined variant="tonal" class="w-100" style="border-radius: 16px">
                   <v-card-title>{{ item.title }}</v-card-title>
                   <v-card-text v-if="item.shortDescription">
                     {{ item.shortDescription }}
                   </v-card-text>
                   <v-card-actions>
+                    <v-spacer></v-spacer>
                     <v-btn color="primary" @click="openBottomSheet(item)">
-                      Подробнее
+                      Пример рациона
                     </v-btn>
                   </v-card-actions>
                 </v-card>
@@ -63,8 +64,8 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import BottomSheetWithClose from '~/components/shared/BottomSheetWithClose.vue';
-import ReferralLink from '~/components/shared/ReferralLink.vue';
+import BottomSheetWithClose from '../../components/shared/BottomSheetWithClose.vue';
+import ReferralLink from '../../components/shared/ReferralLink.vue';
 
 /** Структуры данных */
 interface NutritionExample {

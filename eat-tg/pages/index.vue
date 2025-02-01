@@ -55,9 +55,9 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import TrainingOnWeek from '~/components/training/TrainingOnWeek.vue'
-import TrainingByMuscles from '~/components/training/TrainingByMuscles.vue'
-import ExerciseSearch from "~/components/training/ExerciseSearch.vue"
+import TrainingOnWeek from '../components/training/TrainingOnWeek.vue'
+import TrainingByMuscles from '../components/training/TrainingByMuscles.vue'
+import ExerciseSearch from "../components/training/ExerciseSearch.vue"
 
 // Инициализация активной вкладки с типизацией
 const activeTab = ref<number>(0)
