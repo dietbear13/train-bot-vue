@@ -8,8 +8,12 @@
             <span class="ml-1">Донаты в Telegram Stars</span>
           </v-card-title>
           <v-card-text>
-            Telegram Stars можно купить через Apple Pay на МТС или за криптовалюту TON на <a target="_blank"
-                                                                                             href="https://fragment.com/">Fragment</a>, который требует верификации по паспорту.
+            <p>Telegram Stars можно купить через Apple Pay на МТС или за криптовалюту TON на <a target="_blank"
+                                                                                             href="https://fragment.com/stars/buy">Fragment</a>, который требует верификации по паспорту.
+            </p>
+            <p>
+              Курс покупки 100 stars через Apple Pay — 209 ₽. На fragment 100 stars ~0.32 TON.
+            </p>
           </v-card-text>
           <v-card-text>
             <v-form @submit.prevent="handleDonateStars">
