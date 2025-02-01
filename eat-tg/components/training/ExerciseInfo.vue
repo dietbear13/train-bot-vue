@@ -4,75 +4,176 @@
       v-model="modelValueLocal"
       title="Информация об упражнении"
   >
-  <v-card-text v-if="exercise">
-    <!-- Переносим заголовок в тело нижнего листа -->
-    <div class="headline mb-4">{{ (exercise.name) || 'Об упражнении' }}</div>
+    <v-container class="py-2" fluid>
+      <v-card v-if="exercise" class="mx-auto" max-width="700" outlined>
+        <!-- Заголовок -->
+        <v-card-text class="text-h6 text-center">
+          {{ exercise.name ? (exercise.name.charAt(0).toUpperCase() + exercise.name.slice(1)) : '' }}
+        </v-card-text>
 
-    <!-- Отображение GIF-картинки -->
-    <div v-if="exercise.gifImage" class="gif-container">
-      <img
-          :src="getGifUrl(exercise.gifImage)"
-          alt="GIF упражнения"
-          class="exercise-gif"
-      />
-    </div>
+        <!-- Изображение GIF -->
+        <v-img
+            v-if="exercise.gifImage"
+            :src="getGifUrl(exercise.gifImage)"
+            aspect-ratio="16/9"
+            class="my-2 rounded-lg"
+            :alt="exercise.name ? (exercise.name.charAt(0).toUpperCase() + exercise.name.slice(1)) : 'Упражнение'"
+        />
 
-    <v-row dense>
-      <v-col cols="6" class="label-col">Основная и дополнитьльные мышцы</v-col>
-      <v-col cols="6" class="value-col">{{ exercise.mainMuscle }}</v-col>
+        <!-- Контент упражнения -->
+        <v-card-text>
+          <v-row>
+            <!-- Мышцы -->
+            <v-col cols="12" md="6">
+              <v-card flat>
+                <v-card-title class="d-flex align-center">
+                  <v-icon color="primary" class="me-2">mdi-arm-flex</v-icon>
+                  <span class="font-weight-bold">Мышцы</span>
+                </v-card-title>
+                <v-card-text class="pa-0">
+                  <v-chip-group column>
+                    <!-- Основные мышцы -->
+                    <v-chip
+                        v-for="(muscle, index) in (exercise.mainMuscle ? exercise.mainMuscle.split(',').map(m => m.trim()) : [])"
+                        :key="'main-muscle-' + index"
+                        color="primary lighten-4"
+                        text-color="primary"
+                        outlined
+                        class="ma-1"
+                    >
+                      {{ muscle }}
+                    </v-chip>
+                    <!-- Дополнительные мышцы -->
+                    <v-chip
+                        v-if="exercise.additionalMuscles"
+                        v-for="(muscle, index) in exercise.additionalMuscles.split(',').map(m => m.trim())"
+                        :key="'additional-muscle-' + index"
+                        color="secondary lighten-4"
+                        text-color="secondary"
+                        outlined
+                        class="ma-1"
+                    >
+                      {{ muscle }}
+                    </v-chip>
+                  </v-chip-group>
+                </v-card-text>
+              </v-card>
+            </v-col>
 
-      <v-col cols="6" class="label-col">Дополнительные мышцы:</v-col>
-      <v-col cols="6" class="value-col">{{ exercise.additionalMuscles || '—' }}</v-col>
+            <!-- Оборудование -->
+            <v-col cols="12" md="6">
+              <v-card flat>
+                <v-card-title class="d-flex align-center">
+                  <v-icon color="success" class="me-0">mdi-dumbbell</v-icon>
+                  <span class="font-weight-bold">Оборудование:</span>
+                </v-card-title>
+                <v-card-text class="pa-0">
+                  <template v-if="exercise.equipment">
+                    <v-chip color="success lighten-4" text-color="success" outlined class="ma-1">
+                      {{ exercise.equipment }}
+                    </v-chip>
+                  </template>
+                  <template v-else>
+                    <span>—</span>
+                  </template>
+                </v-card-text>
+              </v-card>
+            </v-col>
 
-      <v-col cols="6" class="label-col">Тип упражнения</v-col>
-      <v-col cols="6" class="value-col">{{ exercise.typeExercise || '—' }}</v-col>
+            <!-- Техника -->
+            <v-col cols="12">
+              <v-card flat>
+                <v-card-title class="d-flex align-center">
+                  <v-icon color="info" class="me-0">mdi-weight-lifter</v-icon>
+                  <span class="font-weight-bold">Техника:</span>
+                </v-card-title>
+                <v-card-text class="pa-0">
+                  <template v-if="exercise.technique">
+                    <transition name="fade">
+                      <div class="technique-text">
+                        {{ exercise.technique }}
+                      </div>
+                    </transition>
+                  </template>
+                  <template v-else>
+                    <span>—</span>
+                  </template>
+                </v-card-text>
+              </v-card>
+            </v-col>
 
-      <v-col cols="6" class="label-col">Оборудование</v-col>
-      <v-col cols="6" class="value-col">{{ exercise.equipment || '—' }}</v-col>
+            <!-- Ограничения при травмах -->
+            <v-col cols="12">
+              <v-card flat>
+                <v-card-title class="d-flex align-center">
+                  <v-icon color="error" class="me-0">mdi-alert</v-icon>
+                  <span class="font-weight-bold">Ограничения при травмах</span>
+                </v-card-title>
+                <v-card-text class="pa-0">
+                  <v-row>
+                    <v-col cols="12" sm="4" class="d-flex align-center">
+                      <v-icon
+                          :color="exercise.spineRestrictions ? 'red lighten-2' : 'green lighten-2'"
+                          class="me-2"
+                      >
+                        {{ exercise.spineRestrictions ? 'mdi-close-circle' : 'mdi-check-circle' }}
+                      </v-icon>
+                      Позвоночника:
+                      <span :class="exercise.spineRestrictions ? 'text-red' : 'text-green'">
+                        {{ exercise.spineRestrictions ? 'не рекомендуется' : 'можно' }}
+                      </span>
+                    </v-col>
+                    <v-col cols="12" sm="4" class="d-flex align-center">
+                      <v-icon
+                          :color="exercise.kneeRestrictions ? 'red lighten-2' : 'green lighten-2'"
+                          class="me-2"
+                      >
+                        {{ exercise.kneeRestrictions ? 'mdi-close-circle' : 'mdi-check-circle' }}
+                      </v-icon>
+                      Коленей:
+                      <span :class="exercise.kneeRestrictions ? 'text-red' : 'text-green'">
+                        {{ exercise.kneeRestrictions ? 'не рекомендуется' : 'можно' }}
+                      </span>
+                    </v-col>
+                    <v-col cols="12" sm="4" class="d-flex align-center">
+                      <v-icon
+                          :color="exercise.shoulderRestrictions ? 'red lighten-2' : 'green lighten-2'"
+                          class="me-2"
+                      >
+                        {{ exercise.shoulderRestrictions ? 'mdi-close-circle' : 'mdi-check-circle' }}
+                      </v-icon>
+                      Плеч:
+                      <span :class="exercise.shoulderRestrictions ? 'text-red' : 'text-green'">
+                        {{ exercise.shoulderRestrictions ? 'не рекомендуется' : 'можно' }}
+                      </span>
+                    </v-col>
+                  </v-row>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+        </v-card-text>
 
-      <v-col cols="6" class="label-col">Предупреждение по GIF:</v-col>
-      <v-col cols="6" class="value-col">
-        <span v-if="exercise.isWarnGif">Да</span>
-        <span v-else>Нет</span>
-      </v-col>
+        <v-divider class="my-4"></v-divider>
 
-      <v-col cols="12" class="label-col" style="margin-top:10px; font-weight:bold;">
-        Техника выполнения:
-      </v-col>
-      <v-col cols="12" class="value-col">
-        <p style="white-space: pre-wrap; margin:0;">
-          {{ exercise.technique || '—' }}
-        </p>
-      </v-col>
+        <v-alert type="warning" border="left" outlined>
+          Не является медицинской рекомендацией, при травмах стоит обратиться к врачу.
+        </v-alert>
 
-      <v-col cols="6" class="label-col">При проблемах со спиной:</v-col>
-      <v-col cols="6" class="value-col">
-        <span v-if="exercise.spineRestrictions"> Не рекомендуется</span>
-        <span v-else> Можно</span>
-      </v-col>
-
-      <v-col cols="6" class="label-col">При проблемах с коленями:</v-col>
-      <v-col cols="6" class="value-col">
-        <span v-if="exercise.kneeRestrictions">Не рекомендуется</span>
-        <span v-else>Можно</span>
-      </v-col>
-
-      <v-col cols="6" class="label-col">При проблемах с плечами:</v-col>
-      <v-col cols="6" class="value-col">
-        <span v-if="exercise.shoulderRestrictions">Не рекомендуется</span>
-        <span v-else>Можно</span>
-      </v-col>
-      <p style="color: gray">Не является медицинской рекомендацией, при травмах стоит обратиться к врачу, чтобы травма не переходила из острой фазы в хроническую.</p>
-    </v-row>
-
-  </v-card-text>
+      <!-- Индикатор загрузки -->
+      <v-card v-else class="mx-auto" max-width="700" outlined>
+        <v-card-text class="d-flex justify-center py-10">
+          <v-progress-circular indeterminate color="primary" size="48"></v-progress-circular>
+        </v-card-text>
+      </v-card>
+    </v-container>
   </BottomSheetWithClose>
 </template>
 
 <script lang="ts">
 import { defineComponent, computed } from 'vue';
 import type { Exercise } from '~/composables/types';
-import BottomSheetWithClose from '~/components/shared/BottomSheetWithClose.vue'; // Импортируем универсальный компонент
+import BottomSheetWithClose from '~/components/shared/BottomSheetWithClose.vue';
 
 export default defineComponent({
   name: 'ExerciseInfo',
@@ -91,20 +192,17 @@ export default defineComponent({
   },
   emits: ['update:modelValue'],
   setup(props, { emit }) {
-    // Создаём реактивное состояние для v-model
     const modelValueLocal = computed({
       get: () => props.modelValue,
       set: (val: boolean) => emit('update:modelValue', val)
     });
 
-    // Метод для закрытия нижнего листа
     const close = () => {
       modelValueLocal.value = false;
     };
 
-    // Метод для получения полного URL GIF
+    // Метод для получения полного URL GIF (логика не изменяется)
     const getGifUrl = (gifPath: string): string => {
-      // Предполагается, что gifPath — это относительный путь
       if (gifPath.startsWith('/')) {
         return gifPath;
       } else {
@@ -152,5 +250,27 @@ export default defineComponent({
   max-width: 100%;
   height: auto;
   border-radius: 16px;
+}
+
+/* Дополнительные стили из шаблона страницы */
+.rounded-lg {
+  border-radius: 16px;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.technique-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.text-red {
+  color: #e53935;
+}
+
+.text-green {
+  color: #43a047;
 }
 </style>

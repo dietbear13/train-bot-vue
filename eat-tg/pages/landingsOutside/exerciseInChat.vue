@@ -128,7 +128,7 @@
             <v-card flat>
               <v-card-title class="d-flex align-center">
                 <v-icon color="error" class="me-0">mdi-alert</v-icon>
-                <span class="font-weight-bold">Ограничения при травмах:</span>
+                <span class="font-weight-bold">Ограничения при травмах</span>
               </v-card-title>
               <v-card-text class="pa-0">
                 <v-row>
