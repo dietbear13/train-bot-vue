@@ -173,17 +173,14 @@ function tryFindExercise(
             chosenReps = variants[Math.floor(Math.random() * variants.length)]
         } else if (goal === 'Общие') {
             // Общие: случайно от 6 до 15
-            const min = 6
-            const max = 15
-            chosenReps = Math.floor(Math.random() * (max - min + 1)) + min
+            const variants = [8,10,12,15]
+            chosenReps = variants[Math.floor(Math.random() * variants.length)]
         } else if (goal === 'Массонабор') {
             // Массонабор: случайно от 6 до 12
-            const min = 6
-            const max = 12
-            chosenReps = Math.floor(Math.random() * (max - min + 1)) + min
+            const variants = [6,8,10,12]
+            chosenReps = variants[Math.floor(Math.random() * variants.length)]
         }
         // Если goal не установлен (или не совпал с перечисленными) — оставляем reps как есть
-
         const sets = getSets(chosenReps)
 
         return {
