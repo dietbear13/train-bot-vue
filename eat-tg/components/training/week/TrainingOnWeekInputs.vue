@@ -336,41 +336,37 @@ export default defineComponent({
 
     // Когда пользователь жмёт "Создать" (Сгенерировать)
     const onGenerateSplit = async () => {
-      console.log('onGenerateSplit: попытка отправить данные на сервер и затем emit(generateSplitWorkout)')
+      console.log('onGenerateSplit: отправляем данные на сервер');
 
-      // Если есть ошибки - выходим
       if (props.errorMessages.length > 0) {
-        console.warn('Есть ошибки, не генерируем тренировку.')
-        return
+        console.warn('Есть ошибки, не генерируем тренировку.');
+        return;
       }
 
-      // Отправляем данные на сервер (как в старой версии, с помощью useApi)
       try {
         if (!telegramUserId.value) {
-          console.warn('Нет telegramUserId, данные не будут сохранены в базу.')
+          console.warn('Нет telegramUserId, данные не будут сохранены в базу.');
         } else {
           const payload = {
             userId: telegramUserId.value,
             gender: formData.gender,
             goal: formData.goal,
             splitType: formData.splitType,
-            splitId: formData.splitId,
-            timestamp: Date.now(), // можем передать для порядка
-          }
+            splitId: formData.splitId, // Теперь это внутренний splitId
+            timestamp: Date.now(),
+          };
 
           const response = await apiRequest<any>('POST', '/analytics/save-workout', payload)
           console.log('Ответ от /analytics/save-workout:', response)
         }
       } catch (err) {
-        console.error('Ошибка при сохранении тренировки:', err)
-        props.errorMessages.push('Ошибка при сохранении тренировки на сервере.')
-        return
+        console.error('Ошибка при сохранении тренировки:', err);
+        props.errorMessages.push('Ошибка при сохранении тренировки на сервере.');
+        return;
       }
 
-      // После успешной попытки отправки данных (или если нет telegramUserId),
-      // продолжаем как в текущей логике — говорим родителю сгенерировать тренировку
-      emit('generateSplitWorkout')
-    }
+      emit('generateSplitWorkout');
+    };
 
     const getDifficultyColor = (level: number | string): string => {
       const numericLevel = Number(level)
