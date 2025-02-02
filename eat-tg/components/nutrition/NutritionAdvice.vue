@@ -1,87 +1,70 @@
 <!-- components/nutrition/NutritionAdvice.vue -->
 <template>
-  <!-- Заворачиваем в <v-app>, чтобы сохранить логику, аналогичную pages/blog.vue -->
   <v-app>
     <!-- Верхняя панель с заголовком и кнопкой админки (только для администратора) -->
     <v-app-bar v-if="isAdmin" color="primary" dark elevated>
       <v-toolbar-title>Рационы питания</v-toolbar-title>
-
-      <v-btn
-          v-if="isAdmin"
-          color="secondary"
-          class="ma-2"
-          @click="toggleAdmin"
-      >
+      <v-btn v-if="isAdmin" color="secondary" class="ma-2" @click="toggleAdmin">
         {{ showAdminPanel ? 'Закрыть админку' : 'Открыть админку' }}
       </v-btn>
     </v-app-bar>
 
     <v-main>
-      <v-container class="py-4">
+      <v-container>
         <!-- Если включён режим админки, показываем DietsAdmin -->
         <DietsAdmin v-if="showAdminPanel" />
-        <!-- Иначе показываем нашу страницу с советами по питанию -->
+        <!-- Иначе показываем страницу с рациональными советами -->
         <div v-else>
-          <div class="nutrition-advice" style="border-radius: 16px">
-            <v-card style="border-radius: 16px">
-              <v-card-title class="text-h5 font-weight-bold">
-                Примеры питания
-              </v-card-title>
-              <v-card-text>
-                Ниже вы найдёте готовые варианты рационов для мужчин и женщин под разные цели,
-                а также советы по питанию до и после тренировки.
-              </v-card-text>
+          <v-card class="nutrition-advice-card" style="border-radius: 16px">
+            <v-card-title class="text-h5 font-weight-bold">
+              Примеры питания
+            </v-card-title>
+            <v-card-text>
+              Тут лежат примеры рационов питания и советы.
+            </v-card-text>
 
-              <v-expansion-panels multiple>
-                <v-expansion-panel
-                    v-for="(section, index) in allSections"
-                    :key="index"
-                >
-                  <v-expansion-panel-title class="text-h6" color="#2f4f4f">
-                    {{ section.title }}
-                  </v-expansion-panel-title>
-                  <v-expansion-panel-text>
-                    <p v-if="section.description">
-                      {{ section.description }}
-                    </p>
+            <!-- Перебор секций, полученных через API -->
+            <v-expansion-panels multiple>
+              <v-expansion-panel v-for="(section, index) in allSections" :key="index">
+                <v-expansion-panel-title class="text-h6" color="#2f4f4f">
+                  {{ section.title }}
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <p v-if="section.description">
+                    {{ section.description }}
+                  </p>
 
-                    <v-row class="py-2" dense>
-                      <v-col
-                          v-for="(item, i) in section.items"
-                          :key="i"
-                          cols="12"
-                          md="6"
-                          class="mb-2 d-flex"
-                      >
-                        <v-card outlined variant="tonal" class="w-100" style="border-radius: 16px">
-                          <v-card-title>{{ item.title }}</v-card-title>
-                          <v-card-text v-if="item.shortDescription">
-                            {{ item.shortDescription }}
-                          </v-card-text>
-                          <v-card-actions>
-                            <v-spacer></v-spacer>
-                            <v-btn color="primary" @click="openBottomSheet(item)">
-                              Пример рациона
-                            </v-btn>
-                          </v-card-actions>
-                        </v-card>
-                      </v-col>
-                    </v-row>
-                  </v-expansion-panel-text>
-                </v-expansion-panel>
-              </v-expansion-panels>
-            </v-card>
+                  <!-- Перебор постов внутри секции -->
+                  <div class="post-list">
+                    <v-card
+                        v-for="(item, i) in section.items"
+                        :key="i"
+                        outlined
+                        variant="tonal"
+                        class="post-card"
+                        style="border-radius: 16px; margin-bottom: 16px"
+                    >
+                      <v-card-title>{{ item.title }}</v-card-title>
+                      <v-card-text v-if="item.shortDescription">
+                        {{ item.shortDescription }}
+                      </v-card-text>
+                      <v-card-actions>
+                        <v-spacer></v-spacer>
+                        <v-btn color="primary" @click="openBottomSheet(item)">
+                          Пример рациона
+                        </v-btn>
+                      </v-card-actions>
+                    </v-card>
+                  </div>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
+          </v-card>
 
-            <!-- Модальное окно (BottomSheet) для подробного просмотра -->
-            <BottomSheetWithClose
-                v-model="bottomSheet"
-                :title="selectedItem?.title"
-            >
-              <div v-html="formattedContent" class="py-2 px-4"></div>
-            </BottomSheetWithClose>
-
-            <!-- <ReferralLink /> если нужно -->
-          </div>
+          <!-- Модальное окно (BottomSheet) для подробного просмотра -->
+          <BottomSheetWithClose v-model="bottomSheet" :title="selectedItem?.title">
+            <div v-html="formattedContent" class="py-2 px-4"></div>
+          </BottomSheetWithClose>
         </div>
       </v-container>
     </v-main>
@@ -89,12 +72,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import BottomSheetWithClose from '../../components/shared/BottomSheetWithClose.vue';
-import { useUserStore } from '~/stores/userStore'; // путь скорректируйте под свой проект
+import { useUserStore } from '~/stores/userStore'; // Проверьте путь в вашем проекте
 import DietsAdmin from '../userAndAdmin/DietsAdmin.vue';
+import { useApi } from '~/composables/useApi';
 
-/** Структуры данных */
+/** Типы данных для постов и секций */
 interface NutritionExample {
   title: string;
   content: string;
@@ -107,131 +91,62 @@ interface NutritionSection {
   items: NutritionExample[];
 }
 
-/** Примерные данные для аккордеона */
-const allSections = ref<NutritionSection[]>([
-  {
-    title: '!!Мужчинам',
-    description: 'Подборка рационов с учётом мужского метаболизма и энергозатрат.',
-    items: [
-      {
-        title: 'Похудение',
-        shortDescription: 'Рацион для снижения веса без потери мышечной массы.',
-        content: `
-          - Завтрак: Омлет из 2 яиц, овсянка на воде...
-          - Обед: Гречка, куриная грудка...
-          - Ужин: Тушёная рыба, брокколи...
-          <br><br>
-          Рекомендации: пейте достаточно воды...
-        `
-      },
-      {
-        title: 'Удержание веса',
-        shortDescription: 'Примерный план для сохранения формы.',
-        content: `
-          - Завтрак: Каша с фруктами...
-          - Перекус: Орехи или творог...
-          - Обед: Суп на нежирном бульоне...
-        `
-      },
-      {
-        title: 'Набор массы',
-        shortDescription: 'Повышенная калорийность + правильные белки и углеводы.',
-        content: `
-          - Завтрак: Омлет из 3 яиц, сыр, тосты...
-          - Обед: Макароны из твёрдых сортов, говядина...
-          - Ужин: Рис, красная рыба...
-        `
-      }
-    ]
-  },
-  {
-    title: '!!Женщинам',
-    description: 'Примеры рационов для женского организма.',
-    items: [
-      {
-        title: 'Похудение',
-        shortDescription: 'Сбалансированный дефицит калорий.',
-        content: `
-          - Завтрак: Творог с ягодами...
-          - Обед: Запечённая куриная грудка, овощи...
-        `
-      },
-      {
-        title: 'Удержание формы',
-        content: `
-          - Утром: Злаковые хлебцы, растительный омлет...
-        `
-      },
-      {
-        title: 'Набор массы',
-        content: `
-          - Белковые продукты: яйца, рыба, курица...
-          - Сложные углеводы: гречка, киноа...
-        `
-      }
-    ]
-  },
-  {
-    title: 'Питание до тренировки',
-    items: [
-      {
-        title: 'За 1-2 часа до',
-        content: `
-          - Овсяная каша с ягодами...
-          - Фрукты (банан, яблоко)...
-        `
-      }
-    ]
-  },
-  {
-    title: 'Питание после тренировки',
-    items: [
-      {
-        title: 'Через 30-60 минут',
-        content: `
-          - Протеиновый коктейль, творог с ягодами...
-          - Рис/гречка, куриная грудка, овощи...
-        `
-      }
-    ]
+/** Состояние для секций, заполняемое из API */
+const allSections = ref<NutritionSection[]>([]);
+
+/** Используем composable useApi для запросов к серверу */
+const { apiRequest } = useApi();
+
+/** Функция загрузки данных из API */
+async function loadSections() {
+  try {
+    // Получаем данные по маршруту GET /dietsList
+    // Предполагается, что сервер возвращает массив объектов, соответствующих NutritionSection
+    const data = await apiRequest<NutritionSection[]>('GET', 'dietsList');
+    allSections.value = data;
+  } catch (error) {
+    console.error('Ошибка при загрузке рационов:', error);
   }
-])
-
-/** Состояние для BottomSheet */
-const bottomSheet = ref(false)
-const selectedItem = ref<NutritionExample | null>(null)
-
-/** Функция для открытия BottomSheet с выбранным постом */
-function openBottomSheet(item: NutritionExample) {
-  selectedItem.value = item
-  bottomSheet.value = true
 }
 
-/** Форматирование контента для BottomSheet */
+onMounted(() => {
+  loadSections();
+});
+
+/** Состояния для BottomSheet и выбранного элемента */
+const bottomSheet = ref(false);
+const selectedItem = ref<NutritionExample | null>(null);
+
+function openBottomSheet(item: NutritionExample) {
+  selectedItem.value = item;
+  bottomSheet.value = true;
+}
+
 const formattedContent = computed(() => {
-  if (!selectedItem.value) return ''
+  if (!selectedItem.value) return '';
   return selectedItem.value.content
       .replace(/\n/g, '<br>')
       .replace(/-\s+/g, '<li style="margin-left: 20px;">')
       .replace(/<br>\s*<li/g, '<ul><li')
       .replace(/<\/li>\s*<br>/g, '</li></ul>')
       .replace(/<br><ul>/g, '<ul>')
-      .replace(/<br>/g, '<p style="margin-left: 20px;">')
-})
+      .replace(/<br>/g, '<p style="margin-left: 20px;">');
+});
 
 /** Управление режимом админки */
-const userStore = useUserStore()
-const isAdmin = computed(() => userStore.role === 'admin')
-const showAdminPanel = ref(false)
-
+const userStore = useUserStore();
+const isAdmin = computed(() => userStore.role === 'admin');
+const showAdminPanel = ref(false);
 function toggleAdmin() {
-  showAdminPanel.value = !showAdminPanel.value
+  showAdminPanel.value = !showAdminPanel.value;
 }
 </script>
 
 <style scoped>
-.nutrition-advice {
-  padding: 16px;
+.nutrition-advice-card {
+  margin: 8px auto;
+  max-width: 800px;
+  padding: 24px;
 }
 
 .py-2.px-4 {

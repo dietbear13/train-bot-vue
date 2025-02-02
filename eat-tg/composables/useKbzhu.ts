@@ -1,5 +1,6 @@
 // composables/useKbzhu.ts
 import { ref, computed, type Ref } from 'vue'
+import {number} from "@telegram-apps/sdk";
 
 // Интерфейсы для типов данных
 interface KbzhuResult {
@@ -96,14 +97,25 @@ export function useKbzhu() {
             let BMR: number
             if (gender === 'мужчина') {
                 BMR = (10 * weight) + (6.25 * height) - (5 * age) + 5
+
             } else if (gender === 'женщина') {
                 BMR = (10 * weight) + (6.25 * height) - (5 * age) - 161
             } else {
                 throw new Error('Некорректный пол.')
             }
 
+            let activityCoefficient: number
+            if (gender === 'мужчина') {
+                activityCoefficient = 1.55
+
+            } else if (gender === 'женщина') {
+                activityCoefficient = 1.45
+
+            } else {
+                throw new Error('Некорректный пол для кэфа активности.')
+            }
+
             // Коэффициент активности (примерно)
-            const activityCoefficient = 1.55
 
             // Расчёт TDEE
             let TDEE = BMR * activityCoefficient
@@ -137,9 +149,9 @@ export function useKbzhu() {
                     'плотное': { protein: 2.1, fat: 1.0 },
                 },
                 'женщина': {
-                    'худощавое': { protein: 1.7, fat: 1.1 },
-                    'среднее': { protein: 1.8, fat: 1.1 },
-                    'плотное': { protein: 1.9, fat: 1.1 },
+                    'худощавое': { protein: 1.8, fat: 1.1 },
+                    'среднее': { protein: 1.9, fat: 1.1 },
+                    'плотное': { protein: 2.0, fat: 1.1 },
                 },
             }
 

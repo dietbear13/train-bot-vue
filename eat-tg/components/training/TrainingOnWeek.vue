@@ -2,7 +2,7 @@
 <template>
     <!-- Проверка роли (roleLoading) -->
     <div v-if="roleLoading">
-      <v-skeleton-loader type="ossein" height="60px" class="mx-auto" />
+      <v-skeleton-loader type="ossein" height="50px" class="mx-auto" style="border-radius: 16px"/>
     </div>
 
     <div v-else>
