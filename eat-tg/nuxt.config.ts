@@ -35,16 +35,17 @@ export default defineNuxtConfig({
       telegramBotApiKey: process.env.TELEGRAM_BOT_API_KEY || '',
       tinyMceKey: process.env.TinyMCE_KEY || '',
       kassaKey: process.env.KASSA_KEY || '',
+      adminTelegramId: process.env.ADMIN_TELEGRAM_ID || '',
     },
   },
 
   modules: [
       '@nuxt/fonts',
-    '@pinia/nuxt',
-    '@nuxtjs/device',
-    [
-      'nuxt-yandex-metrika',
-      {
+      '@pinia/nuxt',
+      '@nuxtjs/device',
+      [
+          'nuxt-yandex-metrika',
+        {
         id: 99643818,
         clickmap:true,
         trackLinks:true,

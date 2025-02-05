@@ -1,8 +1,8 @@
-<!-- AdminInfo.vue (Vuetify 3, Nuxt 3, с новым столбцом "TG Username") -->
+<!-- AdminInfo.vue (Vuetify 3, Nuxt 3) -->
 <template>
   <v-container fluid>
-    <v-card class="pa-4">
-      <!-- Заголовок и кнопка обновления -->
+    <v-card class="pa-2">
+      <!-- Заголовок + кнопка "Обновить" -->
       <v-app-bar color="transparent" flat>
         <v-toolbar-title>Админ-панель: список пользователей</v-toolbar-title>
         <v-spacer />
@@ -12,7 +12,7 @@
         </v-btn>
       </v-app-bar>
 
-      <!-- Поле поиска по Telegram ID -->
+      <!-- Поиск по Telegram ID -->
       <v-text-field
           v-model="searchId"
           label="Поиск по Telegram ID"
@@ -23,7 +23,7 @@
           @input="searchUser"
       />
 
-      <!-- Таблица пользователей -->
+      <!-- Основная таблица (список пользователей) -->
       <v-data-table
           :headers="userHeaders"
           :items="filteredUsers"
@@ -32,12 +32,12 @@
           class="elevation-1"
           hide-default-footer
       >
-        <!-- Вывод dateAdded -->
+        <!-- Колонка dateAdded -->
         <template #item.dateAdded="{ item }">
           {{ formatDate(item.dateAdded) }}
         </template>
 
-        <!-- Действия (глаз / удалить) -->
+        <!-- Колонка действий -->
         <template #item.actions="{ item }">
           <v-btn icon variant="text" color="primary" @click="openUserDialog(item)">
             <v-icon icon="mdi-eye" />
@@ -60,9 +60,9 @@
         <v-card>
           <v-card-title class="text-h6">Управление пользователем</v-card-title>
 
-          <!-- Основное содержимое диалога -->
+          <!-- Основная часть диалога -->
           <v-card-text v-if="selectedUser && editingUser">
-            <!-- Первый блок вкладок (только названия вкладок) -->
+            <!-- Вкладки -->
             <v-tabs
                 v-model="activeTab"
                 align-tabs="center"
@@ -77,7 +77,6 @@
               <v-tab value="likes">Blog Likes</v-tab>
             </v-tabs>
 
-            <!-- Второй блок заменён на v-tabs-window -->
             <v-tabs-window v-model="activeTab">
               <!-- TAB: Основное -->
               <v-tabs-window-item value="main">
@@ -136,9 +135,12 @@
                     dense
                     hide-default-footer
                 >
+                  <!-- Колонка timestamp (КБЖУ) -->
                   <template #item.timestamp="{ item }">
                     {{ formatTimestamp(item.timestamp) }}
                   </template>
+
+                  <!-- Колонка formData (данные формы) -->
                   <template #item.formData="{ item }">
                     Пол: {{ item.formData.gender }},
                     Телосложение: {{ item.formData.bodyType }},
@@ -148,6 +150,8 @@
                     Цель: {{ item.formData.goal }},
                     Тренировок: {{ item.formData.workoutsPerWeek }}
                   </template>
+
+                  <!-- Колонка kbzhuResult -->
                   <template #item.kbzhuResult="{ item }">
                     Кал: {{ item.kbzhuResult.calories }},
                     Доп.ккал: {{ item.kbzhuResult.extraCalories }},
@@ -155,6 +159,8 @@
                     Ж: {{ item.kbzhuResult.fats }},
                     У: {{ item.kbzhuResult.carbs }}
                   </template>
+
+                  <!-- Колонка actions (удалить) -->
                   <template #item.actions="{ item }">
                     <v-btn
                         icon
@@ -177,15 +183,21 @@
                     dense
                     hide-default-footer
                 >
+                  <!-- 1) timestamp -->
                   <template #item.timestamp="{ item }">
                     {{ formatTimestamp(item.timestamp) }}
                   </template>
+
+                  <!-- 2) formData -->
                   <template #item.formData="{ item }">
                     Пол: {{ item.formData.gender }}<br />
                     Цель: {{ item.formData.goal }}<br />
                     Сплит: {{ item.formData.splitType }}<br />
-                    ID Сплита: {{ item.formData.splitId }}
+                    ID Сплита: {{ item.formData.splitId }}<br />
+                    Отправлена: {{ item.isSended ? 'Отправлена' : 'Сгенерирована' }}
                   </template>
+
+                  <!-- 3) actions (удалить) -->
                   <template #item.actions="{ item }">
                     <v-btn
                         icon
@@ -238,7 +250,7 @@
             </v-tabs-window>
           </v-card-text>
 
-          <!-- Прелоадер, если selectedUser ещё не загрузился -->
+          <!-- Прелоадер, если нет editingUser -->
           <v-card-text v-else class="d-flex justify-center">
             <v-progress-circular indeterminate color="primary" />
           </v-card-text>
@@ -262,7 +274,7 @@
         </v-card>
       </v-dialog>
 
-      <!-- Сообщение об ошибке -->
+      <!-- Ошибка, если есть -->
       <v-alert
           v-if="userError"
           type="error"
@@ -279,339 +291,344 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useUserStore } from '~/stores/userStore'
-import { useApi } from '~/composables/useApi'
+import { useUserStore } from '../../stores/userStore'
+import { useApi } from '../../composables/useApi'
 
-/** ====== Типы ====== */
+/** ===== Типы для КБЖУ ===== */
 interface IKbzhuFormData {
-  gender: string;
-  bodyType: string;
-  age: number;
-  height: number;
-  weight: number;
-  goal: string;
-  workoutsPerWeek: number;
+  gender: string
+  bodyType: string
+  age: number
+  height: number
+  weight: number
+  goal: string
+  workoutsPerWeek: number
 }
 interface IKbzhuResult {
-  calories: number;
-  extraCalories: number;
-  proteins: number;
-  fats: number;
-  carbs: number;
+  calories: number
+  extraCalories: number
+  proteins: number
+  fats: number
+  carbs: number
 }
 interface IKbzhuHistory {
-  _id?: string;
-  formData: IKbzhuFormData;
-  kbzhuResult: IKbzhuResult;
-  timestamp: number; // в миллисекундах
+  _id?: string
+  formData: IKbzhuFormData
+  kbzhuResult: IKbzhuResult
+  timestamp: number
 }
 
+/** ===== Типы для тренировок ===== */
 interface ITrainingFormData {
-  gender: string;
-  splitType: string;
-  splitId: string;
+  gender: string
+  goal?: string
+  splitType: string
+  splitId: string
 }
 interface ITrainingHistory {
-  _id?: string;
-  formData: ITrainingFormData;
-  timestamp: number;
+  _id?: string
+  formData: ITrainingFormData
+  timestamp: number
+  isSended?: boolean  // <-- поле "Отправлена?"
 }
 
+/** ===== Типы для Likes / Referrals ===== */
 interface IBlogLike {
-  postId: number;
-  liked: boolean;
-  date: number;
+  postId: string
+  liked: boolean
+  date: number
+}
+interface IReferral {
+  inviteeId?: number
+  date?: number
 }
 
-/** Добавляем telegramUsername, чтобы хранить результирующий @username из Telegram API */
+/** ===== Основной интерфейс IUser ===== */
 interface IUser {
-  _id: string;
-  telegramId: number;
-  firstName?: string;
-  lastName?: string;
-  username?: string;
-  role: 'admin' | 'freeUser' | 'paidUser';
-  dateAdded: number;
-  kbzhuHistory?: IKbzhuHistory[];
-  trainingHistory?: ITrainingHistory[];
-  referrals?: string[];
-  blogLikes?: IBlogLike[];
-  telegramUsername?: string; // Добавили поле
+  _id: string
+  telegramId: number
+  firstName?: string
+  lastName?: string
+  username?: string
+  role: 'admin' | 'freeUser' | 'paidUser'
+  dateAdded: number
+  kbzhuHistory?: IKbzhuHistory[]
+  trainingHistory?: ITrainingHistory[]
+  referrals?: IReferral[]
+  blogLikes?: IBlogLike[]
+  starDonationHistory?: any[]
+  telegramUsername?: string
 }
 
+/** Тип ответа API */
 interface IApiUsersResponse {
-  users: IUser[];
+  users: IUser[]
 }
 
+/** Telegram getChat */
 interface TelegramGetChatResponse {
-  ok: boolean;
+  ok: boolean
   result?: {
-    id?: number;
-    first_name?: string;
-    last_name?: string;
-    username?: string;
-  };
+    id?: number
+    first_name?: string
+    last_name?: string
+    username?: string
+  }
 }
 
-/** ====== Основная логика ====== */
-const userStore = useUserStore();
-const { apiRequest } = useApi();
+/** ===== Основная логика ===== */
+const userStore = useUserStore()
+const { apiRequest } = useApi()
 
-const users = ref<IUser[]>([]);
-const loading = ref(false);
-const saving = ref(false);
-const userError = ref<string|null>(null);
+const users = ref<IUser[]>([])
+const loading = ref(false)
+const saving = ref(false)
+const userError = ref<string|null>(null)
 
-// Для поиска / пагинации
-const searchId = ref('');
-const filteredUsers = ref<IUser[]>([]);
-const pagination = ref({ page: 1 });
-const pageCount = computed(() => Math.ceil(computedFilteredUsers.value.length / 10));
+// Поиск + пагинация
+const searchId = ref('')
+const filteredUsers = ref<IUser[]>([])
+const pagination = ref({ page: 1 })
+const pageCount = computed(() =>
+    Math.ceil(computedFilteredUsers.value.length / 10)
+)
 
-// Диалог + выбранный пользователь
-const userDialog = ref(false);
-const selectedUser = ref<IUser|null>(null);
-// editingUser — копия, которую редактируем
-const editingUser = ref<IUser|null>(null);
+// Диалог + выбор пользователя
+const userDialog = ref(false)
+const selectedUser = ref<IUser|null>(null)
+const editingUser = ref<IUser|null>(null)
 
-// Текущая вкладка
-const activeTab = ref<string>('main');
+// Управление вкладками
+const activeTab = ref<'main'|'kbzhu'|'training'|'referrals'|'likes'>('main')
 
-/** Обновляем заголовки: добавляем новый столбец для вывода @username */
+/** Заголовки (Headers) таблицы пользователей */
 const userHeaders = [
   { title: 'Telegram ID', key: 'telegramId', width: 150 },
-  {
-    title: 'TG Username',   // название столбца
-    key: 'telegramUsername', // свойство у пользователя
-    width: 150
-  },
+  { title: 'TG Username', key: 'telegramUsername', width: 150 },
   { title: 'Роль', key: 'role', width: 100 },
   { title: 'Дата Добавления', key: 'dateAdded', width: 150 },
-  { title: 'Действия', key: 'actions', sortable: false, width: 100 },
-];
+  { title: 'Действия', key: 'actions', sortable: false, width: 100 }
+]
 
+/** Заголовки для KБЖУ */
 const kbzhuHeaders = [
-  { title: 'Дата (timestamp)', key: 'timestamp', width: 140 },
-  { title: 'Данные формы', key: 'formData' },
-  { title: 'Результат КБЖУ', key: 'kbzhuResult' },
-  { title: 'Действия', key: 'actions', sortable: false, width: 80 },
-];
+  { title: 'Дата (timestamp)', key: 'timestamp', width: 140, sortable: false },
+  { title: 'Данные формы', key: 'formData', sortable: false },
+  { title: 'Результат КБЖУ', key: 'kbzhuResult', sortable: false },
+  { title: 'Действия', key: 'actions', sortable: false, width: 80 }
+]
 
+/** Заголовки для Тренировок (4 столбца) */
 const trainingHeaders = [
-  { title: 'Дата (timestamp)', key: 'timestamp', width: 140 },
-  { title: 'Данные формы', key: 'formData' },
-  { title: 'Действия', key: 'actions', sortable: false, width: 80 },
-];
+  { title: 'Дата (timestamp)', key: 'timestamp', width: 140, sortable: false },
+  { title: 'Данные формы', key: 'formData', sortable: false },
+  { title: 'Действия', key: 'actions', sortable: false, width: 80 }
+]
 
-const roleItems = ['admin', 'freeUser', 'paidUser'];
+const roleItems = ['admin', 'freeUser', 'paidUser']
 
-/** ====== Computed & Watch ====== */
 const computedFilteredUsers = computed(() => {
-  const search = searchId.value.trim();
-  if (!search) return users.value;
-  const idNum = parseInt(search);
-  if (!isNaN(idNum)) {
-    return users.value.filter(u => u.telegramId === idNum);
+  const search = searchId.value.trim()
+  if (!search) return users.value
+  const idAsNumber = parseInt(search)
+  if (!isNaN(idAsNumber)) {
+    return users.value.filter(u => u.telegramId === idAsNumber)
   }
-  return users.value; // Или расширить поиск по другим критериям
-});
+  return users.value
+})
 
-watch(computedFilteredUsers, (newVal) => {
-  // При изменении фильтра сбрасываем пагинацию
-  pagination.value.page = 1;
-  filteredUsers.value = newVal.slice(0, 10);
-});
+watch(computedFilteredUsers, newVal => {
+  pagination.value.page = 1
+  filteredUsers.value = newVal.slice(0, 10)
+})
 
-// Следим за сменой страницы
 watch(
     () => pagination.value.page,
-    (newPage) => {
-      const start = (newPage - 1) * 10;
-      const end = start + 10;
-      filteredUsers.value = computedFilteredUsers.value.slice(start, end);
+    newVal => {
+      const start = (newVal - 1) * 10
+      const end = start + 10
+      filteredUsers.value = computedFilteredUsers.value.slice(start, end)
     }
-);
+)
 
-/** ====== Методы ====== */
+/** Сброс страницы при вводе поиска */
 function searchUser() {
-  // При любом вводе сбрасываем страницу
-  pagination.value.page = 1;
+  pagination.value.page = 1
 }
 
+/** Дата, если dateAdded в секундах */
 function formatDate(timestamp: number) {
-  if (!timestamp) return '—';
-  const date = new Date(timestamp * 1000); // если timestamp в секундах
-  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+  if (!timestamp) return '—'
+  const date = new Date(timestamp)
+  return date.toLocaleDateString('ru-RU', {
+    day: 'numeric', month: 'long', year: 'numeric'
+  })
 }
+
+/** Дата в мс */
 function formatTimestamp(ts: number) {
-  if (!ts) return '—';
-  const date = new Date(ts); // предполагаем, что ts в мс
-  return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+  if (!ts) return '—'
+  const date = new Date(ts)
+  return date.toLocaleDateString('ru-RU', {
+    day: 'numeric', month: 'long', year: 'numeric'
+  })
 }
 
-/** Метод для запроса инфы по одному Telegram ID */
+/** Запрос к Telegram API */
 async function fetchUserInfo(telegramId: number) {
-  const runtimeConfig = useRuntimeConfig();
-  const key = runtimeConfig.public.telegramBotApiKey;
-
-  // Проверим, что ключ считался
+  const runtimeConfig = useRuntimeConfig()
+  const key = runtimeConfig.public.telegramBotApiKey
   if (!key) {
-    console.error('TELEGRAM_BOT_API_KEY отсутствует или не передан в Nuxt!');
-    return {};
+    console.error('Нет TELEGRAM_BOT_API_KEY в Nuxt!')
+    return {}
   }
 
-  const url = `https://api.telegram.org/bot${key}/getChat?chat_id=${telegramId}`;
-
+  const url = `https://api.telegram.org/bot${key}/getChat?chat_id=${telegramId}`
   try {
-    const res = await fetch(url);
+    const res = await fetch(url)
     if (!res.ok) {
-      throw new Error(`Telegram API вернул статус ${res.status}`);
+      throw new Error(`Telegram API вернул статус ${res.status}`)
     }
-    const data: TelegramGetChatResponse = await res.json();
+    const data: TelegramGetChatResponse = await res.json()
     if (!data.ok || !data.result) {
-      return {};
+      return {}
     }
     return {
       firstName: data.result.first_name,
       lastName: data.result.last_name,
-      username: data.result.username,
-    };
+      username: data.result.username
+    }
   } catch (err) {
-    console.error('fetchUserInfo Error:', err);
-    return {};
+    console.error('fetchUserInfo Error:', err)
+    return {}
   }
 }
 
-/**
- * Загружаем пользователей с бэкенда, затем
- * в цикле запрашиваем их username у Telegram
- * и сохраняем в поле user.telegramUsername = '@username'.
- */
+/** Загрузка списка пользователей + usernames */
 async function fetchUsers() {
-  loading.value = true;
-  userError.value = null;
+  loading.value = true
+  userError.value = null
   try {
-    // 1. Получаем список пользователей
-    const data = await apiRequest<IApiUsersResponse>('GET', 'users');
-    users.value = data.users;
+    const data = await apiRequest<IApiUsersResponse>('GET', 'users')
+    users.value = data.users
 
-    // 2. Запрашиваем Telegram usernames для всех (параллельно или по очереди)
+    // Параллельные запросы к Telegram
     const requests = users.value.map(async (user) => {
-      const info = await fetchUserInfo(user.telegramId);
-      // Если info.username есть, добавим "@" перед ним
-      user.telegramUsername = info.username ? `@${info.username}` : '';
-    });
-    await Promise.all(requests);
+      const info = await fetchUserInfo(user.telegramId)
+      user.telegramUsername = info.username ? `@${info.username}` : ''
+    })
+    await Promise.all(requests)
 
-    // 3. Заполняем таблицу
-    filteredUsers.value = users.value.slice(0, 10);
-    pagination.value.page = 1;
+    filteredUsers.value = users.value.slice(0, 10)
+    pagination.value.page = 1
   } catch (err: any) {
-    userError.value = 'Не удалось загрузить пользователей: ' + err.message;
+    userError.value = 'Не удалось загрузить пользователей: ' + err.message
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
 
+/** Открыть диалог редактирования */
 function openUserDialog(user: IUser) {
-  userError.value = null;
-  loading.value = true;
-  // Здесь уже отдельный запрос для одной карточки (если нужно)
+  userError.value = null
+  loading.value = true
   fetchUserInfo(user.telegramId)
       .then(info => {
         editingUser.value = {
           ...user,
           firstName: info.firstName ?? user.firstName,
           lastName: info.lastName ?? user.lastName,
-          username: info.username ?? user.username,
-        };
-        selectedUser.value = editingUser.value;
-        activeTab.value = 'main';
-        userDialog.value = true;
+          username: info.username ?? user.username
+        }
+        selectedUser.value = editingUser.value
+        activeTab.value = 'main'
+        userDialog.value = true
       })
       .catch(err => {
-        userError.value = `Ошибка при открытии пользователя: ${err.message}`;
+        userError.value = `Ошибка при открытии пользователя: ${err.message}`
       })
       .finally(() => {
-        loading.value = false;
-      });
+        loading.value = false
+      })
 }
 
+/** Закрыть диалог */
 function closeUserDialog() {
-  userDialog.value = false;
-  selectedUser.value = null;
-  editingUser.value = null;
+  userDialog.value = false
+  selectedUser.value = null
+  editingUser.value = null
 }
 
+/** Сохранить изменения (роль) */
 async function saveUserChanges() {
-  if (!editingUser.value) return;
-  saving.value = true;
-  userError.value = null;
+  if (!editingUser.value) return
+  saving.value = true
+  userError.value = null
   try {
-    const payload = {
-      role: editingUser.value.role,
-      // добавьте другие поля, если хотите редактировать
-    };
-    await apiRequest('PATCH', `users/${editingUser.value._id}`, payload);
-    // Обновляем в списке
-    const idx = users.value.findIndex(u => u._id === editingUser.value?._id);
+    const payload = { role: editingUser.value.role }
+    await apiRequest('PATCH', `users/${editingUser.value._id}`, payload)
+
+    // Отразить сразу в списке
+    const idx = users.value.findIndex(u => u._id === editingUser.value?._id)
     if (idx !== -1 && editingUser.value) {
-      users.value[idx].role = editingUser.value.role;
+      users.value[idx].role = editingUser.value.role
     }
-    closeUserDialog();
+    closeUserDialog()
   } catch (err: any) {
-    userError.value = 'Ошибка при сохранении: ' + err.message;
+    userError.value = 'Ошибка при сохранении: ' + err.message
   } finally {
-    saving.value = false;
+    saving.value = false
   }
 }
 
+/** Удалить пользователя целиком */
 async function deleteUser(userId: string) {
-  if (!confirm('Удалить пользователя?')) return;
+  if (!confirm('Удалить пользователя?')) return
   try {
-    await apiRequest('DELETE', `users/${userId}`);
-    users.value = users.value.filter(u => u._id !== userId);
-    filteredUsers.value = computedFilteredUsers.value.slice(0, 10);
+    await apiRequest('DELETE', `users/${userId}`)
+    users.value = users.value.filter(u => u._id !== userId)
+    filteredUsers.value = computedFilteredUsers.value.slice(0, 10)
   } catch (err: any) {
-    userError.value = 'Не удалось удалить: ' + err.message;
+    userError.value = 'Не удалось удалить: ' + err.message
   }
 }
 
+/** Удалить запись КБЖУ */
 async function deleteKbzhuEntry(kbzhuId?: string) {
-  if (!editingUser.value || !kbzhuId) return;
-  if (!confirm('Удалить запись из КБЖУ?')) return;
+  if (!editingUser.value || !kbzhuId) return
+  if (!confirm('Удалить запись из КБЖУ?')) return
   try {
-    await apiRequest('DELETE', `users/${editingUser.value._id}/kbzhu/${kbzhuId}`);
-    editingUser.value.kbzhuHistory = editingUser.value.kbzhuHistory?.filter(e => e._id !== kbzhuId);
+    await apiRequest('DELETE', `users/${editingUser.value._id}/kbzhu/${kbzhuId}`)
+    editingUser.value.kbzhuHistory = editingUser.value.kbzhuHistory?.filter(e => e._id !== kbzhuId)
   } catch (err: any) {
-    userError.value = 'Ошибка при удалении КБЖУ: ' + err.message;
+    userError.value = 'Ошибка при удалении КБЖУ: ' + err.message
   }
 }
 
+/** Удалить запись Тренировки */
 async function deleteTrainingEntry(trainId?: string) {
-  if (!editingUser.value || !trainId) return;
-  if (!confirm('Удалить запись?')) return;
+  if (!editingUser.value || !trainId) return
+  if (!confirm('Удалить запись?')) return
   try {
-    await apiRequest('DELETE', `users/${editingUser.value._id}/training/${trainId}`);
-    editingUser.value.trainingHistory = editingUser.value.trainingHistory?.filter(e => e._id !== trainId);
+    await apiRequest('DELETE', `users/${editingUser.value._id}/training/${trainId}`)
+    editingUser.value.trainingHistory = editingUser.value.trainingHistory?.filter(e => e._id !== trainId)
   } catch (err: any) {
-    userError.value = 'Ошибка при удалении тренировки: ' + err.message;
+    userError.value = 'Ошибка при удалении тренировки: ' + err.message
   }
 }
 
-/** Хук onMounted */
+/** При монтировании (если admin) - загружаем пользователей */
 onMounted(() => {
   if (userStore.role === 'admin') {
-    // При загрузке компонента сразу получаем всех пользователей и их TG usernames
-    fetchUsers();
+    fetchUsers()
   } else {
-    userError.value = 'У вас нет доступа к этой странице.';
+    userError.value = 'У вас нет доступа к этой странице.'
   }
-});
+})
 </script>
 
 <style scoped>
-/* Пример под тёмную тему Vuetify 3 + небольшие правки */
+/* Тёмная тема Vuetify 3 + небольшие правки */
 .v-application .v-card,
 .v-application .v-dialog,
 .v-application .v-data-table {

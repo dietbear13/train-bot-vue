@@ -23,11 +23,12 @@ export interface IKbzhuHistory {
 export interface ITrainingHistory {
     formData: {
         gender: string
-        goal: string       // Цель (Похудение, Общие, Массонабор и т.д.)
+        goal: string
         splitType: string
         splitId: string
     }
     timestamp: number // UNIX timestamp
+    isSended?: boolean
 }
 
 export interface IReferral {
@@ -37,8 +38,8 @@ export interface IReferral {
 
 export interface IBlogLike {
     postId: string
-    liked: boolean     // true (лайк) или false (анлайк)
-    date: number       // время, когда пользователь изменил лайк
+    liked: boolean
+    date: number
 }
 
 // Новая структура для истории нажатий на кнопку "донат звёзд"
@@ -98,6 +99,7 @@ const UserSchema: Schema = new Schema<IUser>({
                 splitId: { type: String, required: true },
             },
             timestamp: { type: Number, required: true },
+            isSended: { type: Boolean, default: false },
         },
     ],
     referrals: {

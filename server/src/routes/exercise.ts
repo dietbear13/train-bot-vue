@@ -30,4 +30,30 @@ router.get('/exercise', async (req: Request, res: Response) => {
     }
 });
 
+/**
+ * GET /exercise-week
+ * Поиск упражнения по id (query: id)
+ */
+router.get('/exercise-week', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.query;
+        if (!id) {
+            return res.status(400).json({ message: 'Не передан id упражнения' });
+        }
+
+        // Ищем упражнение в БД по id
+        const exercise = await ExerciseModel.findById(id).lean();
+
+        if (!exercise) {
+            return res.status(404).json({ message: 'Упражнение не найдено' });
+        }
+
+        return res.json(exercise);
+    } catch (error) {
+        console.error('Ошибка при поиске упражнения:', error);
+        return res.status(500).json({ message: 'Ошибка сервера' });
+    }
+});
+
+
 export default router;

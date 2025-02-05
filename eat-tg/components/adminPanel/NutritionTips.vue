@@ -1,4 +1,4 @@
-<!-- components/userAndAdmin/DietsAdmin.vue -->
+<!-- components/nutrition/NutritionTips.vue -->
 <template>
   <v-app>
     <!-- Боковая панель (Список рационов) -->
@@ -13,7 +13,7 @@
           Список рационов
         </v-list-subheader>
 
-        <!-- Перебираем diets -->
+        <!-- Перебираем рацион (diets) -->
         <v-list-item
             v-for="diet in diets"
             :key="diet._id"
@@ -34,15 +34,6 @@
             @click="newDiet"
         />
       </v-list>
-
-      <!-- Кнопка "Выйти" внизу (условная, если хотим) -->
-      <template #append>
-        <div class="pa-2">
-          <v-btn block color="secondary" @click="logout">
-            Выйти
-          </v-btn>
-        </div>
-      </template>
     </v-navigation-drawer>
 
     <!-- Основная часть -->
@@ -99,15 +90,14 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import Editor from '@tinymce/tinymce-vue'
-import { useRuntimeConfig } from 'nuxt/imports'
+import { useRuntimeConfig } from '#imports'
 import { useApi } from '../../composables/useApi'
 
-/** Интерфейс данных (упрощённо) */
+/** Интерфейс данных для рациона */
 interface IDietsList {
   _id: string;
   title: string;
   description?: string;
-  // items: ... // при желании можно добавить логику редактирования items
 }
 
 /** Список рационов */
@@ -139,7 +129,7 @@ const tinymceInit = {
     'charmap',
     'code',
     'table',
-    'autoresize',
+    'autoresize'
   ],
   toolbar: `undo redo | formatselect | bold italic underline strikethrough |
             blockquote forecolor backcolor | alignleft aligncenter alignright alignjustify |
@@ -224,7 +214,7 @@ async function deleteDiet() {
   }
 }
 
-/** Выход из админки (пример) */
+/** Выход из админки */
 function logout() {
   localStorage.removeItem('authToken')
   router.push('/login')

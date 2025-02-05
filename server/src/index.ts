@@ -49,8 +49,6 @@ app.use(express.json());
 mongoose
     .connect('mongodb://frobot1519dpf:2!L8ys9U)(rK@mongodb:27017/fitness-app', {
         authSource: 'fitness-app',
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
     } as mongoose.ConnectOptions)
     .then(() => {
         console.log('Connected to MongoDB');

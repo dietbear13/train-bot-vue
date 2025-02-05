@@ -1,6 +1,7 @@
 // src/routes/bot/sendDetailedPlan.ts
 
 import { Router, Request, Response } from 'express';
+import { ObjectId } from 'mongodb'; // Импортируем ObjectId
 import { bot, appUrl } from './botInstance';
 import { formatWeeklyWorkoutMessageHTML, escapeHTML } from '../../utils/helpers';
 
@@ -10,6 +11,7 @@ const router = Router();
  * Интерфейс для упражнения.
  */
 interface Exercise {
+    _id: ObjectId; // Используем ObjectId для идентификатора из MongoDB
     name: string;
     sets: number;
     reps: number;
@@ -17,16 +19,7 @@ interface Exercise {
 }
 
 /**
- * Интерфейс для дня недели с упражнениями.
- */
-interface GeneratedDay {
-    dayName: string;
-    exercises: Exercise[];
-    patternOrExercise?: string[];
-}
-
-/**
- * Маршрут для отправки детального плана (c splitName, splitComment, plan[])
+ * Маршрут для отправки детального плана (с splitName, splitComment, plan[])
  */
 router.post('/send-detailed-plan', async (req: Request, res: Response) => {
     const { userId, plan, splitName, splitComment } = req.body;
@@ -49,15 +42,19 @@ router.post('/send-detailed-plan', async (req: Request, res: Response) => {
             return str.charAt(0).toUpperCase() + str.slice(1);
         }
 
-        // Добавляем иконку-ссылку к каждому упражнению
-        // Используем схему tg://open-web-app для открытия Mini App внутри Telegram
+        // Формируем сообщение с привязкой к каждому упражнению
         let detailedMessage = '';
         plan.forEach(day => {
             if (day.exercises && day.exercises.length > 0) {
                 detailedMessage += `<u>${escapeHTML(day.dayName)}</u>\n`;
                 day.exercises.forEach((exercise: Exercise, index: number) => {
-                    const externalUrl = `${appUrl}/landingsOutside/exerciseInChat?name=${encodeURIComponent(exercise.name)}`;
+                    // Преобразуем ObjectId в строку для формирования URL
+                    const idStr = exercise._id.toString();
+                    console.log('exercise id:', idStr);
+
+                    const externalUrl = `${appUrl}/landingsOutside/exerciseInChat?id=${encodeURIComponent(exercise._id.toString())}`;
                     detailedMessage += `${index + 1}. <a href="${externalUrl}">${escapeHTML(capitalizeFirstLetter(exercise.name))}</a> — ${exercise.sets}×${exercise.reps} <a href="${externalUrl}">🔗</a>\n`;
+                    console.log('exercise id:', exercise._id.toString());
                 });
                 detailedMessage += `\n`;
             }

@@ -121,5 +121,64 @@ router.post('/analytics/save-workout', async (req: Request, res: Response) => {
     }
 });
 
+/**
+ * Маршрут для сохранения "отправленной" тренировки
+ * @route POST /api/analytics/save-sended-workout
+ * @body {
+ *   userId: number,       // telegramId пользователя
+ *   gender: string,       // пол пользователя
+ *   goal: string,         // цель (Похудение, Общие, ...)
+ *   splitType: string,    // тип сплита
+ *   splitId: string,      // конкретный ID сплита
+ *   timestamp?: number    // (опционально) Временная метка
+ * }
+ */
+router.post('/analytics/save-sended-workout', async (req: Request, res: Response) => {
+    try {
+        const { userId, gender, goal, splitType, splitId, timestamp } = req.body;
+
+        if (!userId || !gender || !splitType || !splitId) {
+            return res.status(400).json({
+                error: 'Отсутствуют необходимые поля (userId, gender, splitType, splitId, goal) в теле запроса',
+            });
+        }
+
+        const user = await User.findOne({ telegramId: userId });
+        if (!user) {
+            return res.status(404).json({
+                error: `Пользователь с telegramId=${userId} не найден`,
+            });
+        }
+
+        const newWorkoutEntry = {
+            formData: {
+                gender,
+                goal,
+                splitType,
+                splitId,
+            },
+            timestamp: timestamp || Date.now(),
+            isSended: true, // вот здесь отмечаем, что тренировка "отправлена"
+        };
+
+        user.trainingHistory = user.trainingHistory || [];
+        user.trainingHistory.push(newWorkoutEntry);
+
+        await user.save();
+
+        return res.status(201).json({
+            success: true,
+            message: 'Отправленная тренировка успешно сохранена в историю пользователя',
+            data: newWorkoutEntry,
+        });
+    } catch (err) {
+        console.error('Ошибка в /analytics/save-sended-workout:', err);
+        return res.status(500).json({
+            error: 'Внутренняя ошибка сервера при сохранении отправленной тренировки',
+        });
+    }
+});
+
+
 
 export default router;

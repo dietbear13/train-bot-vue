@@ -223,7 +223,7 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn text @click="isDialogOpen = false">Закрыть</v-btn>
+          <v-btn @click="isDialogOpen = false">Закрыть</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -236,6 +236,7 @@ import { useApi } from '../../composables/useApi';
 import { useRoute, useRouter } from 'vue-router';
 
 interface Exercise {
+  _id: string;
   name: string;
   mainMuscle: string;
   additionalMuscles?: string;
@@ -249,13 +250,6 @@ interface Exercise {
   gifImage?: string;
 }
 
-interface KbzhuResult {
-  calories: number;
-  extraCalories: number;
-  proteins: number;
-  fats: number;
-  carbs: number;
-}
 
 const exercise = ref<Exercise | null>(null);
 const route = useRoute();
@@ -324,14 +318,14 @@ function redirectToTelegramBot() {
  */
 async function fetchExerciseData() {
   try {
-    // Получаем название упражнения из query: /exerciseInChat?name=...
-    const exerciseName = route.query.name as string;
-    if (!exerciseName) return;
+    // Получаем id упражнения из query: /exerciseInChat?id=...
+    const exerciseId = route.query.id as string;
+    if (!exerciseId) return;
 
-    // Запрос на сервер: GET /api/exercise?name=...
+    // Запрос на сервер: GET /api/exercise?id=...
     const data = await apiRequest<Exercise>(
-        `GET`,
-        `exercise?name=${encodeURIComponent(exerciseName)}`
+        'GET',
+        `exercise-week?id=${encodeURIComponent(exerciseId)}`
     );
 
     if (data) {
@@ -359,10 +353,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.banner-alert {
-  border-radius: 16px;
-}
-
 .rounded-lg {
   border-radius: 16px;
 }

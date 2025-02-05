@@ -80,6 +80,50 @@ bot.onText(/\/start/, (msg) => {
     });
 });
 
+bot.on('callback_query', async (query) => {
+    if (!query.data) return;
+
+    // Пример: data = "SURVEY|<surveyId>|<messageId>|<callbackData>"
+    // Парсим
+    const parts = query.data.split('|');
+    if (parts[0] === 'SURVEY') {
+        const surveyId = parts[1];
+        const messageId = parts[2];
+        const userChoice = parts[3];
+
+        // Сохраняем ответ в базе
+        await saveSurveyAnswer(surveyId, messageId, query.from.id, userChoice);
+
+        // Отправим "спасибо за ответ" или обновим сообщение
+        bot.answerCallbackQuery(query.id, {
+            text: 'Ответ принят!',
+            show_alert: false
+        });
+
+        // Проверяем, нужно ли отправить следующее сообщение
+        await processNextMessage(surveyId, messageId);
+    }
+});
+
+async function saveSurveyAnswer(surveyId: string, messageId: string, telegramId: number, userChoice: string) {
+    // Можно завести отдельную коллекцию answers
+    // или хранить ответы внутри ScheduledSurvey
+    // Например:
+    // 1) Находим survey
+    // 2) Находим message
+    // 3) Пушим внутрь message "answers" массив
+    // 4) Сохраняем
+}
+
+async function processNextMessage(surveyId: string, messageId: string) {
+    // Логика: если у текущего message = waitForResponse: true,
+    // то только после получения ответа шлём следующее
+    // 1) Найти survey
+    // 2) Узнать index текущего message
+    // 3) Если waitForResponse, то sendMessage(..., index+1)
+}
+
+
 // Обработка ошибок polling
 bot.on('polling_error', (error) => {
     console.error('Polling error:', error);
