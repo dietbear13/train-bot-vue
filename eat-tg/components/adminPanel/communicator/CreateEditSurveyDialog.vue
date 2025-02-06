@@ -1,5 +1,4 @@
 <!-- adminPanel/communicator/CreateEditSurveyDialog.vue -->
-
 <template>
   <v-dialog v-model="modelValue" max-width="800px">
     <v-card>
@@ -30,7 +29,7 @@
                 <v-col cols="12" sm="6">
                   <v-select
                       v-model="userFilters.role"
-                      :items="['admin', 'user', 'coach']"
+                      :items="['admin', 'freeUser', 'paidUser', 'coach']"
                       label="Роль пользователя"
                       :clearable="true"
                   />
@@ -83,8 +82,8 @@
                 </v-col>
               </v-row>
 
-              <!-- Здесь вы можете добавить и другие критерии
-                   (например, фильтр по trainingHistory, по blogLikes и т.д.) -->
+              <!-- Здесь можно добавить и другие критерии, например:
+                   trainingHistory, blogLikes, starDonationHistory и т.д. -->
 
               <!-- Отображаем статистику -->
               <div v-if="matchingUsersCount !== null" class="mt-3">
@@ -182,7 +181,7 @@
 import { ref, watch, computed } from 'vue';
 import { useApi } from '~/composables/useApi';
 
-// ==== Типы данных ====
+// ==== Типы данных для рассылки ====
 interface InlineButton {
   text: string;
   callbackData: string;
@@ -197,21 +196,21 @@ interface SurveyMessage {
 
 interface SurveyForm {
   _id?: string;
-  telegramId?: number;      // если нужен конкретный пользователь
-  filters?: string;         // JSON-строка с критериями
+  telegramId?: number;      // если хотим адресовать одному конкретному пользователю
+  filters?: string;         // JSON-строка с критериями (serialize userFilters)
   scheduledAt: string;      // дата/время в ISO
   messages: SurveyMessage[];
 }
 
-// Возможные поля для фильтра
+// ==== Типы данных для фильтров ====
 interface UserFilters {
-  role?: string;             // ['admin', 'user', 'coach']
-  gender?: string;           // ['мужчина','женщина'] - из kbzhuHistory.formData.gender
-  bodyType?: string;         // ['худое','среднее','полное']
-  goal?: string;             // ['похудение','удержание','массонабор','общие']
+  role?: string;            // ['admin', 'freeUser', 'paidUser', 'coach', ...]
+  gender?: string;          // ['мужчина','женщина']
+  bodyType?: string;        // ['худое','среднее','полное']
+  goal?: string;            // ['похудение','удержание','массонабор','общие']
   ageMin?: number;
   ageMax?: number;
-  // Можно расширять дальше, например, по trainingHistory, blogLikes и т.д.
+  // Можно расширять дальше (trainingHistory, blogLikes, ...)
 }
 
 // ==== Пропсы и эмиты ====
@@ -230,15 +229,15 @@ const internalSurvey = ref<SurveyForm>({
   messages: [],
 });
 
-// Удобный объект для UI-фильтров
+// Объект для удобного редактирования фильтров в UI
 const userFilters = ref<UserFilters>({});
 
 // Кол-во подходящих пользователей
 const matchingUsersCount = ref<number | null>(null);
-// Ошибка (например, при парсинге или запросе)
+// Ошибка при парсинге JSON или при запросе
 const filtersError = ref<boolean>(false);
 
-// === При открытии диалога ===
+/** При первом открытии (если props.editingSurvey передана) заполняем форму */
 function getCurrentISODate() {
   return new Date().toISOString().slice(0, 19) + 'Z';
 }
@@ -273,7 +272,7 @@ watch(
     { immediate: true }
 );
 
-// === Автоматическое обновление JSON-фильтра при изменении userFilters ===
+// Автоматическое обновление поля filters и запрос на сервер после изменения userFilters
 let filtersTimeout: ReturnType<typeof setTimeout> | null = null;
 
 watch(
@@ -291,7 +290,7 @@ watch(
     { deep: true }
 );
 
-// === Запрос на сервер за количеством подходящих пользователей ===
+/** Запрашиваем у сервера, сколько пользователей подходит под заданные фильтры */
 async function fetchMatchingUsersCount() {
   if (!internalSurvey.value.filters) {
     matchingUsersCount.value = null;
@@ -309,18 +308,18 @@ async function fetchMatchingUsersCount() {
   }
 }
 
-// === Валидация даты ===
+// Проверяем корректность даты
 const isDateValid = computed(() => {
   const d = new Date(internalSurvey.value.scheduledAt);
   return d.toString() !== 'Invalid Date';
 });
 
-// === Закрыть диалог ===
+/** Закрыть диалог */
 function close() {
   emits('update:modelValue', false);
 }
 
-// === Сохранение рассылки ===
+/** Сохранение рассылки (создание или редактирование) */
 async function onSubmit() {
   if (!isDateValid.value) {
     alert('Неверная дата!');
@@ -330,12 +329,14 @@ async function onSubmit() {
     alert('Нужно добавить хотя бы одно сообщение');
     return;
   }
+  // Проверяем, что либо указан telegramId, либо заданы фильтры
   const noTelegramId = !internalSurvey.value.telegramId;
   const noFilters = !internalSurvey.value.filters;
   if (noTelegramId && noFilters) {
     alert('Укажите либо конкретный telegramId, либо задайте фильтры для массовой рассылки');
     return;
   }
+
   try {
     if (!internalSurvey.value._id) {
       // создание
@@ -352,7 +353,7 @@ async function onSubmit() {
   }
 }
 
-// === Управление сообщениями ===
+/** Управление сообщениями */
 function addMessage() {
   internalSurvey.value.messages.push({
     order: internalSurvey.value.messages.length,
@@ -366,7 +367,7 @@ function removeMessage(idx: number) {
   internalSurvey.value.messages.splice(idx, 1);
 }
 
-// === Управление кнопками ===
+/** Управление кнопками */
 function addButton(msgIdx: number) {
   internalSurvey.value.messages[msgIdx].inlineButtons.push({
     text: '',
@@ -390,7 +391,7 @@ function handleButtonTextChange(msgIdx: number, bIdx: number) {
   btn.callbackData = makeCallbackDataFromText(btn.text);
 }
 
-// === Тестовая отправка (без сохранения) ===
+/** Тестовая отправка (без сохранения) */
 async function sendTestMessage() {
   try {
     if (!internalSurvey.value.messages.length) {

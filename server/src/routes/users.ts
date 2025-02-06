@@ -134,15 +134,70 @@ router.post('/update-user-role', async (req: Request, res: Response) => {
 
 // Пример: GET /api/users/matchCount?filters=<JSON-строка>
 // Возвращает { count: <число> }
-router.get('/users/matchCount', async (req, res) => {
+router.get('/users/matchCount', async (req: Request, res: Response) => {
     try {
-        const filtersStr = req.query.filters;
+        const filtersStr = req.query.filters as string | undefined;
+        console.log('++ filtersStr', filtersStr);
         if (!filtersStr) {
             return res.json({ count: 0 });
         }
-        const parsed = JSON.parse(filtersStr as string);
-        // Предположим, вы ищете пользователей: User.find(parsed).countDocuments()
-        const count = await User.countDocuments(parsed);
+
+        // Парсим объект с фронтенда, например:
+        // { role: "admin", gender: "мужчина", ageMin: 20, ageMax: 35, ... }
+        const parsed = JSON.parse(filtersStr);
+        console.log('++ parsed', parsed);
+
+        // Подготовим объект для mongoose
+        const query: any = {};
+
+        // 1) Фильтр по роли (хранится на верхнем уровне User)
+        //    Пример: parsed.role = 'admin'
+        if (parsed.role) {
+            query.role = parsed.role;
+        }
+
+        // 2) Фильтр по kbzhuHistory: gender, bodyType, goal, age
+        //    Соберём условия для $elemMatch в одном объекте:
+        const kbzhuMatch: any = {};
+
+        // gender (к примеру, "мужчина" или "женщина")
+        if (parsed.gender) {
+            kbzhuMatch['formData.gender'] = parsed.gender;
+        }
+
+        // bodyType (к примеру, "среднее", "полное", "худое")
+        if (parsed.bodyType) {
+            kbzhuMatch['formData.bodyType'] = parsed.bodyType;
+        }
+
+        // goal (например, "похудение", "удержание", "массонабор")
+        if (parsed.goal) {
+            kbzhuMatch['formData.goal'] = parsed.goal;
+        }
+
+        // возраст (ageMin / ageMax) => formData.age
+        const ageFilter: any = {};
+        if (parsed.ageMin !== undefined) {
+            ageFilter.$gte = Number(parsed.ageMin);
+        }
+        if (parsed.ageMax !== undefined) {
+            ageFilter.$lte = Number(parsed.ageMax);
+        }
+        if (Object.keys(ageFilter).length > 0) {
+            kbzhuMatch['formData.age'] = ageFilter;
+        }
+
+        // Если kbzhuMatch не пуст, добавляем его в query
+        if (Object.keys(kbzhuMatch).length > 0) {
+            query.kbzhuHistory = { $elemMatch: kbzhuMatch };
+        }
+
+        // При необходимости здесь можно добавить аналогичные блоки для trainingHistory, blogLikes и т.д.
+
+        // Выполняем запрос
+        const count = await User.countDocuments(query);
+        console.log('++ count', count);
+
         return res.json({ count });
     } catch (err) {
         console.error('Ошибка matchCount:', err);

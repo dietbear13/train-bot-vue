@@ -1,66 +1,11 @@
 <!-- pages/index.vue (ex. training) -->
 <template>
-  <v-container class="training-container">
-    <!-- Настройка v-tabs с дополнительными пропсами для улучшенной адаптивности -->
-    <v-tabs
-        v-model="activeTab"
-        background-color="transparent"
-        dark
-        fixed-tabs
-        grow
-        mobile-breakpoint="md"
-        direction="horizontal"
-        align-tabs="center"
-        hide-slider
-        class="custom-tabs"
-    >
-      <v-tab
-          class="custom-tab px-1"
-          style="border-radius: 16px"
-          :class="{ 'active-tab': activeTab === 0 }"
-      >
-        Прога на неделю
-      </v-tab>
-
-      <v-tab
-          class="custom-tab px-1"
-          style="border-radius: 16px"
-          :class="{ 'active-tab': activeTab === 1 }"
-      >
-        На одну мышцу
-      </v-tab>
-      <v-tab
-          class="custom-tab px-1"
-          style="border-radius: 16px"
-          :class="{ 'active-tab': activeTab === 2 }"
-      >
-        Вики
-      </v-tab>
-    </v-tabs>
-
-    <v-tabs-window class="mt-2" v-model="activeTab">
-      <v-tabs-window-item class="pa-0" style="background-color: #121212;">
-        <TrainingOnWeek />
-      </v-tabs-window-item>
-      <v-tabs-window-item class="pa-0"  style="background-color: #121212;">
-        <TrainingByMuscles />
-      </v-tabs-window-item>
-      <v-tabs-window-item class="pa-0"  style="background-color: #121212;">
-        <ExerciseSearch />
-      </v-tabs-window-item>
-    </v-tabs-window>
-
-  </v-container>
+  <!-- Компонент TrainingTabs отвечает за отображение и логику табов -->
+  <TrainingTabs />
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import TrainingOnWeek from '../components/training/TrainingOnWeek.vue'
-import TrainingByMuscles from '../components/training/TrainingByMuscles.vue'
-import ExerciseSearch from "../components/training/ExerciseSearch.vue"
-
-// Инициализация активной вкладки с типизацией
-const activeTab = ref<number>(0)
+import TrainingTabs from '~/components/training/TrainingTabs.vue'
 </script>
 
 <style scoped>
