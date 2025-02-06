@@ -12,6 +12,8 @@ nodeCron.schedule('* * * * *', async () => {
         scheduledAt: { $lte: now },
     });
 
+    console.log('surveys', surveys);
+
     for (const survey of surveys) {
         // Если ещё не отправляли (currentIndex = -1), отправим первое сообщение
         if (survey.currentIndex === -1) {
@@ -29,6 +31,8 @@ async function sendMessage(survey: any, index: number) {
         return;
     }
     const message = survey.messages[index];
+    console.log('message', message);
+
     // Формируем кнопки
     const inline_keyboard = message.inlineButtons.map((b: any) => [
         {

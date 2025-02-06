@@ -1,28 +1,22 @@
 // src/bot.ts
-
-import dotenv from 'dotenv';
 import TelegramBot, { InlineKeyboardMarkup } from 'node-telegram-bot-api';
 
-// Загрузка переменных окружения из .env файла
-dotenv.config();
-
+// Токен и URL берем из process.env, которые подгружены в server.ts
 const botToken = process.env.TELEGRAM_BOT_API_KEY;
 const appUrl = process.env.APP_URL;
 
 if (!botToken) {
-    throw new Error('TELEGRAM_BOT_API_KEY не задан в файле .env');
+    throw new Error('TELEGRAM_BOT_API_KEY не задан в .env');
 }
-
 if (!appUrl) {
-    throw new Error('APP_URL не задан в файле .env');
+    throw new Error('APP_URL не задан в .env');
 }
 
-// Инициализация бота с использованием polling без некорректных опций request
 const bot = new TelegramBot(botToken, {
     polling: true,
 });
 
-console.log('Бот запущен');
+console.log('Telegram bot initialized');
 
 /**
  * Функция для создания кнопки Telegram Web App
@@ -32,9 +26,9 @@ console.log('Бот запущен');
  */
 const openTelegramLink = (text: string, path: string): any => {
     return {
-        text: text,
+        text,
         web_app: {
-            url: `${appUrl}${path}`, // Полный URL вашего Web App с добавленным путем
+            url: `${appUrl}${path}`,
         },
     };
 };
@@ -47,57 +41,53 @@ const openTelegramLink = (text: string, path: string): any => {
  */
 const openUrlButton = (text: string, url: string): any => {
     return {
-        text: text,
-        url: url,
+        text,
+        url,
     };
 };
 
-// Обработчик команды /start
+// /start
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
 
-    const welcomeMessage = 'Привет!\n\nИспользуй кнопки ниже для быстрого попадания в нужный раздел.';
+    const welcomeMessage = 'Привет!\n\nБесплатные программы тренировок, КБЖУ калькулятор и примеры питания.';
 
     // Создание клавиатуры с кнопками
     const keyboard: InlineKeyboardMarkup = {
         inline_keyboard: [
             [
-                openTelegramLink('🏋️‍♂️ Тренировки', '/'), // Страница тренировок
-                openTelegramLink('🍏 Питание', '/nutrition'), // Страница питания
+                openTelegramLink('🏋️‍♂️ Тренировки', '/'),
+                openTelegramLink('🍏 Питание', '/nutrition'),
             ],
             [
-                openUrlButton('🔗 ТГ-канал «кОчалка»', 'https://t.me/training_health'), // Переход в канал
+                openUrlButton('🔗 ТГ-канал «кОчалка»', 'https://t.me/training_health'),
             ],
             [
-                openTelegramLink('⭐ Поддержать проект', '/landingsOutside/donatStars'), // Корректный путь для донатов
+                openTelegramLink('⭐ Поддержать проект', '/landingsOutside/donatStars'),
             ],
         ],
     };
 
-    // Отправка сообщения с клавиатурой
     bot.sendMessage(chatId, welcomeMessage, {
         reply_markup: keyboard,
     });
 });
 
+// Пример callback_data = "SURVEY|<surveyId>|<messageId>|<callbackData>"
 bot.on('callback_query', async (query) => {
     if (!query.data) return;
-
-    // Пример: data = "SURVEY|<surveyId>|<messageId>|<callbackData>"
-    // Парсим
     const parts = query.data.split('|');
     if (parts[0] === 'SURVEY') {
         const surveyId = parts[1];
         const messageId = parts[2];
         const userChoice = parts[3];
 
-        // Сохраняем ответ в базе
+        // Сохранить ответ ...
         await saveSurveyAnswer(surveyId, messageId, query.from.id, userChoice);
 
-        // Отправим "спасибо за ответ" или обновим сообщение
         bot.answerCallbackQuery(query.id, {
             text: 'Ответ принят!',
-            show_alert: false
+            show_alert: false,
         });
 
         // Проверяем, нужно ли отправить следующее сообщение
@@ -105,28 +95,24 @@ bot.on('callback_query', async (query) => {
     }
 });
 
-async function saveSurveyAnswer(surveyId: string, messageId: string, telegramId: number, userChoice: string) {
-    // Можно завести отдельную коллекцию answers
-    // или хранить ответы внутри ScheduledSurvey
-    // Например:
-    // 1) Находим survey
-    // 2) Находим message
-    // 3) Пушим внутрь message "answers" массив
-    // 4) Сохраняем
+async function saveSurveyAnswer(
+    surveyId: string,
+    messageId: string,
+    telegramId: number,
+    userChoice: string,
+) {
+    // сохранение в БД (ScheduledSurvey или отдельная коллекция)
 }
 
 async function processNextMessage(surveyId: string, messageId: string) {
-    // Логика: если у текущего message = waitForResponse: true,
-    // то только после получения ответа шлём следующее
-    // 1) Найти survey
-    // 2) Узнать index текущего message
-    // 3) Если waitForResponse, то sendMessage(..., index+1)
+    // найти survey, определить текущий index,
+    // если waitForResponse, отправить следующее и т.д.
 }
 
-
-// Обработка ошибок polling
+// Ловим ошибки
 bot.on('polling_error', (error) => {
     console.error('Polling error:', error);
 });
 
+// Экспортируем, чтобы в server.ts можно было импортировать bot
 export default bot;

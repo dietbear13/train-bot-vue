@@ -1,3 +1,5 @@
+<!--adminPanel/commiunicator/CommunicatorMain.vue-->
+
 <template>
   <v-card>
     <v-toolbar color="primary" dark>
@@ -8,6 +10,7 @@
       </v-btn>
     </v-toolbar>
 
+    <!-- Список рассылок -->
     <v-data-table
         :headers="headers"
         :items="surveys"
@@ -16,7 +19,6 @@
       <template #item.scheduledAt="{ item }">
         {{ formatDate(item.scheduledAt) }}
       </template>
-
       <template #item.actions="{ item }">
         <v-btn icon color="primary" @click="editSurvey(item)">
           <v-icon>mdi-pencil</v-icon>
@@ -28,7 +30,6 @@
     </v-data-table>
   </v-card>
 
-  <!-- Диалог создания/редактирования -->
   <CreateEditSurveyDialog
       v-model="dialog"
       :editingSurvey="editingSurvey"
@@ -59,8 +60,7 @@ function formatDate(d: string | Date) {
 }
 
 async function fetchSurveys() {
-  // GET /admin/surveys
-  const data = await apiRequest('GET', 'admin/surveys');
+  const data = await apiRequest('GET', 'surveys');
   surveys.value = data;
 }
 
@@ -76,7 +76,7 @@ function editSurvey(survey: any) {
 
 async function deleteSurvey(id: string) {
   if (!confirm('Удалить рассылку?')) return;
-  await apiRequest('DELETE', `admin/surveys/${id}`);
+  await apiRequest('DELETE', `surveys/${id}`);
   fetchSurveys();
 }
 

@@ -1,11 +1,6 @@
 <!-- components/nutrition/NutritionAdvice.vue -->
 <template>
   <v-app>
-    <!-- Верхняя панель без кнопки админки -->
-    <v-app-bar color="primary" dark elevated>
-      <v-toolbar-title>Рационы питания</v-toolbar-title>
-    </v-app-bar>
-
     <v-main>
       <v-container>
         <v-card class="nutrition-advice-card" style="border-radius: 16px">
@@ -13,48 +8,170 @@
             Примеры питания
           </v-card-title>
           <v-card-text>
-            Тут лежат примеры рационов питания и советы.
+            Тут лежат примеры рационов питания и советы, автоматически сгруппированные для мужчин и женщин.
           </v-card-text>
 
-          <!-- Перебор секций, полученных через API -->
-          <v-expansion-panels multiple>
-            <v-expansion-panel v-for="(section, index) in allSections" :key="index">
+          <!-- Группировка: Мужчинам -->
+          <v-expansion-panels multiple variant="popout">
+            <v-expansion-panel>
               <v-expansion-panel-title class="text-h6" color="#2f4f4f">
-                {{ section.title }}
+                Мужчинам
               </v-expansion-panel-title>
               <v-expansion-panel-text>
-                <p v-if="section.description">
-                  {{ section.description }}
-                </p>
+                <div v-if="menSections.length === 0">
+                  Нет рационов для мужчин
+                </div>
+                <div v-else>
+                  <!-- Перебираем каждый документ (раздел) из menSections -->
+                  <v-expansion-panels multiple>
+                    <v-expansion-panel
+                        v-for="(doc, docIndex) in menSections"
+                        :key="doc._id"
+                    >
+                      <v-expansion-panel-title color="#2f4f4f">
+                        <!-- Выводим очищенный заголовок без (мужчины) -->
+                        {{ cleanTitle(doc.title) }}
+                      </v-expansion-panel-title>
+                      <v-expansion-panel-text>
+                        <p v-if="doc.description">{{ doc.description }}</p>
 
-                <!-- Перебор постов внутри секции -->
-                <div class="post-list">
-                  <v-card
-                      v-for="(item, i) in section.items"
-                      :key="i"
-                      outlined
-                      variant="tonal"
-                      class="post-card"
-                      style="border-radius: 16px; margin-bottom: 16px"
-                  >
-                    <v-card-title>{{ item.title }}</v-card-title>
-                    <v-card-text v-if="item.shortDescription">
-                      {{ item.shortDescription }}
-                    </v-card-text>
-                    <v-card-actions>
-                      <v-spacer></v-spacer>
-                      <v-btn color="primary" @click="openBottomSheet(item)">
-                        Пример рациона
-                      </v-btn>
-                    </v-card-actions>
-                  </v-card>
+                        <div
+                            v-for="(item, itemIndex) in doc.items"
+                            :key="itemIndex"
+                            class="post-list"
+                        >
+                          <v-card
+                              outlined
+                              variant="tonal"
+                              class="post-card mt-2"
+                              style="border-radius: 16px"
+                          >
+                            <v-card-title>{{ item.title }}</v-card-title>
+                            <v-card-text v-if="item.shortDescription">
+                              {{ item.shortDescription }}
+                            </v-card-text>
+                            <v-card-actions>
+                              <v-spacer></v-spacer>
+                              <v-btn color="primary" @click="openBottomSheet(item)">
+                                Пример рациона
+                              </v-btn>
+                            </v-card-actions>
+                          </v-card>
+                        </div>
+                      </v-expansion-panel-text>
+                    </v-expansion-panel>
+                  </v-expansion-panels>
+                </div>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+
+            <!-- Группировка: Женщинам -->
+            <v-expansion-panel>
+              <v-expansion-panel-title class="text-h6" color="#2f4f4f">
+                Женщинам
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <div v-if="womenSections.length === 0">
+                  Нет рационов для женщин
+                </div>
+                <div v-else>
+                  <v-expansion-panels multiple variant="popout">
+                    <v-expansion-panel
+                        v-for="(doc, docIndex) in womenSections"
+                        :key="doc._id"
+                    >
+                      <v-expansion-panel-title color="#2f4f4f">
+                        <!-- Очищаем (женщины) -->
+                        {{ cleanTitle(doc.title) }}
+                      </v-expansion-panel-title>
+                      <v-expansion-panel-text>
+                        <p v-if="doc.description">{{ doc.description }}</p>
+
+                        <div
+                            v-for="(item, itemIndex) in doc.items"
+                            :key="itemIndex"
+                            class="post-list"
+                        >
+                          <v-card
+                              outlined
+                              variant="tonal"
+                              class="post-card mt-2"
+                              style="border-radius: 16px"
+                          >
+                            <v-card-title>{{ item.title }}</v-card-title>
+                            <v-card-text v-if="item.shortDescription">
+                              {{ item.shortDescription }}
+                            </v-card-text>
+                            <v-card-actions>
+                              <v-spacer></v-spacer>
+                              <v-btn color="primary" @click="openBottomSheet(item)">
+                                Пример рациона
+                              </v-btn>
+                            </v-card-actions>
+                          </v-card>
+                        </div>
+                      </v-expansion-panel-text>
+                    </v-expansion-panel>
+                  </v-expansion-panels>
+                </div>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+
+            <!-- Дополнительно: прочие рационы (если нужны) -->
+            <v-expansion-panel>
+              <v-expansion-panel-title class="text-h6" color="#2f4f4f">
+                Прочие рационы
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <div v-if="otherSections.length === 0">
+                  Нет прочих рационов
+                </div>
+                <div v-else>
+                  <v-expansion-panels multiple variant="popout">
+                    <v-expansion-panel
+                        v-for="(doc, docIndex) in otherSections"
+                        :key="doc._id"
+                    >
+                      <v-expansion-panel-title color="#2f4f4f">
+                        <!-- Здесь обычный заголовок, т.к. он не содержит (мужчины)/(женщины) -->
+                        {{ cleanTitle(doc.title) }}
+                      </v-expansion-panel-title>
+                      <v-expansion-panel-text>
+                        <p v-if="doc.description">{{ doc.description }}</p>
+
+                        <div
+                            v-for="(item, itemIndex) in doc.items"
+                            :key="itemIndex"
+                            class="post-list"
+                        >
+                          <v-card
+                              outlined
+                              variant="tonal"
+                              class="post-card mt-2"
+                              style="border-radius: 16px"
+                          >
+                            <v-card-title>{{ item.title }}</v-card-title>
+                            <v-card-text v-if="item.shortDescription">
+                              {{ item.shortDescription }}
+                            </v-card-text>
+                            <v-card-actions>
+                              <v-spacer></v-spacer>
+                              <v-btn color="primary" @click="openBottomSheet(item)">
+                                Пример рациона
+                              </v-btn>
+                            </v-card-actions>
+                          </v-card>
+                        </div>
+                      </v-expansion-panel-text>
+                    </v-expansion-panel>
+                  </v-expansion-panels>
                 </div>
               </v-expansion-panel-text>
             </v-expansion-panel>
           </v-expansion-panels>
         </v-card>
 
-        <!-- Модальное окно (BottomSheet) для подробного просмотра -->
+        <!-- BottomSheet для подробного просмотра конкретного item -->
         <BottomSheetWithClose v-model="bottomSheet" :title="selectedItem?.title">
           <div v-html="formattedContent" class="py-2 px-4"></div>
         </BottomSheetWithClose>
@@ -65,53 +182,88 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import BottomSheetWithClose from '../../components/shared/BottomSheetWithClose.vue'
 import { useApi } from '~/composables/useApi'
+import BottomSheetWithClose from '~/components/shared/BottomSheetWithClose.vue'
 
-/** Типы данных для постов и секций */
-interface NutritionExample {
-  title: string;
-  content: string;
-  shortDescription?: string;
+/** Интерфейсы для данных */
+interface INutritionExample {
+  title: string
+  content: string
+  shortDescription?: string
 }
 
-interface NutritionSection {
-  title: string;
-  description?: string;
-  items: NutritionExample[];
+interface IDietsList {
+  _id: string
+  title: string
+  description?: string
+  items: INutritionExample[]
 }
 
-/** Состояние для секций, заполняемое из API */
-const allSections = ref<NutritionSection[]>([])
+/** Списки рационов, которые придут из базы (GET /dietsList) */
+const allDiets = ref<IDietsList[]>([])
 
-/** Используем composable useApi для запросов к серверу */
+/** Группированные списки: мужчины, женщины и прочие */
+const menSections = ref<IDietsList[]>([])
+const womenSections = ref<IDietsList[]>([])
+const otherSections = ref<IDietsList[]>([])
+
+/** BottomSheet */
+const bottomSheet = ref(false)
+const selectedItem = ref<INutritionExample | null>(null)
+
+/** Для запросов к серверу */
 const { apiRequest } = useApi()
 
-/** Функция загрузки данных из API */
-async function loadSections() {
+/** При монтировании — загрузка данных */
+onMounted(async () => {
   try {
-    // Получаем данные по маршруту GET /dietsList
-    // Предполагается, что сервер возвращает массив объектов, соответствующих NutritionSection
-    const data = await apiRequest<NutritionSection[]>('GET', 'dietsList')
-    allSections.value = data
+    allDiets.value = await apiRequest<IDietsList[]>('GET', 'dietsList')
+    groupByGender(allDiets.value)
   } catch (error) {
     console.error('Ошибка при загрузке рационов:', error)
   }
-}
-
-onMounted(() => {
-  loadSections()
 })
 
-/** Состояния для BottomSheet и выбранного элемента */
-const bottomSheet = ref(false)
-const selectedItem = ref<NutritionExample | null>(null)
+/**
+ * Группировка рационов по мужским/женским/прочим,
+ * исходя из содержания title (или другого критерия).
+ */
+function groupByGender(diets: IDietsList[]) {
+  const men = diets.filter((d) =>
+      d.title.toLowerCase().includes('(мужчины)')
+  )
+  const women = diets.filter((d) =>
+      d.title.toLowerCase().includes('(женщины)')
+  )
+  const others = diets.filter(
+      (d) =>
+          !d.title.toLowerCase().includes('(мужчины)') &&
+          !d.title.toLowerCase().includes('(женщины)')
+  )
 
-function openBottomSheet(item: NutritionExample) {
+  menSections.value = men
+  womenSections.value = women
+  otherSections.value = others
+}
+
+/**
+ * Убираем "(мужчины)" или "(женщины)" из отображаемого заголовка,
+ * чтобы не дублировать эту информацию в интерфейсе.
+ */
+function cleanTitle(rawTitle: string): string {
+  return rawTitle
+      .replace(/\(мужчины\)/gi, '')
+      .replace(/\(женщины\)/gi, '')
+      .trim()
+}
+
+/** Открыть BottomSheet с подробным описанием одного пункта */
+function openBottomSheet(item: INutritionExample) {
   selectedItem.value = item
   bottomSheet.value = true
 }
 
+/** Форматирование контента для вывода в BottomSheet */
 const formattedContent = computed(() => {
   if (!selectedItem.value) return ''
   return selectedItem.value.content
@@ -128,11 +280,10 @@ const formattedContent = computed(() => {
 .nutrition-advice-card {
   margin: 8px auto;
   max-width: 800px;
-  padding: 24px;
+  padding: 8px;
+}
+.post-card {
+  padding: 8px;
 }
 
-.py-2.px-4 {
-  white-space: normal !important;
-  word-break: break-word;
-}
 </style>

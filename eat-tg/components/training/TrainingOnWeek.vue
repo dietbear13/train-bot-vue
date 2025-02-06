@@ -71,25 +71,28 @@
     </div>
   </div>
 
-  <!-- Глобальный Snackbar -->
-  <v-snackbar
-      v-model="snackbar.show"
-      :color="snackbar.color"
-      :timeout="snackbar.timeout"
-      top
-      right
-      multi-line
-  >
-    {{ snackbar.message }}
-    <template #actions>
-      <v-btn color="white" text @click="snackbar.show = false">
-        Закрыть
-      </v-btn>
-    </template>
-  </v-snackbar>
+    <!-- Глобальный Snackbar -->
+    <v-snackbar
+        v-model="snackbar.show"
+        :color="snackbar.color"
+        :timeout="snackbar.timeout"
+        top
+        right
+        multi-line
+    >
+      {{ snackbar.message }}
+      <template #actions>
+        <v-btn color="white" @click="snackbar.show = false">
+          Закрыть
+        </v-btn>
+      </template>
+    </v-snackbar>
 
-  <!-- Компонент для подробностей упражнения (ExerciseInfo) -->
-  <ExerciseInfo v-model="showExerciseInfo" :exercise="selectedExercise" />
+    <!-- Компонент для подробностей упражнения (ExerciseInfo) -->
+    <ExerciseInfo
+        v-model="showExerciseInfo"
+        :exercise="selectedExercise"
+    />
 </template>
 
 <script lang="ts">
@@ -236,7 +239,7 @@ export default defineComponent({
     })
 
     // Следим за ID выбранного сплита
-    watch(selectedSplitId, newId => {
+    watch(selectedSplitId, (newId) => {
       const split = availableSplits.value.find(s => s._id === newId)
       if (split) {
         selectedSplit.value = split
@@ -246,8 +249,7 @@ export default defineComponent({
       }
     })
 
-    // Если массив splitsToShow обновился, а selectedSplitId ещё пустой — ставим первый
-    watch(splitsToShow, newSplits => {
+    watch(splitsToShow, (newSplits) => {
       if (newSplits.length > 0 && !selectedSplitId.value) {
         selectedSplitId.value = newSplits[0]._id
       }
@@ -375,7 +377,7 @@ export default defineComponent({
       }
 
       // Имитация проверки роли (реально — запрос на сервер)
-      await new Promise(resolve => setTimeout(resolve, 800))
+      await new Promise((resolve) => setTimeout(resolve, 800))
       roleLoading.value = false
     })
 

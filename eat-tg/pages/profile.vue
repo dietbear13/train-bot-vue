@@ -20,9 +20,6 @@
       />
     </v-card>
 
-    <!-- Компонент AdminInfo для администраторов -->
-    <AdminInfo v-if="userStore.role === 'admin'" />
-
     <!-- Секция для paidUser -->
     <div v-else-if="userStore.role === 'paidUser'">
       <v-card
@@ -39,7 +36,7 @@
 
         <v-card-text>
           <p>
-            Читай наш канал <a :href="channelLink" target="_blank">кОчалка</a>.
+            Читай наш канал кОчалка.
           </p>
           <v-btn color="primary" @click="goToChannel" class="my-2">
             Перейти в канал
@@ -53,8 +50,7 @@
       <v-card class="mb-2">
         <v-card-text>
           <p>
-            Подпишись на мой канал
-            <a :href="channelLink" target="_blank">кОчалка</a>, чтобы получить
+            Подпишись на мой канал кОчалка, чтобы получить
             полный функционал.
           </p>
           <v-btn color="primary" @click="goToChannel" class="my-2">
@@ -95,7 +91,6 @@
 <script setup lang="ts">
 import { reactive, computed } from 'vue';
 import { useUserStore } from '~/stores/userStore';
-import AdminInfo from '~/components/userAndAdmin/AdminInfo.vue';
 import KbzhuCardProfile from '~/components/nutrition/KbzhuCardProfile.vue';
 import { useApi } from '~/composables/useApi';
 import 'dotenv';

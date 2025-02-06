@@ -132,4 +132,23 @@ router.post('/update-user-role', async (req: Request, res: Response) => {
     }
 });
 
+// Пример: GET /api/users/matchCount?filters=<JSON-строка>
+// Возвращает { count: <число> }
+router.get('/users/matchCount', async (req, res) => {
+    try {
+        const filtersStr = req.query.filters;
+        if (!filtersStr) {
+            return res.json({ count: 0 });
+        }
+        const parsed = JSON.parse(filtersStr as string);
+        // Предположим, вы ищете пользователей: User.find(parsed).countDocuments()
+        const count = await User.countDocuments(parsed);
+        return res.json({ count });
+    } catch (err) {
+        console.error('Ошибка matchCount:', err);
+        return res.status(400).json({ error: 'Invalid filters or DB error' });
+    }
+});
+
+
 export default router;
