@@ -1,6 +1,6 @@
 // ~/composables/useSplitGenerator.ts
 import { ref, onMounted, type Ref } from 'vue'
-import { useApi } from '~/composables/useApi'
+import { useApi } from './useApi'
 
 // ======================= Интерфейсы =======================
 interface FoundExercise {
@@ -502,7 +502,11 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
             params.showSnackbar('Не указан Telegram ID.', 'error')
             return
         }
+
+        console.log('Отправляемый план тренировок:', finalPlan.value)
+
         try {
+            console.log('params', params)
             await apiRequest('post', 'send-detailed-plan', {
                 userId: params.telegramUserId.value,
                 plan: finalPlan.value,

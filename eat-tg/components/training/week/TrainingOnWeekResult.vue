@@ -163,19 +163,19 @@
       </v-card-text>
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn color="grey" text @click="closeDialog">Отмена</v-btn>
-        <v-btn color="red" text @click="deleteExercise">Удалить</v-btn>
+        <v-btn color="grey" @click="closeDialog">Отмена</v-btn>
+        <v-btn color="red" @click="deleteExercise">Удалить</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
 </template>
 
 <script lang="ts">
-import {defineComponent, PropType, ref} from 'vue'
+import {defineComponent, type PropType, ref} from 'vue'
 import BottomSheetWithClose from '../../../components/shared/BottomSheetWithClose.vue'
 import AdminExerciseButton from '../../../components/userAndAdmin/AdminExerciseButton.vue'
 import ExerciseInfo from '../../../components/training/ExerciseInfo.vue'
-import {useApi} from '~/composables/useApi'
+import {useApi} from '../../../composables/useApi'
 
 interface Exercise {
   _id: string

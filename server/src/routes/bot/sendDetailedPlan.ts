@@ -19,6 +19,16 @@ interface Exercise {
 }
 
 /**
+ * Интерфейс для дня недели с упражнениями.
+ */
+interface GeneratedDay {
+    dayName: string;
+    exercises: Exercise[];
+    patternOrExercise?: string[];
+}
+
+
+/**
  * Маршрут для отправки детального плана (с splitName, splitComment, plan[])
  */
 router.post('/send-detailed-plan', async (req: Request, res: Response) => {
@@ -63,6 +73,7 @@ router.post('/send-detailed-plan', async (req: Request, res: Response) => {
         // Добавляем ссылки на бота и канал в конце сообщения
         detailedMessage += `<a href="https://t.me/kochalkatg_bot">бот с тренировками</a>\n`;
         detailedMessage += `<a href="https://t.me/training_health">тг-канал «кОчалка»</a>\n`;
+
 
         // Отправляем сообщение пользователю
         await bot.sendMessage(userId, detailedMessage, {

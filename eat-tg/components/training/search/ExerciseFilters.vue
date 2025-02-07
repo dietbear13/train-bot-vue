@@ -7,36 +7,51 @@
     </v-btn>
     <v-expand-transition>
       <div v-show="showFilters" class="filters-container">
-        <v-select
-            v-model="filtersProxy.typeExercise"
-            :items="typeExerciseOptions"
-            label="Тип упражнения"
-            multiple
-            variant="outlined"
-            clearable
-            chips
-            chip-color="primary"
-        />
-        <v-select
-            v-model="filtersProxy.category"
-            :items="categoryOptions"
-            label="Категория"
-            multiple
-            variant="outlined"
-            clearable
-            chips
-            chip-color="primary"
-        />
-        <v-select
-            v-model="filtersProxy.equipment"
-            :items="equipmentOptions"
-            label="Оборудование"
-            multiple
-            variant="outlined"
-            clearable
-            chips
-            chip-color="primary"
-        />
+        <!-- Первая строка: селект для "Виды нагрузок" -->
+        <v-row>
+          <v-col cols="12">
+            <v-select
+                inputmode="none"
+                v-model="displayTypeExercise"
+                :items="typeExerciseOptions"
+                label="Виды нагрузок"
+                multiple
+                variant="outlined"
+                chips
+                closable-chips
+                chip-color="primary"
+            />
+          </v-col>
+        </v-row>
+        <!-- Вторая строка: селекты для "Мышцы" и "Инвентарь" -->
+        <v-row class="mt-0">
+          <v-col cols="6">
+            <v-select
+                inputmode="none"
+                v-model="displayCategory"
+                :items="categoryOptions"
+                label="Мышцы"
+                multiple
+                variant="outlined"
+                chips
+                closable-chips
+                chip-color="primary"
+            />
+          </v-col>
+          <v-col cols="6">
+            <v-select
+                inputmode="none"
+                v-model="displayEquipment"
+                :items="equipmentOptions"
+                label="Инвентарь"
+                multiple
+                variant="outlined"
+                chips
+                closable-chips
+                chip-color="primary"
+            />
+          </v-col>
+        </v-row>
       </div>
     </v-expand-transition>
   </div>
@@ -49,7 +64,7 @@ import type { Exercise } from '../../../composables/types';
 export default defineComponent({
   name: 'ExerciseFilters',
   props: {
-    // Теперь v-model ожидает объект, где каждое поле – массив строк
+    // v-model ожидает объект с массивами строк для каждого фильтра
     modelValue: {
       type: Object as () => { typeExercise: string[]; category: string[]; equipment: string[] },
       required: true,
@@ -62,25 +77,22 @@ export default defineComponent({
   emits: ['update:modelValue'],
   setup(props, { emit }) {
     const showFilters = ref(false);
-
     const toggleFilters = () => {
       showFilters.value = !showFilters.value;
     };
 
-    // Используем вычисляемое свойство как proxy для v-model
+    // Прокси для v-model
     const filtersProxy = computed({
       get: () => props.modelValue,
       set: (val) => emit('update:modelValue', val),
     });
 
-    // Функция для нормализации значения: удаляем пробелы, приводим к нижнему регистру
+    // Функции нормализации и форматирования строк
     const normalize = (str: string) => str.trim().toLowerCase();
-
-    // Функция для приведения к виду с первой заглавной буквой (для отображения)
     const capitalize = (str: string) =>
         str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 
-    // Вычисляем опции для типа упражнения с объединением значений, отличающихся только регистром
+    // Опции для "Виды нагрузок" (ранее типа упражнения)
     const typeExerciseOptions = computed(() => {
       const map = new Map<string, string>();
       props.exercises.forEach((ex) => {
@@ -94,7 +106,7 @@ export default defineComponent({
       return Array.from(map.values());
     });
 
-    // Аналогично для категорий
+    // Опции для "Мышцы" (категория)
     const categoryOptions = computed(() => {
       const map = new Map<string, string>();
       props.exercises.forEach((ex) => {
@@ -108,7 +120,7 @@ export default defineComponent({
       return Array.from(map.values());
     });
 
-    // И для оборудования
+    // Опции для "Инвентарь" (оборудование)
     const equipmentOptions = computed(() => {
       const map = new Map<string, string>();
       props.exercises.forEach((ex) => {
@@ -122,6 +134,38 @@ export default defineComponent({
       return Array.from(map.values());
     });
 
+    // computed для отображения дефолтного значения "Все", если массив пустой
+    const displayTypeExercise = computed<string[]>({
+      get: () =>
+          filtersProxy.value.typeExercise.length
+              ? filtersProxy.value.typeExercise
+              : ['Все'],
+      set: (val: string[]) => {
+        // Если единственный выбранный элемент – "Все", интерпретируем как отсутствие фильтра
+        filtersProxy.value.typeExercise = (val.length === 1 && val[0] === 'Все') ? [] : val;
+      },
+    });
+
+    const displayCategory = computed<string[]>({
+      get: () =>
+          filtersProxy.value.category.length
+              ? filtersProxy.value.category
+              : ['Все'],
+      set: (val: string[]) => {
+        filtersProxy.value.category = (val.length === 1 && val[0] === 'Все') ? [] : val;
+      },
+    });
+
+    const displayEquipment = computed<string[]>({
+      get: () =>
+          filtersProxy.value.equipment.length
+              ? filtersProxy.value.equipment
+              : ['Все'],
+      set: (val: string[]) => {
+        filtersProxy.value.equipment = (val.length === 1 && val[0] === 'Все') ? [] : val;
+      },
+    });
+
     return {
       showFilters,
       toggleFilters,
@@ -129,6 +173,9 @@ export default defineComponent({
       typeExerciseOptions,
       categoryOptions,
       equipmentOptions,
+      displayTypeExercise,
+      displayCategory,
+      displayEquipment,
     };
   },
 });
@@ -138,10 +185,11 @@ export default defineComponent({
 .exercise-filters {
   margin: 8px 0;
 }
+
 .filters-container {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-top: 8px;
+  margin-top: 12px;
 }
+
+/* Если потребуется дополнительное оформление для отступов внутри строк,
+   можно воспользоваться классами Vuetify или добавить свои стили */
 </style>

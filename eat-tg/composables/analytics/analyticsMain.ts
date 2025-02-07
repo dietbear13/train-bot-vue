@@ -1,7 +1,7 @@
 /* /composables/analytics/analyticsMain.ts */
 
 import { ref, reactive, computed, watch } from 'vue'
-import { useApi } from '~/composables/useApi'
+import { useApi } from '../useApi'
 
 /** Интерфейс для события аналитики */
 export interface AnalyticsEvent {
