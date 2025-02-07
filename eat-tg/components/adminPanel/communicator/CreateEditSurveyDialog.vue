@@ -23,7 +23,6 @@
           <v-expansion-panel>
             <v-expansion-panel-title>Настройки массовой рассылки (Фильтры)</v-expansion-panel-title>
             <v-expansion-panel-text>
-              <!-- Расширенный пример фильтров -->
               <v-row>
                 <!-- Роль (role) -->
                 <v-col cols="12" sm="6">
@@ -34,8 +33,7 @@
                       :clearable="true"
                   />
                 </v-col>
-
-                <!-- Пол (gender) - данные из kbzhuHistory.formData.gender -->
+                <!-- Пол (gender) -->
                 <v-col cols="12" sm="6">
                   <v-select
                       v-model="userFilters.gender"
@@ -44,7 +42,6 @@
                       :clearable="true"
                   />
                 </v-col>
-
                 <!-- Тип телосложения (bodyType) -->
                 <v-col cols="12" sm="6">
                   <v-select
@@ -54,7 +51,6 @@
                       :clearable="true"
                   />
                 </v-col>
-
                 <!-- Цель (goal) -->
                 <v-col cols="12" sm="6">
                   <v-select
@@ -64,7 +60,6 @@
                       :clearable="true"
                   />
                 </v-col>
-
                 <!-- Возраст -->
                 <v-col cols="12" sm="6">
                   <v-text-field
@@ -81,9 +76,6 @@
                   />
                 </v-col>
               </v-row>
-
-              <!-- Здесь можно добавить и другие критерии, например:
-                   trainingHistory, blogLikes, starDonationHistory и т.д. -->
 
               <!-- Отображаем статистику -->
               <div v-if="matchingUsersCount !== null" class="mt-3">
@@ -197,20 +189,18 @@ interface SurveyMessage {
 interface SurveyForm {
   _id?: string;
   telegramId?: number;      // если хотим адресовать одному конкретному пользователю
-  filters?: string;         // JSON-строка с критериями (serialize userFilters)
   scheduledAt: string;      // дата/время в ISO
   messages: SurveyMessage[];
 }
 
 // ==== Типы данных для фильтров ====
 interface UserFilters {
-  role?: string;            // ['admin', 'freeUser', 'paidUser', 'coach', ...]
-  gender?: string;          // ['мужчина','женщина']
-  bodyType?: string;        // ['худое','среднее','полное']
-  goal?: string;            // ['похудение','удержание','массонабор','общие']
+  role?: string;   // ['admin', 'freeUser', 'paidUser', 'coach', ...]
+  gender?: string; // ['мужчина','женщина']
+  bodyType?: string;
+  goal?: string;
   ageMin?: number;
   ageMax?: number;
-  // Можно расширять дальше (trainingHistory, blogLikes, ...)
 }
 
 // ==== Пропсы и эмиты ====
@@ -234,10 +224,10 @@ const userFilters = ref<UserFilters>({});
 
 // Кол-во подходящих пользователей
 const matchingUsersCount = ref<number | null>(null);
-// Ошибка при парсинге JSON или при запросе
+// Ошибка при запросе
 const filtersError = ref<boolean>(false);
 
-/** При первом открытии (если props.editingSurvey передана) заполняем форму */
+// При первом открытии (если props.editingSurvey передана) заполняем форму
 function getCurrentISODate() {
   return new Date().toISOString().slice(0, 19) + 'Z';
 }
@@ -257,49 +247,50 @@ watch(
       } else {
         // Редактируем существующую
         internalSurvey.value = JSON.parse(JSON.stringify(newVal)) as SurveyForm;
-        try {
-          userFilters.value = internalSurvey.value.filters
-              ? JSON.parse(internalSurvey.value.filters)
-              : {};
-        } catch (err) {
-          userFilters.value = {};
-        }
+        // Если вы где-то храните эти фильтры в БД — нужно подтягивать их отдельно.
+        // Но раз решили хранить по-новому, уберите references на internalSurvey.value.filters.
+        userFilters.value = {};
         matchingUsersCount.value = null;
         filtersError.value = false;
+        // Если нужно — сразу грузим кол-во подходящих
         fetchMatchingUsersCount();
       }
     },
     { immediate: true }
 );
 
-// Автоматическое обновление поля filters и запрос на сервер после изменения userFilters
+// Чтобы при изменении userFilters делать перезапрос через 400 мс
 let filtersTimeout: ReturnType<typeof setTimeout> | null = null;
 
 watch(
     userFilters,
     () => {
-      try {
-        internalSurvey.value.filters = JSON.stringify(userFilters.value);
-        filtersError.value = false;
-        clearTimeout(filtersTimeout as number);
-        filtersTimeout = setTimeout(fetchMatchingUsersCount, 400);
-      } catch (err) {
-        filtersError.value = true;
-      }
+      filtersError.value = false;
+      clearTimeout(filtersTimeout as any);
+      filtersTimeout = setTimeout(fetchMatchingUsersCount, 400);
     },
     { deep: true }
 );
 
 /** Запрашиваем у сервера, сколько пользователей подходит под заданные фильтры */
 async function fetchMatchingUsersCount() {
-  if (!internalSurvey.value.filters) {
+  // Если фильтры пусты — нет смысла запрашивать
+  const hasSomeFilter = Object.keys(userFilters.value).some(
+      (k) => userFilters.value[k as keyof UserFilters] != null
+  );
+  if (!hasSomeFilter) {
     matchingUsersCount.value = null;
-    filtersError.value = false;
     return;
   }
+  interface MatchCountResponse {
+    count: number;
+  }
+
   try {
-    const resp = await apiRequest('GET', 'users/matchCount', {
-      params: { filters: internalSurvey.value.filters },
+    // ! ВАЖНО: передаём userFilters.value напрямую в params
+    //    Теперь сервер ждёт ?role=...&gender=...
+    const resp = await apiRequest<MatchCountResponse>('GET', 'users/matchCount', {
+      params: userFilters.value,
     });
     matchingUsersCount.value = resp.count ?? 0;
   } catch (err) {
@@ -314,12 +305,12 @@ const isDateValid = computed(() => {
   return d.toString() !== 'Invalid Date';
 });
 
-/** Закрыть диалог */
+// Закрыть диалог
 function close() {
   emits('update:modelValue', false);
 }
 
-/** Сохранение рассылки (создание или редактирование) */
+// Сохранение рассылки (создание или редактирование)
 async function onSubmit() {
   if (!isDateValid.value) {
     alert('Неверная дата!');
@@ -331,8 +322,11 @@ async function onSubmit() {
   }
   // Проверяем, что либо указан telegramId, либо заданы фильтры
   const noTelegramId = !internalSurvey.value.telegramId;
-  const noFilters = !internalSurvey.value.filters;
-  if (noTelegramId && noFilters) {
+  const hasSomeFilter = Object.keys(userFilters.value).some(
+      (k) => userFilters.value[k as keyof UserFilters] != null
+  );
+
+  if (noTelegramId && !hasSomeFilter) {
     alert('Укажите либо конкретный telegramId, либо задайте фильтры для массовой рассылки');
     return;
   }
@@ -340,10 +334,17 @@ async function onSubmit() {
   try {
     if (!internalSurvey.value._id) {
       // создание
-      await apiRequest('POST', 'surveys', internalSurvey.value);
+      await apiRequest('POST', 'surveys', {
+        ...internalSurvey.value,
+        // Если нужно сохранить фильтры — передаём их отдельно
+        userFilters: userFilters.value,
+      });
     } else {
       // редактирование
-      await apiRequest('PATCH', `surveys/${internalSurvey.value._id}`, internalSurvey.value);
+      await apiRequest('PATCH', `surveys/${internalSurvey.value._id}`, {
+        ...internalSurvey.value,
+        userFilters: userFilters.value,
+      });
     }
     emits('saved');
     close();
@@ -398,9 +399,13 @@ async function sendTestMessage() {
       alert('Нет сообщений для отправки');
       return;
     }
+    const hasSomeFilter = Object.keys(userFilters.value).some(
+        (k) => userFilters.value[k as keyof UserFilters] != null
+    );
     const resp = await apiRequest('POST', 'surveys/testSend', {
       telegramId: internalSurvey.value.telegramId,
-      filters: internalSurvey.value.filters,
+      // Передаём userFilters, если нужно
+      userFilters: hasSomeFilter ? userFilters.value : null,
       messages: internalSurvey.value.messages,
     });
     console.log('Тестовое отправление: ответ сервера', resp);

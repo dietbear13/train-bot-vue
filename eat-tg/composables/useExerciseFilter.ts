@@ -48,9 +48,9 @@ export function useExerciseFilter(exercises: Ref<Exercise[]>, searchQuery: Ref<s
     // Определяем веса для полей
     const fieldWeights: { [key: string]: number } = {
         name: 4,
-        mainMuscle: 3,
-        additionalMuscles: 2,
-        equipment: 1
+        equipment: 3,
+        mainMuscle: 2,
+        additionalMuscles: 1
     };
 
     console.log("useExerciseFilter", searchQuery.value, )
