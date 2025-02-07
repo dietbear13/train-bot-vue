@@ -1,7 +1,16 @@
+<!--training/ExerciseSearch-->
+
 <template>
   <div style="background-color: #121212">
     <!-- Строка поиска + кнопка добавления (для админа) -->
-    <SearchBar v-model="searchQuery" :isAdmin="isAdmin" @open-add-exercise-dialog="openAddExerciseDialog" />
+    <SearchBar
+        v-model="searchQuery"
+        :isAdmin="isAdmin"
+        @open-add-exercise-dialog="openAddExerciseDialog"
+    />
+
+    <!-- Блок с фильтрами (раскрывающийся) -->
+    <ExerciseFilters v-model="selectedFilters" :exercises="exercises" />
 
     <!-- Фиксированная кнопка открытия BottomSheet -->
     <v-btn
@@ -35,16 +44,6 @@
     <!-- Компонент информации об упражнении -->
     <ExerciseInfo :exercise="selectedExercise" v-model="showExerciseInfo" />
 
-    <!-- Диалоги CRUD -->
-    <AddExerciseDialog v-model="showAddExerciseDialog" @add-exercise="addExercise" />
-    <EditExerciseDialog v-model="showEditExerciseDialog" :exerciseData="editExerciseData" @save-exercise="saveExercise" />
-    <DeleteExerciseDialog
-        v-model="showDeleteConfirmDialog"
-        :exercise="exerciseToDelete"
-        @delete-exercise="deleteExercise"
-        @cancel-delete="cancelDelete"
-    />
-
     <!-- BottomSheet для тренировки -->
     <WorkoutSheet
         v-model="showWorkoutSheet"
@@ -76,10 +75,8 @@ import { retrieveLaunchParams } from '@telegram-apps/sdk';
 
 import SearchBar from './search/SearchBar.vue';
 import ExerciseList from './search/ExerciseList.vue';
-import AddExerciseDialog from './search/AddExerciseDialog.vue';
-import EditExerciseDialog from './search/EditExerciseDialog.vue';
-import DeleteExerciseDialog from './search/DeleteExerciseDialog.vue';
 import WorkoutSheet from './search/WorkoutSheet.vue';
+import ExerciseFilters from './search/ExerciseFilters.vue';
 
 interface WorkoutItem extends Exercise {
   sets: number;
@@ -92,10 +89,8 @@ export default defineComponent({
     SearchBar,
     ExerciseList,
     ExerciseInfo,
-    AddExerciseDialog,
-    EditExerciseDialog,
-    DeleteExerciseDialog,
     WorkoutSheet,
+    ExerciseFilters,
   },
   setup() {
     const { apiRequest } = useApi();
@@ -104,22 +99,34 @@ export default defineComponent({
     const initData = ref<any>(null);
     const userData = ref<any>(null);
 
-    const repScale = [3, 4, 5, 6, 8, 10, 12, 15, 20, 24, 30, 45, 60, 75, 90, 105, 120];
+    const repScale = [5, 6, 8, 10, 12, 15, 20, 24, 30, 45, 60, 75, 90, 105, 120];
 
+    // Основной список упражнений и поисковый запрос
     const exercises = ref<Exercise[]>([]);
     const searchQuery = ref('');
     const isLoading = ref(true);
 
-    // Получаем данные пользователя (telegram) через store
+    // Новый объект для выбранных фильтров (начальные значения — пустые строки)
+    const selectedFilters = ref({
+      typeExercise: '',
+      category: '',
+      equipment: '',
+    });
+
+    // Хук фильтрации с дополнительными фильтрами
+    const { filteredExercises, displayedExercises } = useExerciseFilter(
+        exercises,
+        searchQuery,
+        selectedFilters
+    );
+
+    // Получаем данные пользователя (Telegram) через store
     const userStore = useUserStore();
     const telegramUserId = ref<number | null>(null);
 
     const isAdmin = computed(() => userStore.role === 'admin');
 
-    // Хук фильтрации (логика поиска)
-    const { filteredExercises, displayedExercises } = useExerciseFilter(exercises, searchQuery);
-
-    // Состояния модальных окон и info
+    // Состояния модальных окон и информации
     const showExerciseInfo = ref(false);
     const selectedExercise = ref<Exercise | null>(null);
     const showExerciseGif = ref(false);
@@ -181,7 +188,7 @@ export default defineComponent({
       showAddExerciseDialog.value = true;
     };
 
-    // Добавление упражнения (вызывается из AddExerciseDialog)
+    // Добавление упражнения (вызывается из диалога добавления)
     const addExercise = async (exerciseData: Partial<Exercise>) => {
       try {
         if (
@@ -203,13 +210,13 @@ export default defineComponent({
       }
     };
 
-    // Редактирование упражнения – открываем диалог
+    // Редактирование упражнения — открываем диалог
     const editExercise = (exercise: Exercise) => {
       editExerciseData.value = { ...exercise };
       showEditExerciseDialog.value = true;
     };
 
-    // Сохранение изменений (из EditExerciseDialog)
+    // Сохранение изменений (из диалога редактирования)
     const saveExercise = async (exerciseData: Partial<Exercise>) => {
       try {
         if (
@@ -241,7 +248,7 @@ export default defineComponent({
       }
     };
 
-    // Подтверждение удаления – открываем диалог
+    // Подтверждение удаления — открываем диалог
     const confirmDeleteExercise = (exercise: Exercise) => {
       exerciseToDelete.value = exercise;
       showDeleteConfirmDialog.value = true;
@@ -257,7 +264,9 @@ export default defineComponent({
       if (!exerciseToDelete.value) return;
       try {
         await apiRequest('delete', `exercises/${exerciseToDelete.value._id}`);
-        exercises.value = exercises.value.filter(ex => ex._id !== exerciseToDelete.value?._id);
+        exercises.value = exercises.value.filter(
+            ex => ex._id !== exerciseToDelete.value?._id
+        );
         showDeleteConfirmDialog.value = false;
         exerciseToDelete.value = null;
         alert('Удалено.');
@@ -358,7 +367,8 @@ export default defineComponent({
         showSnackbar.value = true;
       } catch (error: any) {
         console.error('Ошибка при отправке:', error);
-        snackbarMessage.value = 'Не удалось отправить тренировку. Попробуйте позже.';
+        snackbarMessage.value =
+            'Не удалось отправить тренировку. Попробуйте позже.';
         snackbarColor.value = 'error';
         showSnackbar.value = true;
       }
@@ -420,6 +430,8 @@ export default defineComponent({
       snackbarMessage,
       snackbarColor,
       confirmSendWorkoutFromSheet,
+      selectedFilters,
+      exercises,
     };
   },
 });

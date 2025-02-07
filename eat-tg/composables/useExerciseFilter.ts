@@ -1,16 +1,16 @@
 // composables/useExerciseFilter.ts
-
 import { computed } from 'vue';
 import type { Ref } from 'vue';
-import type { Exercise } from './types'; // Импортируем интерфейс
+import type { Exercise } from './types';
 
 // Функция для нормализации строк (убираем спецсимволы, переводим в нижний регистр)
 function normalizeString(str: string): string {
     return str
         .toLowerCase()
-        .replace(/[.,\/#!$%\\^&\\*;:{}=\-_`~()]/g, '')
+        .replace(/[.,\/#!$%\\^&*;:{}=\-_`~()]/g, '')
         .replace(/ё/g, 'е')
-        .replace(/ъ/g, 'ь');
+        .replace(/ъ/g, 'ь')
+        .trim();
 }
 
 // Подсчёт расстояния для определения похожести слов
@@ -44,28 +44,68 @@ function isSimilar(word1: string, word2: string): boolean {
     return distance <= Math.ceil(maxLength * 0.2);
 }
 
-export function useExerciseFilter(exercises: Ref<Exercise[]>, searchQuery: Ref<string>) {
-    // Определяем веса для полей
+/**
+ * Обновлённый хук фильтрации.
+ *
+ * @param exercises — список всех упражнений
+ * @param searchQuery — поисковая строка
+ * @param filters — объект фильтров, где каждое поле — массив строк (например: { typeExercise: string[], category: string[], equipment: string[] })
+ */
+export function useExerciseFilter(
+    exercises: Ref<Exercise[]>,
+    searchQuery: Ref<string>,
+    filters: Ref<{ typeExercise: string[]; category: string[]; equipment: string[] }>
+) {
+    // Определяем веса для полей (приоритеты для поиска)
     const fieldWeights: { [key: string]: number } = {
         name: 4,
         equipment: 3,
         mainMuscle: 2,
-        additionalMuscles: 1
+        category: 2,
+        additionalMuscles: 1,
     };
 
-    console.log("useExerciseFilter", searchQuery.value, )
+    // Сначала отфильтровываем упражнения по выбранным фильтрам
+    const filteredByFilters = computed(() => {
+        return exercises.value.filter((exercise) => {
+            // Фильтр по типу упражнения
+            if (filters.value.typeExercise.length > 0) {
+                const normalizedField = normalizeString(exercise.typeExercise || '');
+                const match = filters.value.typeExercise.some(
+                    (val) => normalizeString(val) === normalizedField
+                );
+                if (!match) return false;
+            }
+            // Фильтр по категории
+            if (filters.value.category.length > 0) {
+                const normalizedField = normalizeString(exercise.category || '');
+                const match = filters.value.category.some(
+                    (val) => normalizeString(val) === normalizedField
+                );
+                if (!match) return false;
+            }
+            // Фильтр по оборудованию
+            if (filters.value.equipment.length > 0) {
+                const normalizedField = normalizeString(exercise.equipment || '');
+                const match = filters.value.equipment.some(
+                    (val) => normalizeString(val) === normalizedField
+                );
+                if (!match) return false;
+            }
+            return true;
+        });
+    });
 
-    // Вычисляем отфильтрованный и отсортированный список с приоритетами
+    // Далее применяем поиск по строке к уже отфильтрованному списку
     const filteredExercises = computed(() => {
+        const baseExercises = filteredByFilters.value;
         const query = normalizeString(searchQuery.value);
-        console.log("query", searchQuery.value,query, !query )
-        if (!query) return exercises.value
+        if (!query) return baseExercises;
 
-        return exercises.value
-            .map(exercise => {
+        return baseExercises
+            .map((exercise) => {
                 let score = 0;
-
-                // Проверяем совпадения в разных полях и добавляем баллы
+                // Проверяем прямое совпадение в основных полях
                 if (normalizeString(exercise.name).includes(query)) {
                     score += fieldWeights.name;
                 }
@@ -79,33 +119,33 @@ export function useExerciseFilter(exercises: Ref<Exercise[]>, searchQuery: Ref<s
                     score += fieldWeights.equipment;
                 }
 
-                // Фаззи совпадение для каждого поля
+                // Фаззи-поиск: разбиваем запрос на слова и проверяем для каждого поля
                 const queryWords = query.split(/\s|-/).filter(Boolean);
                 const fieldsToCheck = ['name', 'mainMuscle', 'additionalMuscles', 'equipment'] as const;
 
-                queryWords.forEach(qWord => {
-                    fieldsToCheck.forEach(field => {
+                queryWords.forEach((qWord) => {
+                    fieldsToCheck.forEach((field) => {
                         const fieldValue = normalizeString((exercise as any)[field] || '');
                         if (fieldValue.includes(qWord) || isSimilar(fieldValue, qWord)) {
-                            score += fieldWeights[field] * 0.5; // Дополнительные баллы за похожие слова
+                            score += fieldWeights[field] * 0.5;
                         }
                     });
                 });
 
                 return { exercise, score };
             })
-            .filter(item => item.score > 0)
+            .filter((item) => item.score > 0)
             .sort((a, b) => b.score - a.score)
-            .map(item => item.exercise);
+            .map((item) => item.exercise);
     });
 
-    // Показываем только первые 20 результатов (исправлено с 50)
+    // Ограничиваем вывод до первых 20 результатов
     const displayedExercises = computed(() => {
         return filteredExercises.value.slice(0, 20);
     });
 
     return {
         filteredExercises,
-        displayedExercises
+        displayedExercises,
     };
 }

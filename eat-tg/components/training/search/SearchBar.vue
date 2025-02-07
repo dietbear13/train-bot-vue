@@ -2,18 +2,12 @@
   <div>
     <v-text-field
         v-model="localSearch"
-        label="Вводи упражнение"
+        label="Вводи упражнение или мышцы"
         clearable
         class="my-0 dark-background pa-1"
         variant="outlined"
         hide-details="auto"
     ></v-text-field>
-    <div v-if="isAdmin" class="admin-actions">
-      <v-btn color="primary" @click="$emit('open-add-exercise-dialog')">
-        <v-icon left>mdi-plus</v-icon>
-        Добавить упражнение
-      </v-btn>
-    </div>
   </div>
 </template>
 

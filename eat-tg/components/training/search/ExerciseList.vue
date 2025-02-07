@@ -15,14 +15,6 @@
           <v-chip class="mr-2" small color="gray" text-color="white">
             {{ exercise.typeExercise }}
           </v-chip>
-          <div v-if="isAdmin" class="admin-buttons">
-            <v-btn icon @click="$emit('edit-exercise', exercise)" variant="plain">
-              <v-icon>mdi-pencil</v-icon>
-            </v-btn>
-            <v-btn icon @click="$emit('confirm-delete-exercise', exercise)" variant="plain">
-              <v-icon>mdi-delete</v-icon>
-            </v-btn>
-          </div>
           <v-tooltip bottom>
             <template #activator="{ on, attrs }">
               <v-btn
