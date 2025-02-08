@@ -3,13 +3,13 @@
 <template>
     <v-row justify="center">
       <v-col cols="12" md="8">
-        <v-card class="pa-2" elevation="4" style="border-radius: 16px;">
-          <v-card-title class="justify-center primary white--text">
+        <v-card elevation="4" style="border-radius: 16px;">
+          <v-card-title class="primary white--text">
             <v-icon large color="#ffd700">mdi-star</v-icon>
-            <span class="ml-1">Донаты в Telegram Stars</span>
+            Донаты в Telegram Stars
           </v-card-title>
-          <v-card-text class="mb-0">
-            <p>Telegram Stars можно купить через Apple Pay на МТС или за криптовалюту TON. Курс покупки 100 stars:
+          <v-card-text class="pb-0 mt-2">
+            <p>Stars можно купить через Apple Pay или за криптовалюту TON. Цена за 100 stars:
             </p>
             <ul style="margin-left: 2.5em">
               <li>через Apple Pay ~209 ₽</li>
@@ -21,12 +21,14 @@
               <v-text-field
                   v-model="stars"
                   label="Количество звёзд"
+                  hide-details
                   type="number"
                   inputmode="numeric"
                   pattern="[0-9]*"
                   required
                   variant="outlined"
                   min="1"
+                  class="mb-4"
                   :rules="[v => v >= 1 || 'Минимум звёзд — 1']"
               />
               <v-btn
@@ -143,10 +145,9 @@ const handleDonateStars = async () => {
   max-width: 500px;
   border-radius: 16px;
 }
-.v-card-title {
-  align-items: center;
+.primary {
+  background-color: darkslategray !important;
+  border-radius: 16px;
 }
-.ml-3 {
-  margin-left: 1rem;
-}
+
 </style>

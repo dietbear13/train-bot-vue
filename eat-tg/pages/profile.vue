@@ -12,6 +12,7 @@
         v-if="userStore.role === 'admin'"
         style="border-radius: 16px"
         flat
+        class="mb-2"
     >
       <!-- ИСПРАВЛЕНО: проверяем, есть ли данные в kbzhuHistory -->
       <KbzhuCardProfile
@@ -23,7 +24,7 @@
     <!-- Секция для paidUser -->
     <div v-else-if="userStore.role === 'paidUser'">
       <v-card
-          class="mb-1"
+          class="mb-2"
           style="border-radius: 16px"
           flat
       >
@@ -60,8 +61,12 @@
       </v-card>
 
       <!-- Кнопка "Проверить подписку" -->
-      <v-btn color="success" @click="checkSubscription">
-        Проверить подписку
+      <v-btn
+        color="success"
+        @click="checkSubscription"
+        rounded="xl"
+      >
+      Проверить подписку
       </v-btn>
     </div>
 
@@ -87,9 +92,7 @@
     </v-snackbar>
 
     <!-- Блок донатов для всех ролей -->
-    <DonatStarsComponent
-      class="mt-2"
-    />
+    <DonatStarsComponent/>
   </v-container>
 </template>
 

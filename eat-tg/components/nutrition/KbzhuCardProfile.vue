@@ -1,6 +1,9 @@
-<template style="border-radius: 16px">
+<template
+    style="border-radius: 16px"
+    class="mb-2"
+>
   <v-card
-      class="mb-0"
+      class="mb-2"
       style="border-radius: 16px"
       flat
   >
@@ -72,8 +75,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { useApi } from '~/composables/useApi';
-import { useUserStore } from '~/stores/userStore';
+import { useApi } from '../../composables/useApi';
+import { useUserStore } from '../../stores/userStore';
 
 interface IKbzhuResult {
   calories: number;

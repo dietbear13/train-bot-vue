@@ -1,5 +1,7 @@
 <template>
-  <DonatStarsComponent/>
+  <v-container>
+    <DonatStarsComponent/>
+  </v-container>
 </template>
 
 <script setup lang="ts">
