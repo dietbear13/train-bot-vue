@@ -85,20 +85,26 @@
         </v-btn>
       </template>
     </v-snackbar>
+
+    <!-- Блок донатов для всех ролей -->
+    <DonatStarsComponent
+      class="mt-2"
+    />
   </v-container>
 </template>
 
 <script setup lang="ts">
-import { reactive, computed } from 'vue';
-import { useUserStore } from '~/stores/userStore';
-import KbzhuCardProfile from '~/components/nutrition/KbzhuCardProfile.vue';
-import { useApi } from '~/composables/useApi';
-import 'dotenv';
+import { reactive, computed } from 'vue'
+import { useUserStore } from '../stores/userStore'
+import KbzhuCardProfile from '../components/nutrition/KbzhuCardProfile.vue'
+import { useApi } from '../composables/useApi'
+import DonatStarsComponent from '../components/shared/DonatStarsComponent.vue'
+import 'dotenv'
 
 /**
  * Хранилище пользователя
  */
-const userStore = useUserStore();
+const userStore = useUserStore()
 
 /**
  * Простой пример локального Snackbar
@@ -108,35 +114,35 @@ const snackbar = reactive({
   message: '',
   color: 'info',
   timeout: 1500,
-});
+})
 
 interface IKbzhuHistory {
   kbzhuResult: {
-    calories: number;
-    extraCalories: number;
-    proteins: number;
-    fats: number;
-    carbs: number;
-  };
-  timestamp: number; // UNIX timestamp
+    calories: number
+    extraCalories: number
+    proteins: number
+    fats: number
+    carbs: number
+  }
+  timestamp: number // UNIX timestamp
 }
 
 /**
  * Вызов метода API (если нужен для других запросов).
  */
-const { apiRequest } = useApi();
+const { apiRequest } = useApi()
 
 /**
  * Ссылка на ваш канал
  */
-const channelLink = 'https://t.me/training_health';
+const channelLink = 'https://t.me/training_health'
 
 /**
  * Открыть канал в новой вкладке
  */
 const goToChannel = () => {
-  window.open(channelLink, '_blank');
-};
+  window.open(channelLink, '_blank')
+}
 
 /**
  * Ручная проверка подписки (по кнопке):
@@ -146,37 +152,37 @@ const checkSubscription = async () => {
   try {
     // Если админ, ничего не меняем
     if (userStore.role === 'admin') {
-      showSnackbar('Вы администратор, статус не меняется.', 'warning');
-      return;
+      showSnackbar('Вы администратор, статус не меняется.', 'warning')
+      return
     }
 
     const result = await apiRequest<{ role?: string; error?: string }>(
         'post',
         'check-user',
         { telegramId: userStore.telegramId }
-    );
+    )
 
     if (result.role) {
-      userStore.setRole(result.role as 'admin' | 'freeUser' | 'paidUser');
+      userStore.setRole(result.role as 'admin' | 'freeUser' | 'paidUser')
       if (result.role === 'paidUser') {
-        showSnackbar('Подтверждаю подписку! У тебя полный доступ.', 'success');
+        showSnackbar('Подтверждаю подписку! У тебя полный доступ.', 'success')
       } else if (result.role === 'freeUser') {
-        showSnackbar('Похоже, вы не подписаны на канал.', 'error');
+        showSnackbar('Похоже, вы не подписаны на канал.', 'error')
       } else {
-        showSnackbar('Роль: администратор.', 'info');
+        showSnackbar('Роль: администратор.', 'info')
       }
     } else if (result.error) {
-      console.error('Ошибка сервера:', result.error);
-      showSnackbar('Ошибка сервера: ' + result.error, 'error');
+      console.error('Ошибка сервера:', result.error)
+      showSnackbar('Ошибка сервера: ' + result.error, 'error')
     }
   } catch (error: any) {
-    console.error('Ошибка при проверке подписки:', error);
+    console.error('Ошибка при проверке подписки:', error)
     showSnackbar(
         'Ошибка при проверке подписки, обратитесь к разработчику.',
         'error'
-    );
+    )
   }
-};
+}
 
 /**
  * Удобная функция для отображения сообщений в Snackbar
@@ -185,9 +191,9 @@ function showSnackbar(
     message: string,
     color: 'success' | 'error' | 'info' | 'warning' = 'info'
 ) {
-  snackbar.message = message;
-  snackbar.color = color;
-  snackbar.show = true;
+  snackbar.message = message
+  snackbar.color = color
+  snackbar.show = true
 }
 
 /**
@@ -196,15 +202,15 @@ function showSnackbar(
 const roleDisplay = computed(() => {
   switch (userStore.role) {
     case 'admin':
-      return 'Администратор';
+      return 'Администратор'
     case 'paidUser':
-      return 'Подписка на канал активна';
+      return 'Подписка на канал активна'
     case 'freeUser':
-      return 'Без подписки на канал';
+      return 'Без подписки на канал'
     default:
-      return 'Неизвестно';
+      return 'Неизвестно'
   }
-});
+})
 
 /**
  * Получение последнего результата КБЖУ
@@ -213,12 +219,12 @@ const latestKbzhuResult = computed(() => {
   if (userStore.kbzhuHistory && userStore.kbzhuHistory.length > 0) {
     const sortedHistory = [...userStore.kbzhuHistory].sort(
         (a, b) => b.timestamp - a.timestamp
-    );
-    console.log('++ sortedHistory', sortedHistory);
-    return sortedHistory[0].kbzhu; // <-- используем kbzhu, а не kbzhuResult
+    )
+    console.log('++ sortedHistory', sortedHistory)
+    return sortedHistory[0].kbzhuResult
   }
-  return null;
-});
+  return null
+})
 
 /**
  * Получение timestamp последнего результата КБЖУ
@@ -227,11 +233,11 @@ const latestKbzhuTimestamp = computed(() => {
   if (userStore.kbzhuHistory && userStore.kbzhuHistory.length > 0) {
     const sortedHistory = [...userStore.kbzhuHistory].sort(
         (a, b) => b.timestamp - a.timestamp
-    );
-    return sortedHistory[0].timestamp;
+    )
+    return sortedHistory[0].timestamp
   }
-  return null;
-});
+  return null
+})
 </script>
 
 <style scoped>

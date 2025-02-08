@@ -1,19 +1,20 @@
+<!--components/shared/DonatStarsComponent.vue'-->
+
 <template>
-  <v-container>
     <v-row justify="center">
       <v-col cols="12" md="8">
         <v-card class="pa-2" elevation="4" style="border-radius: 16px;">
-          <v-card-title class="justify-center">
+          <v-card-title class="justify-center primary white--text">
             <v-icon large color="#ffd700">mdi-star</v-icon>
             <span class="ml-1">Донаты в Telegram Stars</span>
           </v-card-title>
-          <v-card-text>
-            <p>Telegram Stars можно купить через Apple Pay на МТС или за криптовалюту TON на <a target="_blank"
-                                                                                             href="https://fragment.com/stars/buy">Fragment</a>, который требует верификации по паспорту.
+          <v-card-text class="mb-0">
+            <p>Telegram Stars можно купить через Apple Pay на МТС или за криптовалюту TON. Курс покупки 100 stars:
             </p>
-            <p>
-              Курс покупки 100 stars через Apple Pay — 209 ₽. На fragment 100 stars ~0.32 TON.
-            </p>
+            <ul style="margin-left: 2.5em">
+              <li>через Apple Pay ~209 ₽</li>
+              <li>через Fragment ~0.32 TON</li>
+            </ul>
           </v-card-text>
           <v-card-text>
             <v-form @submit.prevent="handleDonateStars">
@@ -28,7 +29,12 @@
                   min="1"
                   :rules="[v => v >= 1 || 'Минимум звёзд — 1']"
               />
-              <v-btn color="primary" type="submit" :loading="isLoading" block>
+              <v-btn
+                  color="primary"
+                  type="submit"
+                  rounded="xl"
+                  :loading="isLoading" block
+              >
                 Отправить ⭐
               </v-btn>
             </v-form>
@@ -36,7 +42,6 @@
         </v-card>
       </v-col>
     </v-row>
-  </v-container>
 </template>
 
 <script setup lang="ts">

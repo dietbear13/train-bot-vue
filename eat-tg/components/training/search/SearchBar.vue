@@ -1,5 +1,4 @@
 <template>
-  <div>
     <v-text-field
         v-model="localSearch"
         label="Вводи упражнение или мышцы"
@@ -8,7 +7,6 @@
         variant="outlined"
         hide-details="auto"
     ></v-text-field>
-  </div>
 </template>
 
 <script lang="ts">

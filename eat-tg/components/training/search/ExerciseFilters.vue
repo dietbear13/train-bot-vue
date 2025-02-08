@@ -1,7 +1,10 @@
 <!-- components/training/search/ExerciseFilters.vue -->
 <template>
   <div class="exercise-filters">
-    <v-btn @click="toggleFilters">
+    <v-btn
+        @click="toggleFilters"
+        rounded="pills"
+    >
       {{ showFilters ? 'Скрыть фильтры' : 'Показать фильтры' }}
       <v-icon right>{{ showFilters ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
     </v-btn>

@@ -22,7 +22,7 @@
                 class="gender-button mx-auto"
                 :class="{ 'selected-button': formData.gender === gender.value }"
                 @click="selectGender(gender.value)"
-                rounded="lg"
+                rounded="xl"
             >
               {{ gender.text }}
             </v-btn>
@@ -50,7 +50,7 @@
                 class="group-button mx-auto"
                 :class="{ 'selected-button': formData.bodyType === bodyType.value }"
                 @click="selectBodyType(bodyType.value)"
-                rounded="lg"
+                rounded="xl"
             >
               {{ bodyType.text }}
             </v-btn>
@@ -139,7 +139,7 @@
                 class="group-button mx-auto"
                 :class="{ 'selected-button': formData.goal === goal.value }"
                 @click="selectGoal(goal.value)"
-                rounded="lg"
+                rounded="xl"
             >
               {{ goal.text }}
             </v-btn>
@@ -176,7 +176,7 @@
         @click="onCalculate"
         color="success"
         class="mt-2"
-        rounded="lg"
+        rounded="xl"
         width="100%"
     >
       <!-- Текст кнопки в зависимости от состояния -->
@@ -231,7 +231,7 @@
               color="primary"
               @click="sendKbzhuResult"
               :disabled="!telegramUserId"
-              rounded="lg"
+              rounded="xl"
               class="mb-1"
           >
             <v-icon left>mdi-send</v-icon>
@@ -247,7 +247,7 @@
         color="secondary"
         @click="toggleTestComponent"
         class="my-2"
-        rounded="lg"
+        rounded="xl"
         width="100%"
     >
       <v-icon left>mdi-test-tube</v-icon>
