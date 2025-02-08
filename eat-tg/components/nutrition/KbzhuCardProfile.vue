@@ -35,11 +35,11 @@
 
       <v-row>
         <v-col>
-          <div class="title-text" style="text-align: center">Калории</div>
+          <div class="title-text" style="text-align: center">Всего калорий</div>
           <div class="value-text" style="text-align: center">{{ userKbzhu.calories }} ккал</div>
         </v-col>
         <v-col>
-          <div class="title-text" style="text-align: center">Доп. Калории</div>
+          <div class="title-text" style="text-align: center">Из которых от тренировок</div>
           <div class="value-text" style="text-align: center">{{ userKbzhu.extraCalories }} ккал</div>
         </v-col>
       </v-row>
@@ -66,7 +66,12 @@
     <!-- Если данных нет -->
     <v-card-text v-else>
       <p>Чтобы отобразились данные, сделайте расчёт в калькуляторе.</p>
-      <v-btn class="mt-2" to="/nutrition" color="primary">
+      <v-btn
+          class="mt-2"
+          to="/nutrition"
+          color="primary"
+          rounded="xl"
+      >
         Перейти в калькулятор
       </v-btn>
     </v-card-text>

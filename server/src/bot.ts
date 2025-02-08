@@ -50,7 +50,11 @@ const openUrlButton = (text: string, url: string): any => {
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
 
-    const welcomeMessage = 'Привет!\n\nБесплатные программы тренировок, КБЖУ калькулятор и примеры питания.';
+    const welcomeMessage = 'Привет!\n\n' +
+        'Я помогу освоиться в тренажёрном зале и узнать много нового\n\n' +
+        '1️⃣ Бесплатные программы тренировок\n' +
+        '2️⃣ КБЖУ калькулятор и рационы питания\n' +
+        '3️⃣ Советы как превратить набор упражнений в план действий';
 
     // Создание клавиатуры с кнопками
     const keyboard: InlineKeyboardMarkup = {

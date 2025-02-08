@@ -1,29 +1,23 @@
+// models/DietsList.ts
 import mongoose, { Schema, Document } from 'mongoose';
 
-/** Описываем структуру NutritionExample */
+/** Интерфейс для одного пункта питания */
 interface INutritionExample {
     title: string;
     content: string;
     shortDescription?: string;
 }
 
-/** Описываем структуру NutritionSection.
- *  Важно: если у вас каждый документ в базе – это именно "секция" (раздел),
- *  то модель может содержать поля title, description и items.
- *  При необходимости вы можете расширить схему и хранить все секции в одном документе
- *  или в нескольких — всё зависит от логики приложения.
- */
+/** Интерфейс для раздела питания (DietsList) */
 export interface IDietsList extends Document {
     title: string;
-    description?: string;
     items: INutritionExample[];
 }
 
-/** Схема для коллекции DietsList */
+/** Схема для коллекции DietsList без поля description */
 const DietsListSchema = new Schema<IDietsList>(
     {
         title: { type: String, required: true },
-        description: { type: String },
         items: [
             {
                 title: { type: String, required: true },
@@ -33,7 +27,7 @@ const DietsListSchema = new Schema<IDietsList>(
         ],
     },
     {
-        timestamps: true, // по желанию, если хотите хранить createdAt/updatedAt
+        timestamps: true, // если нужно хранить createdAt/updatedAt
     }
 );
 

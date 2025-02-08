@@ -58,13 +58,7 @@
                     class="mb-4"
                 />
 
-                <!-- TinyMCE Editor для описания (description) -->
-                <Editor
-                    :api-key="tinyMceKey"
-                    :init="tinymceInit"
-                    v-model="form.description"
-                    id="tinymce-editor-description"
-                />
+                <!-- Поле для описания удалено -->
 
                 <!-- Редактирование элементов рациона (items) -->
                 <v-divider class="my-4" />
@@ -126,11 +120,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import Editor from '@tinymce/tinymce-vue'
-import { useRuntimeConfig } from '#imports'
-import { useApi } from '../../composables/useApi'
+import { ref, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import Editor from '@tinymce/tinymce-vue';
+import { useRuntimeConfig } from '#imports';
+import { useApi } from '../../composables/useApi';
 
 /** Интерфейс для элемента рациона */
 interface IDietItem {
@@ -139,39 +133,36 @@ interface IDietItem {
   content: string;
 }
 
-/** Интерфейс данных для рациона */
+/** Интерфейс данных для рациона (поле description удалено) */
 interface IDietsList {
   _id: string;
   title: string;
-  description?: string;
   items?: IDietItem[];
 }
 
 /** Список рационов */
-const diets = ref<IDietsList[]>([])
+const diets = ref<IDietsList[]>([]);
 
 /** ID выбранного рациона */
-const selectedDietId = ref<string | null>(null)
+const selectedDietId = ref<string | null>(null);
 
-/** Форма для создания/редактирования.
- * Добавлено поле items для редактирования элементов рациона.
- */
+/** Форма для создания/редактирования */
 const form = ref({
   title: '',
-  description: '',
+  // Поле description удалено
   items: [] as IDietItem[],
-})
+});
 
-const router = useRouter()
+const router = useRouter();
 
-// TinyMCE – базовая конфигурация для описания
-const config = useRuntimeConfig()
-const tinyMceKey = config.public.tinyMceKey
-console.log('TinyMCE_KEY from config:', tinyMceKey)
+// TinyMCE – базовая конфигурация для элементов (уменьшённый редактор)
+const config = useRuntimeConfig();
+const tinyMceKey = config.public.tinyMceKey;
+console.log('TinyMCE_KEY from config:', tinyMceKey);
 
-const tinymceInit = {
-  height: 400,
-  menubar: true,
+const tinymceInitSmall = {
+  height: 200,
+  menubar: false,
   plugins: [
     'lists',
     'link',
@@ -179,7 +170,7 @@ const tinymceInit = {
     'charmap',
     'code',
     'table',
-    'autoresize'
+    'autoresize',
   ],
   toolbar: `undo redo | formatselect | bold italic underline strikethrough |
             blockquote forecolor backcolor | alignleft aligncenter alignright alignjustify |
@@ -190,53 +181,37 @@ const tinymceInit = {
       font-size:14px;
     }
   `
-}
+};
 
-// Конфигурация для TinyMCE в редакторах содержимого элементов (уменьшенная высота, упрощённый набор кнопок)
-const tinymceInitSmall = {
-  height: 200,
-  menubar: false,
-  plugins: ['lists', 'link', 'code'],
-  toolbar: 'undo redo | bold italic | alignleft aligncenter alignright | code',
-  content_style: `
-    body {
-      font-family:Helvetica,Arial,sans-serif;
-      font-size:14px;
-    }
-  `
-}
-
-const { apiRequest } = useApi()
+const { apiRequest } = useApi();
 
 /** Загрузка всех рационов при монтировании */
 onMounted(async () => {
-  await loadDiets()
-})
+  await loadDiets();
+});
 
 async function loadDiets() {
   try {
-    // Например: GET /dietsList
-    diets.value = await apiRequest<IDietsList[]>('GET', 'dietsList')
+    diets.value = await apiRequest<IDietsList[]>('GET', 'dietsList');
   } catch (err) {
-    console.error('Ошибка при загрузке рационов:', err)
+    console.error('Ошибка при загрузке рационов:', err);
   }
 }
 
 /** Выбор рациона из списка */
 function selectDiet(diet: IDietsList) {
-  selectedDietId.value = diet._id
-  form.value.title = diet.title
-  form.value.description = diet.description || ''
-  // Если у рациона нет элементов, устанавливаем пустой массив
-  form.value.items = diet.items ? [...diet.items] : []
+  selectedDietId.value = diet._id;
+  form.value.title = diet.title;
+  // Описание удалено
+  form.value.items = diet.items ? [...diet.items] : [];
 }
 
 /** Создание нового рациона (очистка формы) */
 function newDiet() {
-  selectedDietId.value = null
-  form.value.title = ''
-  form.value.description = ''
-  form.value.items = []
+  selectedDietId.value = null;
+  form.value.title = '';
+  // Описание удалено
+  form.value.items = [];
 }
 
 /** Добавление нового элемента в список */
@@ -245,66 +220,64 @@ function addItem() {
     title: '',
     shortDescription: '',
     content: '',
-  })
+  });
 }
 
 /** Удаление элемента из списка */
 function removeItem(index: number) {
-  form.value.items.splice(index, 1)
+  form.value.items.splice(index, 1);
 }
 
 /** Сохранение (создание или обновление) */
 async function saveDiet() {
   try {
     if (!form.value.title) {
-      alert('Введите название рациона')
-      return
+      alert('Введите название рациона');
+      return;
     }
 
     const payload = {
       title: form.value.title,
-      description: form.value.description,
+      // Поле description удалено
       items: form.value.items,
-    }
+    };
 
     if (selectedDietId.value) {
-      // Обновляем
-      await apiRequest('PUT', `dietsList/${selectedDietId.value}`, payload)
+      await apiRequest('PUT', `dietsList/${selectedDietId.value}`, payload);
     } else {
-      // Создаём новый документ
-      await apiRequest('POST', 'dietsList', payload)
+      await apiRequest('POST', 'dietsList', payload);
     }
-    await loadDiets()
-    newDiet()
+    await loadDiets();
+    newDiet();
   } catch (error) {
-    console.error('Ошибка при сохранении рациона:', error)
+    console.error('Ошибка при сохранении рациона:', error);
   }
 }
 
 /** Удаление рациона */
 async function deleteDiet() {
-  if (!selectedDietId.value) return
-  if (!confirm('Точно удалить этот рацион?')) return
+  if (!selectedDietId.value) return;
+  if (!confirm('Точно удалить этот рацион?')) return;
 
   try {
-    await apiRequest('DELETE', `dietsList/${selectedDietId.value}`)
-    await loadDiets()
-    newDiet()
+    await apiRequest('DELETE', `dietsList/${selectedDietId.value}`);
+    await loadDiets();
+    newDiet();
   } catch (error) {
-    console.error('Ошибка при удалении рациона:', error)
+    console.error('Ошибка при удалении рациона:', error);
   }
 }
 
 /** Выход из админки */
 function logout() {
-  localStorage.removeItem('authToken')
-  router.push('/login')
+  localStorage.removeItem('authToken');
+  router.push('/login');
 }
 </script>
 
 <style scoped>
 .drawer-bg {
-  background-color: #6b41e6 !important; /* deep-purple darken-3 */
+  background-color: #6b41e6 !important;
 }
 .text-white {
   color: #ffffff !important;

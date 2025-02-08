@@ -26,10 +26,10 @@
                   class="doc-section"
               >
                 <!-- Заголовок раздела (без лишних пометок) -->
-                <div class="doc-header" v-if="doc.title">
-                  <h3>{{ cleanTitle(doc.title) }}</h3>
-                </div>
-                <p v-if="doc.description">{{ doc.description }}</p>
+<!--                <div class="doc-header" v-if="doc.title">-->
+<!--                  <h3>{{ cleanTitle(doc.title) }}</h3>-->
+<!--                </div>-->
+<!--                <p v-if="doc.description">{{ doc.description }}</p>-->
                 <div class="post-list">
                   <v-card
                       v-for="(item, itemIndex) in doc.items"

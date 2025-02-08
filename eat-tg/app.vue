@@ -11,7 +11,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import './assets/global.css'; // Здесь можно хранить глобальные стили, например для user-select
-import UserInit from './components/userAndAdmin/UserInit.vue';
+import UserInit from './components/shared/UserInit.vue';
 
 const loading = ref(true);
 
