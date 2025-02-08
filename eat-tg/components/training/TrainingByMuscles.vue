@@ -29,7 +29,7 @@
                 class="group-button mx-auto"
                 :class="{ 'selected-button': gender === option }"
                 @click="selectGender(option)"
-                rounded="lg"
+                rounded="xl"
             >
               {{ option }}
             </v-btn>
@@ -66,7 +66,7 @@
                   style="min-width: 100%;"
                   :class="{ 'selected-button': muscleGroup === option }"
                   @click="selectMuscleGroup(option)"
-                  rounded="lg"
+                  rounded="xl"
                   block
                   variant="text"
               >
@@ -99,7 +99,7 @@
                   style="min-width: 100%;"
                   :class="{ 'selected-button': muscleSubgroup === option }"
                   @click="selectMuscleSubgroup(option)"
-                  rounded="lg"
+                  rounded="xl"
                   block
                   variant="text"
               >
@@ -118,7 +118,7 @@
           @click="generateWorkout"
           color="success"
           class="mt-1"
-          rounded="lg"
+          rounded="xl"
           width="100%"
       >
         <!-- Иконка, которая при загрузке вращается -->
@@ -253,7 +253,7 @@
           <v-btn
               color="secondary"
               @click="openAddExerciseSheet"
-              rounded="lg"
+              rounded="xl"
               icon
           >
             <v-icon>mdi-plus</v-icon>
@@ -266,7 +266,7 @@
               color="success"
               @click="generateWorkout"
               :disabled="isGenerating || false"
-              rounded="lg"
+              rounded="xl"
               class="mb-1"
           >
             <v-icon left>mdi-refresh</v-icon>
@@ -277,7 +277,7 @@
               color="primary"
               @click="sendWorkout"
               :disabled="!telegramUserId"
-              rounded="lg"
+              rounded="xl"
           >
             <v-icon left>mdi-send</v-icon>
             Отправить себе
