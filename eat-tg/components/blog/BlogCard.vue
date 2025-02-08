@@ -43,7 +43,7 @@
       <template v-else>
         <!-- Перебираем посты и выводим карточки -->
         <v-col
-            v-for="post in filteredPosts"
+            v-for="post in paginatedPosts"
             :key="post.id"
             cols="12"
             style="padding: 8px"
@@ -88,6 +88,23 @@
         </v-col>
       </template>
     </v-row>
+
+    <!-- Пагинация: показываем, если постов больше чем postsPerPage -->
+    <v-row v-if="!loading && pageCount > 1" justify="center" class="mt-4">
+      <v-pagination
+          v-model="currentPage"
+          :length="pageCount"
+          total-visible="7"
+      ></v-pagination>
+    </v-row>
+
+    <!-- Фиксированные кнопки прокрутки вверх и вниз -->
+    <v-btn icon class="scroll-button up" @click="scrollToTop">
+      <v-icon>mdi-arrow-up</v-icon>
+    </v-btn>
+    <v-btn icon class="scroll-button down" @click="scrollToBottom">
+      <v-icon>mdi-arrow-down</v-icon>
+    </v-btn>
   </v-col>
 </template>
 
@@ -95,7 +112,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { retrieveLaunchParams } from '@telegram-apps/sdk'
 import { useApi } from '../../composables/useApi'
-import type { LikeResponse } from '../../types/LikeResponse' // Проверьте корректность пути
+import type { LikeResponse } from '../../types/LikeResponse'
 
 // Интерфейс поста с новым полем для Telegram-ссылки
 interface Post {
@@ -112,6 +129,46 @@ const telegramUserId = ref<number | null>(null)
 const posts = ref<Post[]>([])
 const searchQuery = ref('')
 const loading = ref(true) // Состояние загрузки
+
+// --- Пагинация ---
+// Количество постов на странице
+const postsPerPage = 10
+// Номер текущей страницы
+const currentPage = ref(1)
+
+// Фильтрация постов по поисковому запросу
+const filteredPosts = computed(() => {
+  const query = searchQuery.value.toLowerCase()
+  if (!query) return posts.value
+  return posts.value.filter(post =>
+      post.title.toLowerCase().includes(query) ||
+      post.text.toLowerCase().includes(query)
+  )
+})
+
+// Общее число страниц для пагинации
+const pageCount = computed(() =>
+    Math.ceil(filteredPosts.value.length / postsPerPage)
+)
+
+// Посты для текущей страницы
+const paginatedPosts = computed(() => {
+  const start = (currentPage.value - 1) * postsPerPage
+  return filteredPosts.value.slice(start, start + postsPerPage)
+})
+
+// Сброс номера страницы на 1 при изменении поискового запроса
+watch(searchQuery, () => {
+  currentPage.value = 1
+})
+
+// Скролл вверх после смены страницы
+watch(currentPage, () => {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  })
+})
 
 // Режим отладки
 const debug = true
@@ -192,16 +249,6 @@ function getTelegramShareUrl(post: Post): string {
   return `https://t.me/share/url?url=${encodeURIComponent(urlToShare)}&text=${encodeURIComponent(textToShare)}`
 }
 
-// Фильтрация постов по поисковому запросу
-const filteredPosts = computed(() => {
-  const query = searchQuery.value.toLowerCase()
-  if (!query) return posts.value
-  return posts.value.filter(post =>
-      post.title.toLowerCase().includes(query) ||
-      post.text.toLowerCase().includes(query)
-  )
-})
-
 // Обработка клика по кнопке лайка
 function toggleLike(postId: string) {
   const post = posts.value.find(p => p.id === postId)
@@ -266,11 +313,43 @@ async function sendLikeToServer(
     }
   }
 }
+
+// Функция прокрутки страницы вверх
+function scrollToTop() {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  })
+}
+
+// Функция прокрутки страницы вниз
+function scrollToBottom() {
+  window.scrollTo({
+    top: document.documentElement.scrollHeight,
+    behavior: 'smooth'
+  })
+}
 </script>
 
 <style scoped>
 .post-card {
   margin: 0 auto;
   border-radius: 16px;
+}
+
+/* Стили для фиксированных кнопок прокрутки */
+.scroll-button {
+  position: fixed;
+  right: 20px;
+  opacity: 0.7;
+  z-index: 1000;
+}
+
+.scroll-button.up {
+  bottom: 80px;
+}
+
+.scroll-button.down {
+  bottom: 20px;
 }
 </style>

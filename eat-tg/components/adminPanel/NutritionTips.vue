@@ -63,8 +63,47 @@
                     :api-key="tinyMceKey"
                     :init="tinymceInit"
                     v-model="form.description"
-                    id="tinymce-editor"
+                    id="tinymce-editor-description"
                 />
+
+                <!-- Редактирование элементов рациона (items) -->
+                <v-divider class="my-4" />
+                <div>
+                  <h3>Элементы рациона</h3>
+                  <div
+                      v-for="(item, index) in form.items"
+                      :key="index"
+                      class="mb-4 pa-4"
+                      style="border: 1px solid #ccc; border-radius: 4px;"
+                  >
+                    <v-text-field
+                        label="Заголовок элемента (item.title)"
+                        v-model="item.title"
+                        variant="outlined"
+                        class="mb-2"
+                    />
+                    <v-text-field
+                        label="Краткое описание (item.shortDescription)"
+                        v-model="item.shortDescription"
+                        variant="outlined"
+                        class="mb-2"
+                    />
+                    <!-- Редактор TinyMCE для содержимого (item.content) -->
+                    <Editor
+                        :api-key="tinyMceKey"
+                        :init="tinymceInitSmall"
+                        v-model="item.content"
+                        :id="'tinymce-editor-item-' + index"
+                    />
+                    <v-btn color="error" small @click="removeItem(index)">
+                      Удалить элемент
+                    </v-btn>
+                  </div>
+
+                  <v-btn color="primary" @click="addItem">
+                    Добавить новый элемент
+                  </v-btn>
+                </div>
               </v-card-text>
 
               <v-divider />
@@ -93,11 +132,19 @@ import Editor from '@tinymce/tinymce-vue'
 import { useRuntimeConfig } from '#imports'
 import { useApi } from '../../composables/useApi'
 
+/** Интерфейс для элемента рациона */
+interface IDietItem {
+  title: string;
+  shortDescription: string;
+  content: string;
+}
+
 /** Интерфейс данных для рациона */
 interface IDietsList {
   _id: string;
   title: string;
   description?: string;
+  items?: IDietItem[];
 }
 
 /** Список рационов */
@@ -106,15 +153,18 @@ const diets = ref<IDietsList[]>([])
 /** ID выбранного рациона */
 const selectedDietId = ref<string | null>(null)
 
-/** Форма для создания/редактирования */
+/** Форма для создания/редактирования.
+ * Добавлено поле items для редактирования элементов рациона.
+ */
 const form = ref({
   title: '',
   description: '',
+  items: [] as IDietItem[],
 })
 
 const router = useRouter()
 
-// TinyMCE
+// TinyMCE – базовая конфигурация для описания
 const config = useRuntimeConfig()
 const tinyMceKey = config.public.tinyMceKey
 console.log('TinyMCE_KEY from config:', tinyMceKey)
@@ -134,6 +184,20 @@ const tinymceInit = {
   toolbar: `undo redo | formatselect | bold italic underline strikethrough |
             blockquote forecolor backcolor | alignleft aligncenter alignright alignjustify |
             bullist numlist outdent indent | link image table charmap | code`,
+  content_style: `
+    body {
+      font-family:Helvetica,Arial,sans-serif;
+      font-size:14px;
+    }
+  `
+}
+
+// Конфигурация для TinyMCE в редакторах содержимого элементов (уменьшенная высота, упрощённый набор кнопок)
+const tinymceInitSmall = {
+  height: 200,
+  menubar: false,
+  plugins: ['lists', 'link', 'code'],
+  toolbar: 'undo redo | bold italic | alignleft aligncenter alignright | code',
   content_style: `
     body {
       font-family:Helvetica,Arial,sans-serif;
@@ -163,6 +227,8 @@ function selectDiet(diet: IDietsList) {
   selectedDietId.value = diet._id
   form.value.title = diet.title
   form.value.description = diet.description || ''
+  // Если у рациона нет элементов, устанавливаем пустой массив
+  form.value.items = diet.items ? [...diet.items] : []
 }
 
 /** Создание нового рациона (очистка формы) */
@@ -170,6 +236,21 @@ function newDiet() {
   selectedDietId.value = null
   form.value.title = ''
   form.value.description = ''
+  form.value.items = []
+}
+
+/** Добавление нового элемента в список */
+function addItem() {
+  form.value.items.push({
+    title: '',
+    shortDescription: '',
+    content: '',
+  })
+}
+
+/** Удаление элемента из списка */
+function removeItem(index: number) {
+  form.value.items.splice(index, 1)
 }
 
 /** Сохранение (создание или обновление) */
@@ -180,18 +261,18 @@ async function saveDiet() {
       return
     }
 
+    const payload = {
+      title: form.value.title,
+      description: form.value.description,
+      items: form.value.items,
+    }
+
     if (selectedDietId.value) {
       // Обновляем
-      await apiRequest('PUT', `dietsList/${selectedDietId.value}`, {
-        title: form.value.title,
-        description: form.value.description,
-      })
+      await apiRequest('PUT', `dietsList/${selectedDietId.value}`, payload)
     } else {
       // Создаём новый документ
-      await apiRequest('POST', 'dietsList', {
-        title: form.value.title,
-        description: form.value.description,
-      })
+      await apiRequest('POST', 'dietsList', payload)
     }
     await loadDiets()
     newDiet()

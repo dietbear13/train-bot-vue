@@ -1,0 +1,5 @@
+// assets/variable.scss
+
+@forward  'vuetify/settings' with (
+  $expansion-panel-text-padding: 8px,
+);

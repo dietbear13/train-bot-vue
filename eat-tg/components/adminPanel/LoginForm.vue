@@ -1,7 +1,6 @@
 <template>
   <v-container fluid class="d-flex align-center justify-center" style="min-height: 100vh;">
-    <v-card class="pa-6" max-width="400">
-      <v-card-title class="text-h5">Вход в админку</v-card-title>
+    <v-card class="pa-6" width="400">
       <v-card-text>
         <v-form ref="formRef" v-model="valid" lazy-validation>
           <v-text-field
