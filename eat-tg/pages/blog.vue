@@ -1,10 +1,6 @@
 <!-- pages/blog.vue -->
 <template>
   <v-app>
-    <v-app-bar color="primary" dark elevated>
-      <v-toolbar-title>Блог</v-toolbar-title>
-    </v-app-bar>
-
     <v-main>
       <v-container class="py-4">
         <v-row>

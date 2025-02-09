@@ -48,15 +48,16 @@
             cols="12"
             style="padding: 8px"
         >
-          <v-card class="post-card" outlined max-width="600">
-            <v-card-text class="text-h6 blog-content d-block px-4 pt-4 pb-0">
-              {{ post.title }}
-            </v-card-text>
+          <v-card-text class="text-h6 blog-content d-block px-4 pt-4 pb-0">
+            <!-- Здесь создаётся якорь с уникальным id, например, с использованием идентификатора поста -->
+            <a :id="`post-${post.id}`">{{ post.title }}</a>
+          </v-card-text>
 
             <v-card-text class="pb-0">
               <!-- Просто выводим HTML контент -->
               <div class="blog-content d-block" v-html="post.text"></div>
             </v-card-text>
+            <a :href="`#post-${post.id}`">Перейти к заголовку поста</a>
 
             <v-card-actions>
               <v-spacer></v-spacer>
@@ -84,7 +85,6 @@
                 {{ post.likesCount }}
               </v-btn>
             </v-card-actions>
-          </v-card>
         </v-col>
       </template>
     </v-row>

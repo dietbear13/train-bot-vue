@@ -61,6 +61,7 @@ function formatDate(d: string | Date) {
 
 async function fetchSurveys() {
   const data = await apiRequest('GET', 'surveys');
+  console.log('data', data);
   surveys.value = data;
 }
 

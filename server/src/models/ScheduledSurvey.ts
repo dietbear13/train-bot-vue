@@ -14,7 +14,14 @@ interface ISurveyMessage {
     waitForResponse: boolean;       // Нужно ли ждать ответа, прежде чем отправить следующее
 }
 
-interface IScheduledSurvey {
+export interface ISurveyAnswer {
+    messageId: Types.ObjectId;    // Идентификатор сообщения, на которое ответили
+    telegramUserId: number;       // Telegram ID пользователя, давшего ответ
+    userChoice: string;           // Выбранное значение (callbackData)
+    answeredAt: Date;             // Дата и время ответа
+}
+
+export interface IScheduledSurvey {
     userId: Types.ObjectId;    // ID пользователя в вашей БД
     telegramId: number;        // Telegram ID, чтобы бот мог отправить
     triggerCondition: string;  // Например, 'afterWorkoutCreation'
@@ -23,6 +30,7 @@ interface IScheduledSurvey {
     messages: ISurveyMessage[]; // Список сообщений (последовательность)
     currentIndex: number;       // Какое сообщение уже отправлено. -1 значит ещё не отправлено.
     completed: boolean;         // Завершена цепочка или нет
+    answers?: ISurveyAnswer[];  // Массив ответов пользователей
 }
 
 const inlineButtonSchema = new Schema<IInlineButton>({
@@ -37,6 +45,14 @@ const surveyMessageSchema = new Schema<ISurveyMessage>({
     waitForResponse: Boolean,
 }, { _id: true });
 
+// Новая схема для ответа
+const surveyAnswerSchema = new Schema<ISurveyAnswer>({
+    messageId: { type: Schema.Types.ObjectId, required: true },
+    telegramUserId: { type: Number, required: true },
+    userChoice: { type: String, required: true },
+    answeredAt: { type: Date, required: true },
+}, { _id: false });
+
 const scheduledSurveySchema = new Schema<IScheduledSurvey>({
     userId: { type: Schema.Types.ObjectId, ref: 'User' },
     telegramId: Number,
@@ -45,6 +61,7 @@ const scheduledSurveySchema = new Schema<IScheduledSurvey>({
     messages: [surveyMessageSchema],
     currentIndex: { type: Number, default: -1 },
     completed: { type: Boolean, default: false },
+    answers: [surveyAnswerSchema], // новое поле для хранения ответов
 });
 
 export default model<IScheduledSurvey>('ScheduledSurvey', scheduledSurveySchema);

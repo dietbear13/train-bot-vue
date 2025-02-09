@@ -64,7 +64,6 @@ router.post('/check-user', async (req: Request, res: Response) => {
         try {
             // Запрашиваем статус пользователя в канале
             const chatMember = await bot.getChatMember(channelUsername, telegramId);
-            // Если status = 'member' / 'administrator' / 'creator', значит подписан
             if (
                 chatMember.status !== 'left' &&
                 chatMember.status !== 'kicked'
@@ -129,60 +128,6 @@ router.post('/update-user-role', async (req: Request, res: Response) => {
     } catch (error: any) {
         console.error('Ошибка при обновлении пользователя:', error.message);
         res.status(500).json({ message: 'Ошибка при обновлении пользователя' });
-    }
-});
-
-router.get('/users/matchCount', async (req: Request, res: Response) => {
-    try {
-        // Готовим query
-        const query: any = {};
-
-        // role
-        if (req.query.role) {
-            query.role = req.query.role;
-        }
-
-        // Собираем $elemMatch для kbzhuHistory
-        const kbzhuMatch: any = {};
-
-        // gender
-        if (req.query.gender) {
-            kbzhuMatch['formData.gender'] = req.query.gender;
-        }
-
-        // bodyType
-        if (req.query.bodyType) {
-            kbzhuMatch['formData.bodyType'] = req.query.bodyType;
-        }
-
-        // goal
-        if (req.query.goal) {
-            kbzhuMatch['formData.goal'] = req.query.goal;
-        }
-
-        // возраст
-        const ageFilter: any = {};
-        if (req.query.ageMin !== undefined) {
-            ageFilter.$gte = Number(req.query.ageMin);
-        }
-        if (req.query.ageMax !== undefined) {
-            ageFilter.$lte = Number(req.query.ageMax);
-        }
-        if (Object.keys(ageFilter).length > 0) {
-            kbzhuMatch['formData.age'] = ageFilter;
-        }
-
-        if (Object.keys(kbzhuMatch).length > 0) {
-            query.kbzhuHistory = { $elemMatch: kbzhuMatch };
-        }
-
-        // Выполняем запрос
-        const count = await User.countDocuments(query);
-        return res.json({ count });
-
-    } catch (err) {
-        console.error('Ошибка matchCount:', err);
-        return res.status(400).json({ error: 'Invalid filters or DB error' });
     }
 });
 
