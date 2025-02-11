@@ -1,5 +1,4 @@
-<!--adminPanel/commiunicator/CommunicatorMain.vue-->
-
+<!-- components/adminPanel/communicator/CommunicatorMain.vue -->
 <template>
   <v-card>
     <v-toolbar color="primary" dark>
@@ -20,7 +19,7 @@
         {{ formatDate(item.scheduledAt) }}
       </template>
       <template #item.actions="{ item }">
-        <v-btn icon color="primary" @click="editSurvey(item)">
+        <v-btn icon color="primary" @click="openEditDialog(item)">
           <v-icon>mdi-pencil</v-icon>
         </v-btn>
         <v-btn icon color="error" @click="deleteSurvey(item._id)">
@@ -30,8 +29,10 @@
     </v-data-table>
   </v-card>
 
-  <CreateEditSurveyDialog
-      v-model="dialog"
+  <!-- Диалоги создания и редактирования -->
+  <CreateSurveyDialog v-model="createDialog" @saved="fetchSurveys" />
+  <EditSurveyDialog
+      v-model="editDialog"
       :editingSurvey="editingSurvey"
       @saved="fetchSurveys"
   />
@@ -40,12 +41,14 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useApi } from '../../../composables/useApi';
-import CreateEditSurveyDialog from './CreateEditSurveyDialog.vue';
+import CreateSurveyDialog from './CreateSurveyDialog.vue';
+import EditSurveyDialog from './EditSurveyDialog.vue';
 
 const { apiRequest } = useApi();
 
 const surveys = ref([]);
-const dialog = ref(false);
+const createDialog = ref(false);
+const editDialog = ref(false);
 const editingSurvey = ref<any | null>(null);
 
 const headers = [
@@ -61,18 +64,16 @@ function formatDate(d: string | Date) {
 
 async function fetchSurveys() {
   const data = await apiRequest('GET', 'surveys');
-  console.log('data', data);
   surveys.value = data;
 }
 
 function openCreateDialog() {
-  editingSurvey.value = null;
-  dialog.value = true;
+  createDialog.value = true;
 }
 
-function editSurvey(survey: any) {
+function openEditDialog(survey: any) {
   editingSurvey.value = { ...survey };
-  dialog.value = true;
+  editDialog.value = true;
 }
 
 async function deleteSurvey(id: string) {

@@ -17,9 +17,9 @@
         <v-card-text>
           Создание программ доступно только для подписанных на телеграм-канал.
           Перейдите на
-          <nuxt-link to="/profile"
-          >страницу профиля <v-icon size="18px">mdi-account</v-icon
-          ></nuxt-link>
+          <nuxt-link to="/profile">
+            страницу профиля <v-icon size="18px">mdi-account</v-icon>
+          </nuxt-link>
           и подпишитесь.
         </v-card-text>
       </v-card>
@@ -40,7 +40,6 @@
           :isGenerating="isGenerating"
           :errorMessages="errorMessages"
           :isAnimating="isAnimating"
-
           @update:gender="gender = $event"
           @update:goal="goal = $event"
           @update:selectedSplitType="selectedSplitType = $event"
@@ -50,48 +49,47 @@
 
       <!-- Компонент результата (готовая «неделя») -->
       <TrainingOnWeekResult
-        v-model:showBottomSheet="showBottomSheet"
-        :selectedSplit="selectedSplit"
-        :finalPlan="finalPlan"
-        :isLoading="isLoading"
-        :telegramUserId="telegramUserId"
-        :refreshingDays="refreshingDays"
-        @sendWorkoutPlan="sendWorkoutPlan"
-        @regenerateWholeSplit="regenerateWholeSplit"
-        @refreshDayExercises="refreshDayExercises"
-        @increaseRepsSplit="increaseRepsSplit"
-        @decreaseRepsSplit="decreaseRepsSplit"
-        @removeExerciseSplit="removeExerciseSplit"
-        @regenerateExerciseSplit="regenerateExerciseSplit"
-        @logExercises="logExercises"
-
-        :openExerciseInfo="openExerciseInfo"
+          v-model:showBottomSheet="showBottomSheet"
+          :selectedSplit="selectedSplit"
+          :finalPlan="finalPlan"
+          :isLoading="isLoading"
+          :telegramUserId="telegramUserId"
+          :refreshingDays="refreshingDays"
+          @sendWorkoutPlan="sendWorkoutPlan"
+          @regenerateWholeSplit="regenerateWholeSplit"
+          @refreshDayExercises="refreshDayExercises"
+          @increaseRepsSplit="increaseRepsSplit"
+          @decreaseRepsSplit="decreaseRepsSplit"
+          @removeExerciseSplit="removeExerciseSplit"
+          @regenerateExerciseSplit="regenerateExerciseSplit"
+          @logExercises="logExercises"
+          :openExerciseInfo="openExerciseInfo"
       />
     </div>
   </div>
 
-    <!-- Глобальный Snackbar -->
-    <v-snackbar
-        v-model="snackbar.show"
-        :color="snackbar.color"
-        :timeout="snackbar.timeout"
-        top
-        right
-        multi-line
-    >
-      {{ snackbar.message }}
-      <template #actions>
-        <v-btn color="white" @click="snackbar.show = false">
-          Закрыть
-        </v-btn>
-      </template>
-    </v-snackbar>
+  <!-- Глобальный Snackbar -->
+  <v-snackbar
+      v-model="snackbar.show"
+      :color="snackbar.color"
+      :timeout="snackbar.timeout"
+      top
+      right
+      multi-line
+  >
+    {{ snackbar.message }}
+    <template #actions>
+      <v-btn color="white" @click="snackbar.show = false">
+        Закрыть
+      </v-btn>
+    </template>
+  </v-snackbar>
 
-    <!-- Компонент для подробностей упражнения (ExerciseInfo) -->
-    <ExerciseInfo
-        v-model="showExerciseInfo"
-        :exercise="selectedExercise"
-    />
+  <!-- Компонент для подробностей упражнения (ExerciseInfo) -->
+  <ExerciseInfo
+      v-model="showExerciseInfo"
+      :exercise="selectedExercise"
+  />
 </template>
 
 <script lang="ts">
@@ -144,7 +142,9 @@ export default defineComponent({
   setup() {
     const userStore = useUserStore()
     const roleLoading = ref(true)
-    const canCreateTraining = computed(() => userStore.role === 'admin' || userStore.role === 'paidUser')
+    const canCreateTraining = computed(
+        () => userStore.role === 'admin' || userStore.role === 'paidUser'
+    )
     const { apiRequest } = useApi()
 
     // Состояния и параметры компонента
@@ -154,8 +154,9 @@ export default defineComponent({
 
     const allSplits = ref<SplitItem[]>([])
     const selectedSplit = ref<SplitItem | null>(null)
-    const selectedSplitId = ref<string | null>(null)
-    const selectedSplitType = ref<string | null>(null)
+    // Изменяем тип с string | null на string | undefined
+    const selectedSplitId = ref<string | undefined>(undefined)
+    const selectedSplitType = ref<string | undefined>(undefined)
 
     const isLoading = ref(false)
     const isGenerating = ref(false)
@@ -165,7 +166,8 @@ export default defineComponent({
     const refreshingDays = ref<Record<number, boolean>>({})
 
     const userData = ref<TelegramUserData | null>(null)
-    const telegramUserId = ref<number | null>(null)
+    // Изменяем тип с number | null на number | undefined
+    const telegramUserId = ref<number | undefined>(undefined)
     const initData = ref<any>(null)
 
     const snackbar = ref<SnackbarState>({
@@ -224,7 +226,7 @@ export default defineComponent({
       }
     })
 
-    watch(splitsToShow, newSplits => {
+    watch(splitsToShow, (newSplits) => {
       if (newSplits.length > 0 && !selectedSplitId.value) {
         selectedSplitId.value = newSplits[0]._id
       }
@@ -251,23 +253,23 @@ export default defineComponent({
      * Функция отправки данных в аналитику (/analytics/save-sended-workout)
      */
     const sendAnalyticsWorkoutPlan = async () => {
+      if (!telegramUserId.value) {
+        showSnackbar('Нет telegramUserId — не можем сохранить.', 'error')
+        return
+      }
+      if (!selectedSplit.value) {
+        showSnackbar('Сплит не выбран — не можем отправить тренировку.', 'error')
+        return
+      }
+      const payload = {
+        userId: telegramUserId.value,
+        gender: selectedSplit.value.gender,
+        goal: goal.value,
+        splitType: selectedSplit.value.split,
+        splitId: selectedSplit.value._id,
+        timestamp: Date.now()
+      }
       try {
-        if (!telegramUserId.value) {
-          showSnackbar('Нет telegramUserId — не можем сохранить.', 'error')
-          return
-        }
-        if (!selectedSplit.value) {
-          showSnackbar('Сплит не выбран — не можем отправить тренировку.', 'error')
-          return
-        }
-        const payload = {
-          userId: telegramUserId.value,
-          gender: selectedSplit.value.gender,
-          goal: goal.value,
-          splitType: selectedSplit.value.split,
-          splitId: selectedSplit.value._id,
-          timestamp: Date.now()
-        }
         const response = await apiRequest<any>('POST', '/analytics/save-sended-workout', payload)
         console.log('Ответ от /analytics/save-sended-workout:', response)
         showSnackbar('Тренировка отправлена и сохранена!', 'success')
@@ -283,9 +285,7 @@ export default defineComponent({
      * функцию из хука для отправки детального плана
      */
     const sendWorkoutPlan = async () => {
-      // Отправляем данные в аналитику
       await sendAnalyticsWorkoutPlan()
-      // Затем отправляем детальный план через функцию из useSplitGenerator
       await sendDetailedWorkoutPlan()
     }
 
@@ -327,8 +327,9 @@ export default defineComponent({
         const launchParams = retrieveLaunchParams()
         initData.value = launchParams.initData
         if (initData.value && initData.value.user) {
-          userData.value = initData.value.user
-          telegramUserId.value = userData.value.id
+          const user = initData.value.user // гарантированно получаем данные пользователя
+          userData.value = user
+          telegramUserId.value = user.id  // теперь safe, так как user точно не null
         } else {
           console.error('Нет данных пользователя (Telegram).')
           showSnackbar('Нет данных пользователя (Telegram).', 'error')
@@ -388,7 +389,7 @@ export default defineComponent({
       }
     }
 
-    const standardRepsValues = [4,5,6,8,10,12,15,20,24,30,45,60,75,90,105,120,135,150,165,180]
+    const standardRepsValues = [4, 5, 6, 8, 10, 12, 15, 20, 24, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180]
     function getSets(reps: number): number {
       if (reps === 4) return 6
       if (reps === 5) return 5
@@ -401,9 +402,12 @@ export default defineComponent({
       const ex = exercisesArr[index]
       const current = ex.reps
       const idx = standardRepsValues.indexOf(current)
-      let newReps = idx !== -1 && idx < standardRepsValues.length - 1
-          ? standardRepsValues[idx + 1]
-          : current + 1
+      let newReps
+      if (idx !== -1 && idx < standardRepsValues.length - 1) {
+        newReps = standardRepsValues[idx + 1]
+      } else {
+        newReps = current + 1
+      }
       ex.reps = newReps
       ex.sets = getSets(newReps)
     }
@@ -412,9 +416,12 @@ export default defineComponent({
       const ex = exercisesArr[index]
       const current = ex.reps
       const idx = standardRepsValues.indexOf(current)
-      let newReps = idx > 0
-          ? standardRepsValues[idx - 1]
-          : current - 1
+      let newReps
+      if (idx > 0) {
+        newReps = standardRepsValues[idx - 1]
+      } else {
+        newReps = current - 1
+      }
       if (newReps >= 1) {
         ex.reps = newReps
         ex.sets = getSets(newReps)
@@ -466,7 +473,6 @@ export default defineComponent({
       finalPlan,
       generateSplitPlan,
       regenerateExercise,
-      // Возвращаем объединённую функцию отправки плана:
       sendWorkoutPlan,
       generateSplitWorkout,
       loadSplits,

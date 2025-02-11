@@ -1,5 +1,4 @@
 // models/User.ts
-
 import mongoose, { Schema, Document } from 'mongoose'
 
 export interface IKbzhuHistory {
@@ -44,11 +43,18 @@ export interface IBlogLike {
     date: number
 }
 
-// Новая структура для истории нажатий на кнопку "донат звёзд"
 export interface IStarDonationPress {
     telegramId: number
     stars: number
     timestamp: number // UNIX timestamp
+}
+
+// Новая структура для истории колбэков рассылок
+export interface ISurveyCallback {
+    surveyId: string
+    messageId: string
+    callbackAt: string   // теперь именно callbackAt, как и ожидает TS
+    answeredAt: Date
 }
 
 export interface IUser extends Document {
@@ -61,9 +67,19 @@ export interface IUser extends Document {
     trainingHistory?: ITrainingHistory[]
     referrals: IReferral[]
     blogLikes: IBlogLike[]
-    // Новое необязательное поле для хранения нажатий по звёздному донату
     starDonationHistory?: IStarDonationPress[]
+    surveyCallbacks?: ISurveyCallback[]
 }
+
+const SurveyCallbackSchema = new Schema<ISurveyCallback>(
+    {
+        surveyId: { type: String, required: true },
+        messageId: { type: String, required: true },
+        callbackAt: { type: String },
+        answeredAt: { type: Date },
+    },
+    { _id: false }
+)
 
 const UserSchema: Schema = new Schema<IUser>({
     telegramId: { type: Number, required: true, unique: true },
@@ -123,7 +139,6 @@ const UserSchema: Schema = new Schema<IUser>({
         ],
         default: [],
     },
-    // Новое поле для записи истории нажатий
     starDonationHistory: {
         type: [
             {
@@ -132,6 +147,11 @@ const UserSchema: Schema = new Schema<IUser>({
                 timestamp: { type: Number, required: true },
             },
         ],
+        default: [],
+    },
+    // Добавляем историю колбэков рассылок
+    surveyCallbacks: {
+        type: [SurveyCallbackSchema],
         default: [],
     },
 })

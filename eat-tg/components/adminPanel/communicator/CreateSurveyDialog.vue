@@ -1,16 +1,13 @@
-<!-- src/components/adminPanel/communicator/CreateEditSurveyDialog.vue -->
+<!-- components/adminPanel/communicator/CreateSurveyDialog.vue -->
 <template>
   <v-dialog v-model="modelValue" max-width="1000px">
     <v-card>
-      <!-- Заголовок -->
-      <v-card-title>
-        <span v-if="internalSurvey._id">Редактирование рассылки</span>
-        <span v-else>Создание рассылки</span>
-      </v-card-title>
+      <!-- Заголовок всегда "Создание рассылки" -->
+      <v-card-title>Создание рассылки</v-card-title>
 
-      <!-- Форма редактирования рассылки -->
+      <!-- Форма создания рассылки -->
       <v-card-text>
-        <!-- Получатель или сохранённые фильтры -->
+        <!-- Данные получателя -->
         <v-card-text class="text-h6">Данные получателя</v-card-text>
         <v-text-field
             label="Telegram ID (если нужно отправить одному пользователю)"
@@ -18,26 +15,44 @@
             type="number"
         />
 
-        <!-- Если сохранены фильтры (для массовой рассылки), отображаем их в readonly-полях -->
+        <v-divider class="my-3"></v-divider>
+        <!-- Если есть фильтры для массовой рассылки -->
         <v-row v-if="hasFilters">
           <v-col cols="12" sm="3">
-            <v-text-field label="Роль" v-model="userFilters.role" readonly />
+            <v-text-field
+                label="Роль"
+                v-model="userFilters.role"
+                readonly
+                variant="outlined"
+            />
           </v-col>
           <v-col cols="12" sm="3">
-            <v-text-field label="Пол" v-model="userFilters.gender" readonly />
+            <v-text-field
+                label="Пол"
+                v-model="userFilters.gender"
+                readonly
+                variant="outlined"
+            />
           </v-col>
           <v-col cols="12" sm="3">
-            <v-text-field label="Тип телосложения" v-model="userFilters.bodyType" readonly />
+            <v-text-field
+                label="Тип телосложения"
+                v-model="userFilters.bodyType"
+                readonly
+                variant="outlined"
+            />
           </v-col>
           <v-col cols="12" sm="3">
-            <v-text-field label="Цель" v-model="userFilters.goal" readonly />
+            <v-text-field
+                label="Цель"
+                v-model="userFilters.goal"
+                readonly
+                variant="outlined"
+            />
           </v-col>
-          <!-- Если есть числовые фильтры, их тоже можно добавить -->
         </v-row>
 
-        <v-divider class="my-3"></v-divider>
-
-        <!-- Фильтры для массовой рассылки (редактируемые) -->
+        <!-- Редактируемые фильтры для массовой рассылки -->
         <v-expansion-panels class="mb-4" multiple>
           <v-expansion-panel>
             <v-expansion-panel-title>
@@ -51,6 +66,7 @@
                       :items="['admin', 'freeUser', 'paidUser', 'coach']"
                       label="Роль пользователя"
                       clearable
+                      variant="outlined"
                   />
                 </v-col>
                 <v-col cols="12" sm="6">
@@ -59,6 +75,7 @@
                       :items="['мужчина', 'женщина']"
                       label="Пол (из истории)"
                       clearable
+                      variant="outlined"
                   />
                 </v-col>
                 <v-col cols="12" sm="6">
@@ -67,6 +84,7 @@
                       :items="['худое', 'среднее', 'полное']"
                       label="Тип телосложения"
                       clearable
+                      variant="outlined"
                   />
                 </v-col>
                 <v-col cols="12" sm="6">
@@ -75,6 +93,7 @@
                       :items="['похудение', 'удержание', 'массонабор', 'общие']"
                       label="Цель (из истории)"
                       clearable
+                      variant="outlined"
                   />
                 </v-col>
                 <v-col cols="12" sm="6">
@@ -82,6 +101,7 @@
                       v-model.number="userFilters.ageMin"
                       type="number"
                       label="Возраст от"
+                      variant="outlined"
                   />
                 </v-col>
                 <v-col cols="12" sm="6">
@@ -89,6 +109,7 @@
                       v-model.number="userFilters.ageMax"
                       type="number"
                       label="Возраст до"
+                      variant="outlined"
                   />
                 </v-col>
                 <v-col cols="12" sm="4">
@@ -114,6 +135,51 @@
           </v-expansion-panel>
         </v-expansion-panels>
 
+        <!-- Список пользователей, отфильтрованных локально -->
+        <div class="mb-4">
+          <v-card-text class="text-h6">Список пользователей по фильтрам</v-card-text>
+          <div v-if="loadingUsers" class="d-flex justify-center my-3">
+            <v-progress-circular indeterminate />
+          </div>
+          <div v-else>
+            <div v-if="filteredUsers.length">
+              <div class="mb-2">
+                Под текущие фильтры подходит пользователей:
+                <strong>{{ filteredUsers.length }}</strong>
+              </div>
+              <v-table dense>
+                <thead>
+                <tr>
+                  <th>Telegram ID</th>
+                  <th>Роль</th>
+                  <th>Возраст</th>
+                  <th>Пол</th>
+                  <th>Тип телосложения</th>
+                  <th>Цель</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr v-for="user in filteredUsers" :key="user.telegramId">
+                  <td>{{ user.telegramId }}</td>
+                  <td>{{ user.role }}</td>
+                  <td>{{ user.age ?? '—' }}</td>
+                  <td>{{ user.gender ?? '—' }}</td>
+                  <td>{{ user.bodyType ?? '—' }}</td>
+                  <td>{{ user.goal ?? '—' }}</td>
+                </tr>
+                </tbody>
+              </v-table>
+            </div>
+            <div v-else class="my-3">
+              <span>Нет пользователей, удовлетворяющих текущим фильтрам.</span>
+            </div>
+          </div>
+          <div v-if="filtersError" class="red--text mt-2">
+            Ошибка при загрузке данных пользователей.
+          </div>
+        </div>
+
+
         <!-- Дата отправки -->
         <v-text-field
             v-model="internalSurvey.scheduledAt"
@@ -136,6 +202,7 @@
               v-model="msg.text"
               :error="!msg.text"
               error-messages="Текст обязателен"
+              variant="outlined"
           />
           <v-switch
               v-model="msg.waitForResponse"
@@ -152,11 +219,12 @@
                 label="Текст кнопки"
                 v-model="btn.text"
                 @change="handleButtonTextChange(msgIdx, bIdx)"
+                variant="outlined"
             />
             <v-text-field
                 label="Callback (генерируется автоматически)"
                 v-model="btn.callbackData"
-                readonly
+                variant="outlined"
             />
             <v-btn color="error" icon @click="removeButton(msgIdx, bIdx)">
               <v-icon>mdi-delete</v-icon>
@@ -183,18 +251,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { useApi } from '../../../composables/useApi';
 
-// ==== Типы данных для рассылки ====
-// Добавляем _id в интерфейс сообщения для сохранённых записей
+// ==== Интерфейсы данных для рассылки ====
 interface InlineButton {
   text: string;
   callbackData: string;
 }
 
 interface SurveyMessage {
-  _id?: string; // Это поле появится после сохранения
+  _id?: string;
   order: number;
   text: string;
   waitForResponse: boolean;
@@ -203,14 +270,12 @@ interface SurveyMessage {
 
 interface SurveyForm {
   _id?: string;
-  telegramId?: number;
   scheduledAt: string;
   messages: SurveyMessage[];
-  // Если сохраняются фильтры, можно добавить поле userFilters
+  telegramId?: number;
   userFilters?: UserFilters;
 }
 
-// ==== Типы данных для фильтров ====
 interface UserFilters {
   role?: string;
   gender?: string;
@@ -223,54 +288,20 @@ interface UserFilters {
   hasStarDonations?: boolean;
 }
 
-// ==== Упрощённый интерфейс пользователя ====
-interface User {
-  telegramId: number;
-  role: string;
-  age?: number;
-  gender?: string;
-  bodyType?: string;
-  goal?: string;
-  hasTrainingHistory?: boolean;
-  hasReferrals?: boolean;
-  hasStarDonations?: boolean;
-}
-
-const props = defineProps<{
-  modelValue: boolean;
-  editingSurvey?: SurveyForm | null;
-}>();
-
+const props = defineProps<{ modelValue: boolean }>();
 const emits = defineEmits(['update:modelValue', 'saved']);
 const { apiRequest } = useApi();
 
-// Основное хранилище рассылки
+// Инициализация пустой рассылки
 const internalSurvey = ref<SurveyForm>({
+  _id: '',
   scheduledAt: '',
   messages: [],
   userFilters: {},
 });
-// Фильтры для пользователей (UI)
 const userFilters = ref<UserFilters>({});
 
-console.log('userFilters', userFilters)
-// Если редактируется существующая рассылка, копируем данные из props
-if (props.editingSurvey) {
-  internalSurvey.value = JSON.parse(JSON.stringify(props.editingSurvey));
-  // Если в редактируемой рассылке сохранены фильтры, копируем их
-  if (props.editingSurvey.userFilters) {
-    userFilters.value = { ...props.editingSurvey.userFilters };
-  }
-  updateAllCallbackData();
-}
-
-
-// Полный список пользователей, полученных с сервера
-const allUsers = ref<User[]>([]);
-const loadingUsers = ref<boolean>(false);
-const filtersError = ref<boolean>(false);
-
-// Флаг для определения, заданы ли фильтры (используется для отображения readonly-полей)
+// Флаг наличия заданных фильтров (отображается в readonly-полях, если уже заданы)
 const hasFilters = computed(() => {
   const f = userFilters.value;
   return (
@@ -286,30 +317,91 @@ const hasFilters = computed(() => {
   );
 });
 
-// Список текущих рассылок (если требуется отображать)
-const surveys = ref<SurveyForm[]>([]);
-const loadingSurveys = ref<boolean>(false);
-async function fetchSurveys() {
-  loadingSurveys.value = true;
-  try {
-    const resp = await apiRequest<SurveyForm[]>('GET', 'surveys');
-    surveys.value = resp || [];
-  } catch (err) {
-    console.error('Ошибка получения рассылок:', err);
-  } finally {
-    loadingSurveys.value = false;
+// Проверка корректности даты
+const isDateValid = computed(() => {
+  const d = new Date(internalSurvey.value.scheduledAt);
+  return d.toString() !== 'Invalid Date';
+});
+
+// Автогенерация callback_data из текста кнопки
+function makeCallbackDataFromText(txt: string): string {
+  let result = txt.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+  if (result.length > 64) result = result.substring(0, 64);
+  return result;
+}
+
+function updateAllCallbackData() {
+  if (internalSurvey.value._id) {
+    internalSurvey.value.messages.forEach((msg) => {
+      if (msg._id) {
+        msg.inlineButtons.forEach((btn) => {
+          btn.callbackData = `SURVEY|${internalSurvey.value._id}|${msg._id}|q_t_${makeCallbackDataFromText(btn.text)}`;
+        });
+      }
+    });
   }
 }
 
-// Получаем пользователей и рассылки при монтировании
-onMounted(() => {
-  fetchAllUsers();
-  fetchSurveys();
-});
+// Функция для копирования данных в локальное состояние
+function loadSurveyData(surveyData: SurveyForm | null) {
+  if (surveyData) {
+    internalSurvey.value = JSON.parse(JSON.stringify(surveyData));
+    if (surveyData.userFilters) {
+      userFilters.value = { ...surveyData.userFilters };
+    }
+    updateAllCallbackData();
+  }
+}
+
+
+function handleButtonTextChange(msgIdx: number, bIdx: number) {
+  const btn = internalSurvey.value.messages[msgIdx].inlineButtons[bIdx];
+  if (internalSurvey.value._id && internalSurvey.value.messages[msgIdx]._id) {
+    btn.callbackData = `SURVEY|${internalSurvey.value._id}|${internalSurvey.value.messages[msgIdx]._id}|q:test:${makeCallbackDataFromText(btn.text)}`;
+  } else {
+    btn.callbackData = makeCallbackDataFromText(btn.text);
+  }
+}
+
+function addMessage() {
+  internalSurvey.value.messages.push({
+    order: internalSurvey.value.messages.length,
+    text: '',
+    waitForResponse: false,
+    inlineButtons: [],
+  });
+}
+
+function removeMessage(idx: number) {
+  internalSurvey.value.messages.splice(idx, 1);
+}
+
+function addButton(msgIdx: number) {
+  const defaultText = 'button';
+  const callbackData = makeCallbackDataFromText(defaultText);
+  internalSurvey.value.messages[msgIdx].inlineButtons.push({
+    text: defaultText,
+    callbackData,
+  });
+}
+
+function removeButton(msgIdx: number, bIdx: number) {
+  internalSurvey.value.messages[msgIdx].inlineButtons.splice(bIdx, 1);
+}
+
+function close() {
+  emits('update:modelValue', false);
+}
+
+// Получение списка пользователей для фильтрации (используется для проверки при сохранении)
+const allUsers = ref<any[]>([]);
+const loadingUsers = ref<boolean>(false);
+const filtersError = ref<boolean>(false);
+
 async function fetchAllUsers() {
   loadingUsers.value = true;
   try {
-    const resp = await apiRequest<User[]>('GET', 'users/matches');
+    const resp = await apiRequest<any[]>('GET', 'users/matches');
     allUsers.value = resp || [];
   } catch (err) {
     console.error('Ошибка получения пользователей:', err);
@@ -320,7 +412,6 @@ async function fetchAllUsers() {
   }
 }
 
-// Локальная фильтрация пользователей
 const filteredUsers = computed(() => {
   const filters = userFilters.value;
   const filterApplied =
@@ -348,88 +439,6 @@ const filteredUsers = computed(() => {
   });
 });
 
-// Проверка корректности даты
-const isDateValid = computed(() => {
-  const d = new Date(internalSurvey.value.scheduledAt);
-  return d.toString() !== 'Invalid Date';
-});
-
-// Функция автогенерации callback_data из текста кнопки
-function makeCallbackDataFromText(txt: string): string {
-  let result = txt.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
-  if (result.length > 64) result = result.substring(0, 64);
-  return result;
-}
-
-// Функция обновления callback_data для всех inline-кнопок текущей рассылки
-function updateAllCallbackData() {
-  if (internalSurvey.value._id) {
-    internalSurvey.value.messages.forEach((msg) => {
-      if (msg._id) {
-        msg.inlineButtons.forEach((btn) => {
-          btn.callbackData = `SURVEY|${internalSurvey.value._id}|${msg._id}|${makeCallbackDataFromText(btn.text)}`;
-        });
-      }
-    });
-  }
-}
-
-// При изменении текста кнопки автоматически генерируем callback_data
-function handleButtonTextChange(msgIdx: number, bIdx: number) {
-  const btn = internalSurvey.value.messages[msgIdx].inlineButtons[bIdx];
-  if (internalSurvey.value._id && internalSurvey.value.messages[msgIdx]._id) {
-    btn.callbackData = `SURVEY|${internalSurvey.value._id}|${internalSurvey.value.messages[msgIdx]._id}|${makeCallbackDataFromText(btn.text)}`;
-  } else {
-    btn.callbackData = makeCallbackDataFromText(btn.text);
-  }
-}
-
-// Если редактируется существующая рассылка, обновляем callback_data для всех кнопок
-watch(
-    () => internalSurvey.value._id,
-    (newVal) => {
-      if (newVal) {
-        updateAllCallbackData();
-      }
-    }
-);
-
-// Управление сообщениями и кнопками
-function addMessage() {
-  internalSurvey.value.messages.push({
-    order: internalSurvey.value.messages.length,
-    text: '',
-    waitForResponse: false,
-    inlineButtons: [],
-  });
-}
-
-function removeMessage(idx: number) {
-  internalSurvey.value.messages.splice(idx, 1);
-}
-
-function addButton(msgIdx: number) {
-  const defaultText = 'button';
-  let callbackData = makeCallbackDataFromText(defaultText);
-  if (internalSurvey.value._id && internalSurvey.value.messages[msgIdx]._id) {
-    callbackData = `SURVEY|${internalSurvey.value._id}|${internalSurvey.value.messages[msgIdx]._id}|${callbackData}`;
-  }
-  internalSurvey.value.messages[msgIdx].inlineButtons.push({
-    text: defaultText,
-    callbackData,
-  });
-}
-
-function removeButton(msgIdx: number, bIdx: number) {
-  internalSurvey.value.messages[msgIdx].inlineButtons.splice(bIdx, 1);
-}
-
-// Закрыть диалог
-function close() {
-  emits('update:modelValue', false);
-}
-
-// Сохранение рассылки – отправляем данные, включая отфильтрованный список telegramId
 async function onSubmit() {
   if (!isDateValid.value) {
     alert('Неверная дата!');
@@ -449,11 +458,7 @@ async function onSubmit() {
       userFilters: userFilters.value,
       filteredUsers: filteredUsers.value.map(u => u.telegramId),
     };
-    if (!internalSurvey.value._id) {
-      await apiRequest('POST', 'surveys', payload);
-    } else {
-      await apiRequest('PATCH', `surveys/${internalSurvey.value._id}`, payload);
-    }
+    await apiRequest('POST', 'surveys', payload);
     emits('saved');
     close();
   } catch (err) {
@@ -462,7 +467,6 @@ async function onSubmit() {
   }
 }
 
-// Тестовая отправка (без сохранения)
 async function sendTestMessage() {
   try {
     if (!internalSurvey.value.messages.length) {
@@ -477,12 +481,14 @@ async function sendTestMessage() {
       userFilters: userFilters.value,
       messages: internalSurvey.value.messages,
     };
-    const resp = await apiRequest('POST', 'surveys/testSend', payload);
-    console.log('Тестовое отправление: ответ сервера', resp);
+    await apiRequest('POST', 'surveys/testSend', payload);
     alert('Тестовое сообщение отправлено!');
   } catch (err) {
     console.error('Ошибка при тестовой отправке:', err);
     alert('Ошибка при тестовой отправке. Смотрите консоль.');
   }
 }
+
+// Получаем пользователей сразу после инициализации
+fetchAllUsers();
 </script>

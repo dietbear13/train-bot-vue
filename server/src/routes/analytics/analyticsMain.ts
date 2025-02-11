@@ -19,6 +19,7 @@ router.post('/analytics/save-kbzhu', async (req: Request, res: Response) => {
     try {
         const { userId, formData, kbzhuResult, timestamp } = req.body;
 
+        console.warn('/analytics/save-kbzhu', userId, formData, kbzhuResult, timestamp)
         // Проверка входных данных
         if (!userId || !formData || !kbzhuResult) {
             return res.status(400).json({

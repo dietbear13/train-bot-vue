@@ -1,6 +1,6 @@
 /* /composables/analytics/usersKbzhu.ts */
 
-import { useApi } from '~/composables/useApi';
+import { useApi } from '../useApi';
 
 /**
  * Хук аналитики для отправки данных КБЖУ на сервер

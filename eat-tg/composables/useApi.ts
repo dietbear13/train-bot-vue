@@ -41,7 +41,6 @@ export function useApi() {
 
         try {
             const response = await axiosInstance(config)
-            console.log('! response UseApi', response)
             return response.data
         } catch (error) {
             console.error(`Ошибка при запросе к ${endpoint}:`, error)

@@ -226,7 +226,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, reactive, watch, onMounted, PropType } from 'vue'
+import { defineComponent, ref, reactive, watch, onMounted, type PropType } from 'vue'
 import { retrieveLaunchParams } from '@telegram-apps/sdk'
 import { useApi } from '../../../composables/useApi';
 
@@ -363,7 +363,7 @@ export default defineComponent({
       console.log('Selected split:', split)
     }
 
-    // Когда пользователь жмёт "Создать" (Сгенерировать)
+    // Когда пользователь жмёт "Создать"
     const onGenerateSplit = async () => {
       console.log('onGenerateSplit: отправляем данные на сервер');
 
@@ -381,7 +381,7 @@ export default defineComponent({
             gender: formData.gender,
             goal: formData.goal,
             splitType: formData.splitType,
-            splitId: formData.splitId, // Теперь это внутренний splitId
+            splitId: formData.splitId,
             timestamp: Date.now(),
           };
 

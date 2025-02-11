@@ -1,33 +1,83 @@
+// routes/index.ts (или surveys.ts)
 import { Request, Response, Router } from 'express';
+import mongoose from 'mongoose';
 import ScheduledSurvey from '../models/ScheduledSurvey';
 import bot from '../bot';
 import User from '../models/User';
 
 const router = Router();
 
-// GET /api/surveys
-router.get('/surveys', async (req, res) => {
-    const surveys = await ScheduledSurvey.find().sort({ scheduledAt: 1 });
-    res.json(surveys);
+// GET /api/surveys – получение всех рассылок
+router.get('/surveys', async (req: Request, res: Response) => {
+    try {
+        const surveys = await ScheduledSurvey.find().sort({ scheduledAt: 1 });
+        res.json(surveys);
+    } catch (err) {
+        console.error('Ошибка получения рассылок:', err);
+        res.status(500).json({ error: 'Ошибка получения рассылок' });
+    }
 });
 
 /**
- * Тестовая отправка без записи в базу
+ * Тестовая отправка без записи в базу.
  * Body: {
  *   telegramId?: number | number[],
- *   messages: [ { text, inlineButtons, ... }, ... ]
+ *   messages: [ { text, inlineButtons, ... }, ... ],
+ *   userFilters?: object
  * }
+ *
+ * На сервере для каждого сообщения и его inline-кнопки генерируется callback_data в формате:
+ * "SURVEY|<tempSurveyId>|<messageId>|q:t:<shortButtonText>"
  */
-router.post('/surveys/testSend', async (req, res) => {
-    const { telegramId, messages } = req.body;
-    if (!messages || !Array.isArray(messages) || !messages.length) {
-        return res.status(400).json({ error: 'messages are required and must be non-empty array' });
+router.post('/surveys/testSend', async (req: Request, res: Response) => {
+    const { telegramId, messages, userFilters } = req.body;
+
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+        return res.status(400).json({
+            error: 'messages are required and must be a non-empty array'
+        });
     }
+
+    if (!telegramId && (!userFilters || Object.keys(userFilters).length === 0)) {
+        return res.status(400).json({
+            error: 'Either telegramId or valid userFilters must be provided'
+        });
+    }
+
+    // Генерируем временный идентификатор рассылки (т.к. тестовая отправка не сохраняется в базу)
+    const tempSurveyId = new mongoose.Types.ObjectId().toString();
+
+    // Вспомогательная функция для нормализации текста кнопки
+    function makeCallbackDataFromText(txt: string): string {
+        let result = txt.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+        if (result.length > 64) result = result.substring(0, 64);
+        return result;
+    }
+
+    // Обрабатываем массив сообщений: если у сообщения отсутствует _id, генерируем его;
+    // затем для каждой кнопки генерируем callback_data на сервере.
+    messages.forEach((msg: any) => {
+        if (!msg._id) {
+            msg._id = new mongoose.Types.ObjectId().toString();
+        }
+        if (Array.isArray(msg.inlineButtons)) {
+            msg.inlineButtons.forEach((btn: any) => {
+                btn.callbackData = `SURVEY|${tempSurveyId}|${msg._id}|q_t_${makeCallbackDataFromText(btn.text)}`;
+            });
+        }
+        console.log('Processed message:', msg);
+    });
+
     try {
+        // Если telegramId передан как одно значение – оборачиваем его в массив
         const targets = Array.isArray(telegramId) ? telegramId : [telegramId];
+        console.log('/surveys/testSend → targets', targets);
+        let sentCount = 0;
         for (const id of targets) {
             await sendMessagesToOne(id, messages);
+            sentCount++;
         }
+        console.log('res.json', res.json({ success: true, count: targets.length }))
         return res.json({ success: true, count: targets.length });
     } catch (err) {
         console.error('Ошибка при testSend:', err);
@@ -39,47 +89,68 @@ async function sendMessagesToOne(telegramId: number, messages: any[]) {
     for (const msg of messages) {
         let inline_keyboard = [];
         if (msg.inlineButtons && msg.inlineButtons.length > 0) {
+            // Используем готовое значение callbackData, сгенерированное на сервере
             inline_keyboard = msg.inlineButtons.map((b: any) => [{
                 text: b.text,
-                callback_data: b.callbackData || 'NO_CALLBACK'
+                callback_data: b.callbackData
             }]);
         }
+        console.log('inline_keyboard', inline_keyboard)
         await bot.sendMessage(telegramId, msg.text, {
             reply_markup: { inline_keyboard },
         });
     }
 }
 
-// POST /api/surveys – сохранение рассылки
-router.post('/surveys', async (req, res) => {
-    if (!req.body.scheduledAt) {
-        return res.status(400).json({ error: 'scheduledAt is required' });
+// POST /api/surveys – сохранение новой рассылки
+router.post('/surveys', async (req: Request, res: Response) => {
+    try {
+        const { scheduledAt, messages } = req.body;
+        if (!scheduledAt) {
+            return res.status(400).json({ error: 'scheduledAt is required' });
+        }
+        if (!messages || !messages.length) {
+            return res.status(400).json({ error: 'messages are required' });
+        }
+        // Преобразуем строку с датой в объект Date (при условии, что дата передаётся в формате ISO)
+        req.body.scheduledAt = new Date(scheduledAt);
+        const created = await ScheduledSurvey.create(req.body);
+        res.json(created);
+    } catch (err) {
+        console.error('Ошибка при сохранении рассылки:', err);
+        res.status(500).json({ error: 'Failed to save survey' });
     }
-    if (!req.body.messages || !req.body.messages.length) {
-        return res.status(400).json({ error: 'messages are required' });
-    }
-    const created = await ScheduledSurvey.create(req.body);
-    res.json(created);
 });
 
-router.patch('/surveys/:id', async (req, res) => {
-    const { id } = req.params;
-    const updated = await ScheduledSurvey.findByIdAndUpdate(id, req.body, { new: true });
-    res.json(updated);
+// PATCH /api/surveys/:id – обновление рассылки
+router.patch('/surveys/:id', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        if (req.body.scheduledAt) {
+            req.body.scheduledAt = new Date(req.body.scheduledAt);
+        }
+        const updated = await ScheduledSurvey.findByIdAndUpdate(id, req.body, { new: true });
+        res.json(updated);
+    } catch (err) {
+        console.error('Ошибка при обновлении рассылки:', err);
+        res.status(500).json({ error: 'Failed to update survey' });
+    }
 });
 
-router.delete('/surveys/:id', async (req, res) => {
-    const { id } = req.params;
-    await ScheduledSurvey.findByIdAndDelete(id);
-    res.json({ success: true });
+// DELETE /api/surveys/:id – удаление рассылки
+router.delete('/surveys/:id', async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        await ScheduledSurvey.findByIdAndDelete(id);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Ошибка при удалении рассылки:', err);
+        res.status(500).json({ error: 'Failed to delete survey' });
+    }
 });
 
 /**
- * GET /users/matches
- * Возвращает всех пользователей с нужными полями:
- *  - telegramId, role
- *  - из последней записи kbzhuHistory: age, gender, bodyType, goal
- *  - булевы флаги наличия trainingHistory, referrals, starDonationHistory
+ * GET /users/matches – получение пользователей с нужными полями
  */
 router.get('/users/matches', async (req: Request, res: Response) => {
     try {
@@ -129,5 +200,3 @@ router.get('/users/matches', async (req: Request, res: Response) => {
 });
 
 export default router;
-
-//q_{userId}_{btnId}

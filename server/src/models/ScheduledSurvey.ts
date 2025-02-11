@@ -26,7 +26,6 @@ export interface IScheduledSurvey {
     telegramId: number;        // Telegram ID, чтобы бот мог отправить
     triggerCondition: string;  // Например, 'afterWorkoutCreation'
     scheduledAt: Date;         // Когда отправлять (абсолютное время)
-                               // или время, вычисляемое относительно действия
     messages: ISurveyMessage[]; // Список сообщений (последовательность)
     currentIndex: number;       // Какое сообщение уже отправлено. -1 значит ещё не отправлено.
     completed: boolean;         // Завершена цепочка или нет
@@ -45,7 +44,7 @@ const surveyMessageSchema = new Schema<ISurveyMessage>({
     waitForResponse: Boolean,
 }, { _id: true });
 
-// Новая схема для ответа
+// Схема ответа
 const surveyAnswerSchema = new Schema<ISurveyAnswer>({
     messageId: { type: Schema.Types.ObjectId, required: true },
     telegramUserId: { type: Number, required: true },
@@ -61,7 +60,7 @@ const scheduledSurveySchema = new Schema<IScheduledSurvey>({
     messages: [surveyMessageSchema],
     currentIndex: { type: Number, default: -1 },
     completed: { type: Boolean, default: false },
-    answers: [surveyAnswerSchema], // новое поле для хранения ответов
+    answers: [surveyAnswerSchema],
 });
 
 export default model<IScheduledSurvey>('ScheduledSurvey', scheduledSurveySchema);

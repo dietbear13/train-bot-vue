@@ -19,7 +19,12 @@
           :kbzhu="latestKbzhuResult"
           :timestamp="latestKbzhuTimestamp"
       />
+      <v-btn href="https://fitnesstgbot.ru/blog#post-6795dd1427ec76c4b67de1bc">
+        К статье
+      </v-btn>
+
     </v-card>
+
 
     <!-- Секция для paidUser -->
     <div v-else-if="userStore.role === 'paidUser'">
@@ -39,7 +44,12 @@
           <p>
             В канале кОчалка рассказываю как превратить набор упражнений в программе в план действий.
           </p>
-          <v-btn color="primary" @click="goToChannel" class="my-2">
+          <v-btn
+              color="primary"
+              @click="goToChannel"
+              class="my-2"
+              rounded="xl"
+          >
             Перейти в канал
           </v-btn>
         </v-card-text>
@@ -54,20 +64,27 @@
             Подпишись на канал кОчалка, чтобы получить полный функционал бота.
             Там рассказываю как превратить набор упражнений в программе в план действий.
           </p>
-          <v-btn color="primary" @click="goToChannel" class="my-2">
+          <v-btn
+              color="primary"
+              @click="goToChannel"
+              class="my-2"
+              rounded="xl"
+          >
             Перейти в канал
           </v-btn>
         </v-card-text>
-      </v-card>
 
-      <!-- Кнопка "Проверить подписку" -->
-      <v-btn
-        color="success"
-        @click="checkSubscription"
-        rounded="xl"
-      >
-      Проверить подписку
-      </v-btn>
+        <!-- Кнопка "Проверить подписку" -->
+        <v-btn
+            color="success"
+            @click="checkSubscription"
+            class="my-2"
+
+            rounded="xl"
+        >
+          Проверить подписку
+        </v-btn>
+      </v-card>
     </div>
 
     <!-- Snackbar для уведомлений -->

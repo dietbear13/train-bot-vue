@@ -1,8 +1,11 @@
 // src/bot.ts
-import TelegramBot, { InlineKeyboardMarkup } from 'node-telegram-bot-api';
+import TelegramBot, {
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+} from 'node-telegram-bot-api';
 import mongoose from 'mongoose';
 import ScheduledSurvey from './models/ScheduledSurvey';
-// Если у вас есть отдельная модель для ответов, подключите её здесь
+import User from './models/User'; // модель пользователя с обновлённым surveyCallbacks
 
 const botToken = process.env.TELEGRAM_BOT_API_KEY;
 const appUrl = process.env.APP_URL;
@@ -22,7 +25,10 @@ console.log('Telegram bot initialized');
  * @param text Текст кнопки
  * @param path Путь внутри приложения
  */
-const openTelegramLink = (text: string, path: string): any => {
+const openTelegramLink = (
+    text: string,
+    path: string
+): InlineKeyboardButton => {
     return {
         text,
         web_app: { url: `${appUrl}${path}` },
@@ -34,7 +40,7 @@ const openTelegramLink = (text: string, path: string): any => {
  * @param text Текст кнопки
  * @param url URL для перехода
  */
-const openUrlButton = (text: string, url: string): any => {
+const openUrlButton = (text: string, url: string): InlineKeyboardButton => {
     return {
         text,
         url,
@@ -53,7 +59,10 @@ bot.onText(/\/start/, (msg) => {
 
     const keyboard: InlineKeyboardMarkup = {
         inline_keyboard: [
-            [openTelegramLink('🏋️‍♂️ Тренировки', '/'), openTelegramLink('🍏 Питание', '/nutrition')],
+            [
+                openTelegramLink('🏋️‍♂️ Тренировки', '/'),
+                openTelegramLink('🍏 Питание', '/nutrition'),
+            ],
             [openUrlButton('🔗 ТГ-канал «кОчалка»', 'https://t.me/training_health')],
             [openTelegramLink('⭐ Поддержать проект', '/landingsOutside/donatStars')],
         ],
@@ -67,9 +76,9 @@ bot.on('callback_query', async (query) => {
     try {
         if (!query.data) return;
 
-        // Ожидаемый формат: "SURVEY|surveyId|messageId|userChoice", а приходит только userChoice
+        // Ожидаемый формат: "SURVEY|surveyId|messageId|userChoice"
         const parts = query.data.split('|');
-        console.log('++ parts', parts)
+        console.log('++ parts', parts);
         if (parts.length < 4) {
             console.error('Неверный формат callback_data:', query.data);
             return bot.answerCallbackQuery(query.id, {
@@ -79,18 +88,58 @@ bot.on('callback_query', async (query) => {
         }
 
         const [type, surveyId, messageId, userChoice] = parts;
+
         if (type === 'SURVEY') {
-            // Сохраняем ответ пользователя в базе
-            await saveSurveyAnswer(surveyId, messageId, query.from.id, userChoice);
+            // Обработка тестовых callback, если userChoice начинается с "q:answer:test:"
+            if (userChoice.startsWith('q_')) {
+                console.log(
+                    `Получен тестовый callback: surveyId=${surveyId}, messageId=${messageId}, userChoice=${userChoice}`
+                );
 
-            // Отправляем уведомление пользователю, что ответ принят
-            await bot.answerCallbackQuery(query.id, {
-                text: 'Ответ принят!',
-                show_alert: false,
-            });
+                // Найти пользователя по Telegram ID и добавить запись в историю колбэков
+                const user = await User.findOne({ telegramId: query.from.id });
+                if (user) {
+                    user.surveyCallbacks = user.surveyCallbacks || [];
+                    user.surveyCallbacks.push({
+                        surveyId,
+                        messageId,
+                        callbackAt: userChoice, // используем callbackAt вместо callbackData
+                        answeredAt: new Date(),
+                    });
+                    await user.save();
+                } else {
+                    console.warn(`Пользователь с telegramId ${query.from.id} не найден.`);
+                }
 
-            // Отправляем следующее сообщение (если требуется) тому же пользователю
-            await processNextMessage(surveyId, messageId, query.from.id);
+                // Удаляем сообщение с кнопками (message_id оставляем как число)
+                if (query.message && query.message.chat && query.message.message_id) {
+                    await bot.deleteMessage(query.message.chat.id, query.message.message_id);
+                }
+
+                await bot.answerCallbackQuery(query.id, {
+                    text: 'Ваш тестовый ответ принят!',
+                    show_alert: false,
+                });
+                return;
+            } else {
+                // Обычная логика для колбэков рассылок
+
+                // Сохраняем ответ пользователя в базе
+                await saveSurveyAnswer(surveyId, messageId, query.from.id, userChoice);
+
+                // Удаляем сообщение с кнопками, чтобы убрать старую inline-клавиатуру
+                if (query.message && query.message.chat && query.message.message_id) {
+                    await bot.deleteMessage(query.message.chat.id, query.message.message_id);
+                }
+
+                await bot.answerCallbackQuery(query.id, {
+                    text: 'Ответ принят!',
+                    show_alert: false,
+                });
+
+                // Отправляем следующее сообщение (если предусмотрено логикой рассылки)
+                await processNextMessage(surveyId, messageId, query.from.id);
+            }
         } else {
             console.warn('Неизвестный тип callback:', type);
             await bot.answerCallbackQuery(query.id, {
@@ -111,7 +160,6 @@ bot.on('callback_query', async (query) => {
 
 /**
  * Сохраняет ответ пользователя на вопрос рассылки.
- * Пример реализации – сохранение ответа в массив survey.answers.
  */
 async function saveSurveyAnswer(
     surveyId: string,
@@ -125,11 +173,10 @@ async function saveSurveyAnswer(
             console.error('Рассылка не найдена:', surveyId);
             return;
         }
-        // Обеспечиваем, что answers – это массив
         if (!survey.answers) {
             survey.answers = [];
         }
-        // Преобразуем messageId в ObjectId, поскольку модель ожидает его как mongoose.Types.ObjectId
+        // Преобразуем messageId в ObjectId, если схема это требует
         survey.answers.push({
             messageId: new mongoose.Types.ObjectId(messageId),
             telegramUserId,
@@ -144,9 +191,6 @@ async function saveSurveyAnswer(
 
 /**
  * Отправляет следующее сообщение рассылки пользователю, если оно предусмотрено.
- * @param surveyId Идентификатор рассылки
- * @param currentMessageId Идентификатор сообщения, на которое был дан ответ
- * @param telegramUserId ID пользователя, которому отправлять следующее сообщение
  */
 async function processNextMessage(
     surveyId: string,
@@ -156,7 +200,10 @@ async function processNextMessage(
     try {
         const survey = await ScheduledSurvey.findById(surveyId);
         if (!survey) {
-            console.error('Рассылка не найдена при обработке следующего сообщения:', surveyId);
+            console.error(
+                'Рассылка не найдена при обработке следующего сообщения:',
+                surveyId
+            );
             return;
         }
         // Если поле currentIndex не определено – считаем, что ни одно сообщение ещё не отправлено
@@ -166,14 +213,12 @@ async function processNextMessage(
             (msg: any) => msg._id.toString() === currentMessageId
         );
         if (idx === -1) {
-            console.error('Сообщение не найдено в рассылке:', currentMessageId);
+            console.error('Сообщение не найде но в рассылке:', currentMessageId);
             return;
         }
 
-        // Если текущее сообщение ожидало ответа, переходим к следующему
         if (survey.messages[idx].waitForResponse) {
             survey.currentIndex = idx + 1;
-            // Сохраняем обновлённый currentIndex, чтобы состояние рассылки обновилось в базе
             await survey.save();
 
             if (survey.currentIndex < survey.messages.length) {
@@ -194,7 +239,6 @@ async function processNextMessage(
                     reply_markup: keyboard,
                 });
             } else {
-                // Если сообщений больше нет, отмечаем рассылку как завершённую
                 survey.completed = true;
                 await survey.save();
             }
