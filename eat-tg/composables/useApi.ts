@@ -40,11 +40,8 @@ export function useApi() {
         }
 
         try {
-            const response = await axiosInstance(config);
-            if (endpoint === 'exercises' && method === 'get') {
-                userStore.setExercises(response.data); // Кэшируем упражнения
-            }
-            return response.data;
+            const response = await axiosInstance(config)
+            return response.data
         } catch (error) {
             console.error(`Ошибка при запросе к ${endpoint}:`, error);
             throw error;

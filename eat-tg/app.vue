@@ -43,7 +43,7 @@ onMounted(() => {
     e.preventDefault();
   }, false);
 
-  // TODO ВКЛЮЧИТЬ! Отключение контекстного меню (частично для защиты от скриншотов)
+  // TODO ВКЛЮЧИТЬ! Отключение контекстного меню
   // document.addEventListener('contextmenu', (e) => {
   //   e.preventDefault();
   // }, false);
