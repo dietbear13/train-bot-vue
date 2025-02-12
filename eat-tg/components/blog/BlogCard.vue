@@ -83,7 +83,7 @@
                   class="mr-2 mb-2 mt-0"
               >
                 <v-icon class="mr-1" left>mdi-heart</v-icon>
-                {{ aggregatedLikes[post.id] || 0 }}
+                {{ post.likesCount }}
               </v-btn>
             </v-card-actions>
           </v-card>

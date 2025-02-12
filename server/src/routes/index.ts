@@ -17,38 +17,22 @@ import adminSurveysRoutes from './adminSurveys';
 
 const router = Router();
 
-// Проверяем, что маршруты не undefined
-console.log('🔍 Проверка импортов маршрутов:', {
-    botRoutes,
-    usersRoutes,
-    exercisesRoutes,
-    patternsRoutes,
-    splitsRoutes,
-    analyticsRoutes,
-    blogRoutes,
-    blogLikesRoutes,
-    referralRoutes,
-    donationsRoutes,
-    adminUsersRoutes,
-    dietsRoutes,
-    adminSurveysRoutes
-});
 
 // Проверяем правильность экспорта
 const routes = [
-    { path: '/bot', module: botRoutes },
-    { path: '/users', module: usersRoutes },
-    { path: '/exercises', module: exercisesRoutes },
-    { path: '/patterns', module: patternsRoutes },
-    { path: '/splits', module: splitsRoutes },
-    { path: '/analytics', module: analyticsRoutes },
-    { path: '/blog', module: blogRoutes },
-    { path: '/blog-likes', module: blogLikesRoutes },
-    { path: '/referral', module: referralRoutes },
-    { path: '/donations', module: donationsRoutes },
-    { path: '/admin-users', module: adminUsersRoutes },
-    { path: '/diets', module: dietsRoutes },
-    { path: '/admin-surveys', module: adminSurveysRoutes }
+    { path: '/', module: botRoutes },
+    { path: '/', module: usersRoutes },
+    { path: '/', module: exercisesRoutes },
+    { path: '/', module: patternsRoutes },
+    { path: '/', module: splitsRoutes },
+    { path: '/', module: analyticsRoutes },
+    { path: '/', module: blogRoutes },
+    { path: '/', module: blogLikesRoutes },
+    { path: '/', module: referralRoutes },
+    { path: '/', module: donationsRoutes },
+    { path: '/', module: adminUsersRoutes },
+    { path: '/', module: dietsRoutes },
+    { path: '/', module: adminSurveysRoutes }
 ];
 
 // Проверяем наличие маршрутов перед добавлением
