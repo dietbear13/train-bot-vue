@@ -1,27 +1,34 @@
 import { bot } from '../config/bot';
 
 /**
- * Отправка сообщения пользователю через Telegram Bot
+ * Функция для создания кнопки Telegram Web App
  */
-export const sendMessageToUser = async (chatId: number, message: string) => {
-    try {
-        await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
-        console.log(`✅ Сообщение отправлено пользователю ${chatId}`);
-    } catch (error) {
-        console.error(`❌ Ошибка при отправке сообщения:`, error);
-    }
-};
+const openTelegramLink = (text: string, path: string) => ({
+    text,
+    web_app: { url: `${process.env.APP_URL}${path}` },
+});
 
 /**
- * Отправка кнопки с inline-клавиатурой
+ * Функция для создания URL-кнопки
  */
-export const sendInlineKeyboard = async (chatId: number, message: string, buttons: any) => {
-    try {
-        await bot.sendMessage(chatId, message, {
-            parse_mode: 'HTML',
-            reply_markup: { inline_keyboard: buttons },
-        });
-    } catch (error) {
-        console.error(`❌ Ошибка при отправке клавиатуры:`, error);
-    }
+const openUrlButton = (text: string, url: string) => ({ text, url });
+
+/**
+ * Настройка команд бота
+ */
+export const setupBotCommands = () => {
+    bot.onText(/\/start/, (msg) => {
+        const chatId = msg.chat.id;
+        const welcomeMessage = `Привет!\n\nЯ помогу освоиться в тренажёрном зале.\n\n🏋️‍♂️ Бесплатные тренировки\n🍏 Питание\n📈 Советы по фитнесу`;
+
+        const keyboard = {
+            inline_keyboard: [
+                [openTelegramLink('🏋️‍♂️ Тренировки', '/'), openTelegramLink('🍏 Питание', '/nutrition')],
+                [openUrlButton('🔗 ТГ-канал «кОчалка»', 'https://t.me/training_health')],
+                [openTelegramLink('⭐ Поддержать проект', '/landingsOutside/donatStars')],
+            ],
+        };
+
+        bot.sendMessage(chatId, welcomeMessage, { reply_markup: keyboard });
+    });
 };
