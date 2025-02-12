@@ -4,6 +4,7 @@ import { connectDB } from './config/db';
 import { config } from './config/env';
 import routes from './routes';
 import { initBot } from './config/bot';
+import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
 
@@ -28,6 +29,10 @@ connectDB();
 
 // Подключение маршрутов
 app.use('/api', routes);
+
+
+// последний app.use
+app.use(errorHandler);
 
 // Запуск Telegram бота
 initBot().then(() => {
