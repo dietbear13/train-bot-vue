@@ -14,6 +14,7 @@ import donationsRoutes from './donations/stars';
 import adminUsersRoutes from './adminUsersEdit';
 import dietsRoutes from './dietsList';
 import adminSurveysRoutes from './adminSurveys';
+import {config} from "../config/env";
 
 const router = Router();
 
@@ -31,5 +32,7 @@ router.use('/donations', donationsRoutes);
 router.use('/admin-users', adminUsersRoutes);
 router.use('/diets', dietsRoutes);
 router.use('/admin-surveys', adminSurveysRoutes);
+
+console.log(`🔀 Маршруты запущены`);
 
 export default router;

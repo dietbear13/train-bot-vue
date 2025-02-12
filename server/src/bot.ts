@@ -1,11 +1,5 @@
-// src/bot.ts
-
 import { bot } from './config/bot';
 import { handleCallbackQuery } from './handlers/callbackHandler';
-import { setupBotCommands } from './services/botService';
-
-// Устанавливаем команды бота
-setupBotCommands();
 
 // Обработка callback-запросов
 bot.on('callback_query', handleCallbackQuery);
