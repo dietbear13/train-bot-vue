@@ -1,19 +1,21 @@
-// routes/users.ts
-
 import { Router, Request, Response } from 'express';
-import User from '../models/User';
-
-// Импортируем наш bot из bot.ts с корректным путем
-import bot from '../bot';
+import {
+    findUserByTelegramId,
+    getAllUsers,
+    createUser,
+    updateUserRole,
+    checkAndCreateUser,
+    checkUserSubscription
+} from '../services/userService';
 
 const router = Router();
 
 /**
- * Маршрут для получения списка всех пользователей
+ * Получить список всех пользователей
  */
 router.get('/users', async (req: Request, res: Response) => {
     try {
-        const users = await User.find({}, '-__v -password'); // Исключаем ненужные поля
+        const users = await getAllUsers(); // Теперь используем правильную функцию
         res.json({ users });
     } catch (error) {
         console.error('Ошибка при получении пользователей:', error);
@@ -22,11 +24,25 @@ router.get('/users', async (req: Request, res: Response) => {
 });
 
 /**
- * Маршрут для проверки и добавления (при необходимости) пользователя.
- * Кроме того, проверяет фактическую подписку (для не-админа).
+ * Получить пользователя по Telegram ID
+ */
+router.get('/users/:telegramId', async (req: Request, res: Response) => {
+    const { telegramId } = req.params;
+    try {
+        const user = await findUserByTelegramId(Number(telegramId));
+        if (!user) {
+            return res.status(404).json({ message: 'Пользователь не найден' });
+        }
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({ message: 'Ошибка при получении пользователя' });
+    }
+});
+
+/**
+ * Проверка и добавление пользователя, а также проверка подписки
  */
 router.post('/check-user', async (req: Request, res: Response) => {
-
     const { telegramId } = req.body;
 
     if (!telegramId) {
@@ -34,76 +50,18 @@ router.post('/check-user', async (req: Request, res: Response) => {
     }
 
     try {
-        let user = await User.findOne({ telegramId });
+        const user = await checkAndCreateUser(Number(telegramId));
+        const updatedRole = await checkUserSubscription(user);
 
-        // 1) Создаём, если не существует
-        if (!user) {
-            // Допустим, жёстко один админ:
-            const isAdmin = telegramId === 327844310;
-
-            user = new User({
-                telegramId,
-                role: isAdmin ? 'admin' : 'freeUser',
-                dateAdded: Math.floor(Date.now() / 1000), // UNIX timestamp
-            });
-            await user.save();
-            console.log(`Добавлен новый пользователь: ${telegramId}`);
-        } else {
-            console.log(`Пользователь найден: ${telegramId}`);
-        }
-
-        // 2) Если пользователь админ, ничего не меняем и сразу возвращаем
-        if (user.role === 'admin') {
-            return res.json({ role: user.role });
-        }
-
-        // 3) Не админ? — проверяем реальную подписку в канале
-        let isSubscribed = false;
-        const channelUsername = '@training_health'; // ваш канал
-
-        try {
-            // Запрашиваем статус пользователя в канале
-            const chatMember = await bot.getChatMember(channelUsername, telegramId);
-            if (
-                chatMember.status !== 'left' &&
-                chatMember.status !== 'kicked'
-            ) {
-                isSubscribed = true;
-            }
-        } catch (err: any) {
-            console.error('Ошибка при обращении к Telegram API:', err.message);
-            // Если не можем получить статус, возвращаем текущую роль без изменения
-            return res.json({ role: user.role, error: 'Ошибка Telegram API' });
-        }
-
-        // 4) Сопоставляем факт подписки с текущей role
-        if (isSubscribed) {
-            // Если подписан, но в базе всё ещё freeUser => переводим в paidUser
-            if (user.role !== 'paidUser') {
-                user.role = 'paidUser';
-                await user.save();
-                console.log(`Обновлена роль на paidUser у пользователя: ${telegramId}`);
-            }
-        } else {
-            // Не подписан. Если в базе стоит paidUser => сбрасываем на freeUser
-            if (user.role === 'paidUser') {
-                user.role = 'freeUser';
-                await user.save();
-                console.log(`Пользователь ${telegramId} отписался, роль изменена на freeUser.`);
-            }
-        }
-
-        // 5) Возвращаем актуальную роль
-        return res.json({ role: user.role });
-    } catch (error: any) {
-        console.error('Ошибка', error);
-        console.error('Ошибка при работе с пользователем:', error.message);
+        res.json({ role: updatedRole });
+    } catch (error) {
+        console.error('Ошибка при проверке пользователя:', error);
         res.status(500).json({ message: 'Ошибка при работе с пользователем' });
     }
 });
 
 /**
- * Маршрут для обновления роли пользователя (например, вручную админ может перевести freeUser -> paidUser).
+ * Обновить роль пользователя (например, вручную админ может изменить freeUser -> paidUser)
  */
 router.post('/update-user-role', async (req: Request, res: Response) => {
     const { telegramId, role, datePaid, datePaidUntil } = req.body;
@@ -113,23 +71,15 @@ router.post('/update-user-role', async (req: Request, res: Response) => {
     }
 
     try {
-        const user = await User.findOne({ telegramId });
-
-        if (user) {
-            user.role = role;
-            if (datePaid) user.datePaid = datePaid;
-            if (datePaidUntil) user.datePaidUntil = datePaidUntil;
-
-            await user.save();
-            res.json({ message: 'Роль пользователя обновлена' });
-        } else {
-            res.status(404).json({ message: 'Пользователь не найден' });
+        const user = await updateUserRole(Number(telegramId), role, datePaid, datePaidUntil);
+        if (!user) {
+            return res.status(404).json({ message: 'Пользователь не найден' });
         }
-    } catch (error: any) {
-        console.error('Ошибка при обновлении пользователя:', error.message);
+        res.json({ message: 'Роль пользователя обновлена', user });
+    } catch (error) {
+        console.error('Ошибка при обновлении пользователя:', error);
         res.status(500).json({ message: 'Ошибка при обновлении пользователя' });
     }
 });
-
 
 export default router;
