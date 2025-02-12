@@ -5,14 +5,27 @@
       К статье
     </v-btn>
   </v-card>
+  <v-btn block color="primary" class="mt-3" rounded="xl" @click="showSavedWorkouts = true">
+    📋 Сохранённые тренировки
+  </v-btn>
+
+  <!-- Отображение сохранённых тренировок -->
+  <ProfileWorkouts/>
 </template>
 
 <script setup lang="ts">
 import KbzhuCardProfile from '../nutrition/KbzhuCardProfile.vue';
-import { computed } from 'vue';
-import { useUserStore } from '../../stores/userStore';
+import {computed, ref} from 'vue';
+import {useUserStore} from '../../stores/userStore';
+import ProfileWorkouts from "./ProfileWorkouts.vue";
 
 const userStore = useUserStore();
+const showSavedWorkouts = ref(false);
+const expandedWorkout = ref<number | null>(null);
+
+const toggleWorkout = (index: number) => {
+  expandedWorkout.value = expandedWorkout.value === index ? null : index;
+};
 
 const latestKbzhuResult = computed(() => {
   if (userStore.kbzhuHistory?.length) {

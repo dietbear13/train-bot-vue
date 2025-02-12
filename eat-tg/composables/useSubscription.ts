@@ -68,43 +68,36 @@ export function useSubscription() {
      *    если sub — updateUserRoleInDB('paidUser'), либо ничего не меняем, если уже такой статус.
      */
     const checkSubscription = async () => {
+        if (isCheckingSubscription.value || userStore.role !== 'freeUser') return; // Избегаем повторных запросов
+
+        isCheckingSubscription.value = true;
+
         try {
-            // Если пользователь админ, не меняем статус
             if (userStore.telegramId === 327844310) {
-                showSnackbar('Вы являетесь администратором. Статус не может быть изменен.', 'warning');
+                showSnackbar('Вы администратор. Статус не изменяется.', 'warning');
                 return;
             }
 
-            // Запрос к вашему бэкенду, который возвращает isSubscribed = true/false
             const response = await apiRequest('post', 'check-subscription', {
                 telegramId: userStore.telegramId,
             });
 
             if (response.data.isSubscribed) {
-                // Если пользователь подписан
                 if (userStore.role !== 'paidUser') {
                     await updateUserRoleInDB('paidUser');
-                    showSnackbar('Подтверждаю подписку! У тебя полный доступ к боту.', 'success');
-                } else {
-                    // Если пользователь уже paidUser, просто покажем уведомление
-                    showSnackbar('Ваша подписка подтверждена.', 'success');
+                    showSnackbar('Подтверждаю подписку! У тебя полный доступ.', 'success');
                 }
             } else {
-                // Если пользователь не подписан
                 if (userStore.role === 'paidUser') {
-                    // Был подписан, но теперь отписался
                     await updateUserRoleInDB('freeUser');
-                    showSnackbar('Вы отписались от канала. Статус изменён на "Без подписки".', 'error');
-                } else {
-                    showSnackbar('Ты не подписался на канал или уже отписался.', 'error');
+                    showSnackbar('Вы отписались. Статус изменён на "Без подписки".', 'error');
                 }
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error('Ошибка при проверке подписки:', error);
-            showSnackbar(
-                'Произошла ошибка при проверке подписки, сообщите об этом разработчику.',
-                'error'
-            );
+            showSnackbar('Ошибка при проверке подписки. Сообщите разработчику.', 'error');
+        } finally {
+            isCheckingSubscription.value = false;
         }
     };
 
