@@ -1,9 +1,11 @@
+// src/index.ts
+
 import express from 'express';
 import cors from 'cors';
 import { connectDB } from './config/db';
 import { config } from './config/env';
 import routes from './routes';
-import { initBot } from './config/bot';
+import './bot';
 
 const app = express();
 
@@ -21,9 +23,6 @@ connectDB();
 
 // Подключение маршрутов
 app.use('/api', routes);
-
-// Запуск Telegram бота
-initBot();
 
 // Запуск сервера
 app.listen(config.port, () => {

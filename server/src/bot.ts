@@ -1,3 +1,5 @@
+// src/bot.ts
+
 import { bot } from './config/bot';
 import { handleCallbackQuery } from './handlers/callbackHandler';
 import { setupBotCommands } from './services/botService';

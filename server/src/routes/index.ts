@@ -1,3 +1,5 @@
+// src/routes/index.ts
+
 import { Router } from 'express';
 import botRoutes from './bot';
 import usersRoutes from './users';

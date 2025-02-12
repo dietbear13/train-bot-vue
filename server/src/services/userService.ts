@@ -5,14 +5,14 @@ import { bot } from '../config/bot';
  * Получение всех пользователей
  */
 export const getAllUsers = async (): Promise<IUser[]> => {
-    return await User.find({}, '-__v -password'); // Исключаем ненужные поля
+    return User.find({}, '-__v -password'); // Исключаем ненужные поля
 };
 
 /**
  * Получение пользователя по Telegram ID
  */
 export const findUserByTelegramId = async (telegramId: number): Promise<IUser | null> => {
-    return await User.findOne({ telegramId });
+    return User.findOne({ telegramId });
 };
 
 /**
@@ -80,7 +80,7 @@ export const updateUserRole = async (
     datePaid?: number,
     datePaidUntil?: number
 ): Promise<IUser | null> => {
-    return await User.findOneAndUpdate(
+    return User.findOneAndUpdate(
         { telegramId },
         { role, datePaid, datePaidUntil },
         { new: true }
