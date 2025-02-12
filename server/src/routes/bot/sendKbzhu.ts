@@ -1,7 +1,7 @@
 // src/routes/bot/sendKbzhu.ts
 
 import { Router, Request, Response } from 'express';
-import { bot } from './botInstance';
+import { bot } from '../../config/bot';
 import { escapeMarkdownV2 } from '../../utils/helpers';
 
 const router = Router();

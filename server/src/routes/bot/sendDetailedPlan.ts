@@ -2,8 +2,10 @@
 
 import { Router, Request, Response } from 'express';
 import { ObjectId } from 'mongodb'; // Импортируем ObjectId
-import { bot, appUrl } from './botInstance';
+import { bot } from '../../config/bot';
 import { formatWeeklyWorkoutMessageHTML, escapeHTML } from '../../utils/helpers';
+
+const appUrl = process.env.APP_URL;
 
 const router = Router();
 
@@ -33,6 +35,7 @@ interface GeneratedDay {
  */
 router.post('/send-detailed-plan', async (req: Request, res: Response) => {
     const { userId, plan, splitName, splitComment } = req.body;
+    console.log('🚨 plan', plan)
 
     if (!userId || !plan || !Array.isArray(plan)) {
         return res.status(400).json({ message: 'Нужно передать userId, plan (array of days), splitName и splitComment.' });
@@ -51,6 +54,8 @@ router.post('/send-detailed-plan', async (req: Request, res: Response) => {
             if (!str) return '';
             return str.charAt(0).toUpperCase() + str.slice(1);
         }
+
+
 
         // Формируем сообщение с привязкой к каждому упражнению
         let detailedMessage = '';

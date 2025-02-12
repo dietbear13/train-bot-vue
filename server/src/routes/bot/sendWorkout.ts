@@ -1,7 +1,7 @@
 // src/routes/bot/sendWorkout.ts
 
 import { Router, Request, Response } from 'express';
-import { bot } from './botInstance';
+import { bot } from '../../config/bot';
 import User from '../../models/User';
 import { formatWeeklyWorkoutMessageHTML, escapeHTML } from '../../utils/helpers';
 

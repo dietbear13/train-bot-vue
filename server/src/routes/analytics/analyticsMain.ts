@@ -139,7 +139,7 @@ router.post('/analytics/save-sended-workout', async (req: Request, res: Response
     try {
         const { userId, gender, goal, splitType, splitId, timestamp, plan } = req.body;
 
-        if (!userId || !gender || !splitType || !splitId) {
+        if (!userId || !gender || !splitType || !splitId || !plan) {
             return res.status(400).json({
                 error: 'Отсутствуют необходимые поля (userId, gender, splitType, splitId, goal) в теле запроса',
             });

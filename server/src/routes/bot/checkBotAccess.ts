@@ -1,7 +1,7 @@
 // src/routes/bot/checkBotAccess.ts
 
 import { Router, Request, Response } from 'express';
-import { bot } from './botInstance';
+import { bot } from '../../config/bot';
 
 const router = Router();
 

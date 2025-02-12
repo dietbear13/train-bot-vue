@@ -282,6 +282,7 @@ export default defineComponent({
         timestamp: Date.now(),
         plan // <-- ВАЖНО: Передаём полный план
       }
+      console.log('🚨 payload', payload)
       try {
         const response = await apiRequest<any>('POST', '/analytics/save-sended-workout', payload)
         console.log('Ответ от /analytics/save-sended-workout:', response)
@@ -299,34 +300,8 @@ export default defineComponent({
      * 2. Отправляем подробный план пользователю (функция `sendDetailedWorkoutPlan` из composable).
      */
     const sendWorkoutPlan = async (plan: DayPlan[]) => {
-      // 1. Аналитика
       await sendAnalyticsWorkoutPlan(plan)
-
-      // 2. Отправляем пользователю в чат
       await sendDetailedWorkoutPlan()
-
-      // 3. Отправляем админу подробный лог упражнений
-      try {
-        if (!telegramUserId.value) {
-          showSnackbar('Нет telegramUserId — не можем логировать.', 'error')
-          return
-        }
-        const response = await apiRequest('post', 'bot/admin/log-exercises', {
-          userId: telegramUserId.value,
-          plan
-        })
-        showSnackbar('Лог плана успешно отправлен админу!', 'success')
-        console.log('Ответ от /bot/admin/log-exercises:', response)
-      } catch (err: any) {
-        if (err.response) {
-          showSnackbar(
-              `Ошибка: ${err.response.data.message || 'Не удалось отправить лог.'}`,
-              'error'
-          )
-        } else {
-          showSnackbar('Не удалось отправить лог.', 'error')
-        }
-      }
     }
 
     async function realGenerateSplitWorkout() {
