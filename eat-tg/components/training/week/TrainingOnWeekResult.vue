@@ -1,4 +1,4 @@
-<!-- /training/week/TrainingOnWeekResult.vue -->
+<!-- components/training/week/TrainingOnWeekResult.vue -->
 <template>
   <BottomSheetWithClose
       v-model="localShowBottomSheet"

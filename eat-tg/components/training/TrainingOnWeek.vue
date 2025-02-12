@@ -300,8 +300,9 @@ export default defineComponent({
      * 2. Отправляем подробный план пользователю (функция `sendDetailedWorkoutPlan` из composable).
      */
     const sendWorkoutPlan = async (plan: DayPlan[]) => {
+      console.log('Передача в sendWorkoutPlan:', plan)
       await sendAnalyticsWorkoutPlan(plan)
-      await sendDetailedWorkoutPlan()
+      await sendDetailedWorkoutPlan(plan)
     }
 
     async function realGenerateSplitWorkout() {

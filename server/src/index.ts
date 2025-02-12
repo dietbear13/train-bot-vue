@@ -5,6 +5,7 @@ import { config } from './config/env';
 import routes from './routes';
 import { initBot } from './config/bot';
 import { errorHandler } from './middleware/errorHandler';
+import { setupBotCommands } from './services/botService';
 
 const app = express();
 
@@ -33,6 +34,8 @@ app.use('/api', routes);
 
 // последний app.use
 app.use(errorHandler);
+
+setupBotCommands();
 
 // Запуск Telegram бота
 initBot().then(() => {

@@ -498,18 +498,18 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
      * Отправка готового плана в Telegram
      * непосредственно в чат пользователю.
      */
-    async function sendWorkoutPlan() {
+    async function sendWorkoutPlan(plan: GeneratedDay[]) {
         if (!params.telegramUserId.value) {
             params.showSnackbar('Не указан Telegram ID.', 'error')
             return
         }
 
-        console.log('Отправляемый план тренировок (из finalPlan):', finalPlan.value)
+        console.log('Отправляемый план тренировок (из finalPlan):', plan)
 
         try {
             await apiRequest('post', 'send-detailed-plan', {
                 userId: params.telegramUserId.value,
-                plan: finalPlan.value,
+                plan: plan,
                 splitName: params.selectedSplitRef.value?.split || '',
                 splitComment: params.selectedSplitRef.value?.splitComment || ''
             })
