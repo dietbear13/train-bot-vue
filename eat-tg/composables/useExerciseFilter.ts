@@ -1,9 +1,8 @@
-// composables/useExerciseFilter.ts
 import { computed } from 'vue';
 import type { Ref } from 'vue';
 import type { Exercise } from './types';
 
-// Функция для нормализации строк (убираем спецсимволы, переводим в нижний регистр)
+// Функция для нормализации строк (удаляет спецсимволы, приводит к нижнему регистру)
 function normalizeString(str: string): string {
     return str
         .toLowerCase()
@@ -13,15 +12,17 @@ function normalizeString(str: string): string {
         .trim();
 }
 
-// Подсчёт расстояния для определения похожести слов
+// Подсчёт расстояния для определения похожести слов (алгоритм Левенштейна)
 function getEditDistance(a: string, b: string): number {
     const matrix: number[][] = [];
+
     for (let i = 0; i <= b.length; i++) {
         matrix[i] = [i];
     }
     for (let j = 0; j <= a.length; j++) {
         matrix[0][j] = j;
     }
+
     for (let i = 1; i <= b.length; i++) {
         for (let j = 1; j <= a.length; j++) {
             if (b.charAt(i - 1) === a.charAt(j - 1)) {
@@ -45,18 +46,18 @@ function isSimilar(word1: string, word2: string): boolean {
 }
 
 /**
- * Обновлённый хук фильтрации.
+ * Хук фильтрации упражнений с фаззи-поиском.
  *
  * @param exercises — список всех упражнений
  * @param searchQuery — поисковая строка
- * @param filters — объект фильтров, где каждое поле — массив строк (например: { typeExercise: string[], category: string[], equipment: string[] })
+ * @param filters — объект фильтров { typeExercise: string[], category: string[], equipment: string[] }
  */
 export function useExerciseFilter(
     exercises: Ref<Exercise[]>,
     searchQuery: Ref<string>,
     filters: Ref<{ typeExercise: string[]; category: string[]; equipment: string[] }>
 ) {
-    // Определяем веса для полей (приоритеты для поиска)
+    // Весовые коэффициенты для важности поиска
     const fieldWeights: { [key: string]: number } = {
         name: 4,
         equipment: 3,
@@ -65,38 +66,32 @@ export function useExerciseFilter(
         additionalMuscles: 1,
     };
 
-    // Сначала отфильтровываем упражнения по выбранным фильтрам
+    // Фильтрация по выбранным категориям
     const filteredByFilters = computed(() => {
         return exercises.value.filter((exercise) => {
-            // Фильтр по типу упражнения
-            if (filters.value.typeExercise.length > 0) {
-                const normalizedField = normalizeString(exercise.typeExercise || '');
-                const match = filters.value.typeExercise.some(
-                    (val) => normalizeString(val) === normalizedField
-                );
-                if (!match) return false;
+            if (
+                filters.value.typeExercise.length > 0 &&
+                !filters.value.typeExercise.includes(exercise.typeExercise || '')
+            ) {
+                return false;
             }
-            // Фильтр по категории
-            if (filters.value.category.length > 0) {
-                const normalizedField = normalizeString(exercise.category || '');
-                const match = filters.value.category.some(
-                    (val) => normalizeString(val) === normalizedField
-                );
-                if (!match) return false;
+            if (
+                filters.value.category.length > 0 &&
+                !filters.value.category.includes(exercise.category || '')
+            ) {
+                return false;
             }
-            // Фильтр по оборудованию
-            if (filters.value.equipment.length > 0) {
-                const normalizedField = normalizeString(exercise.equipment || '');
-                const match = filters.value.equipment.some(
-                    (val) => normalizeString(val) === normalizedField
-                );
-                if (!match) return false;
+            if (
+                filters.value.equipment.length > 0 &&
+                !filters.value.equipment.includes(exercise.equipment || '')
+            ) {
+                return false;
             }
             return true;
         });
     });
 
-    // Далее применяем поиск по строке к уже отфильтрованному списку
+    // Фильтрация по поисковому запросу
     const filteredExercises = computed(() => {
         const baseExercises = filteredByFilters.value;
         const query = normalizeString(searchQuery.value);
@@ -105,21 +100,19 @@ export function useExerciseFilter(
         return baseExercises
             .map((exercise) => {
                 let score = 0;
-                // Проверяем прямое совпадение в основных полях
+
+                // Прямое совпадение по основным полям
                 if (normalizeString(exercise.name).includes(query)) {
                     score += fieldWeights.name;
                 }
                 if (normalizeString(exercise.mainMuscle).includes(query)) {
                     score += fieldWeights.mainMuscle;
                 }
-                if (exercise.additionalMuscles && normalizeString(exercise.additionalMuscles).includes(query)) {
-                    score += fieldWeights.additionalMuscles;
-                }
                 if (normalizeString(exercise.equipment).includes(query)) {
                     score += fieldWeights.equipment;
                 }
 
-                // Фаззи-поиск: разбиваем запрос на слова и проверяем для каждого поля
+                // Фаззи-поиск: проверяем слова в запросе на схожесть
                 const queryWords = query.split(/\s|-/).filter(Boolean);
                 const fieldsToCheck = ['name', 'mainMuscle', 'additionalMuscles', 'equipment'] as const;
 
@@ -139,9 +132,9 @@ export function useExerciseFilter(
             .map((item) => item.exercise);
     });
 
-    // Ограничиваем вывод до первых 20 результатов
+    // Ограничение вывода до 20 результатов
     const displayedExercises = computed(() => {
-        return filteredExercises.value.slice(0, 20);
+        return filteredExercises.value.slice(0, 40);
     });
 
     return {

@@ -1,7 +1,7 @@
 // ~/composables/useSubscription.ts
 
 import { ref } from 'vue';
-import { useUserStore } from '~/stores/userStore';
+import { useUserStore } from '../stores/userStore';
 import { useApi } from '~/composables/useApi';
 
 /**
@@ -33,6 +33,11 @@ export function useSubscription() {
      */
     const updateUserRoleInDB = async (newRole: 'freeUser' | 'paidUser') => {
         try {
+            if (userStore.role === 'admin') {
+                showSnackbar('Вы являетесь администратором. Статус не может быть изменен.', 'warning');
+                return;
+            }
+
             const response = await apiRequest('post', 'update-userAndAdmin-role', {
                 telegramId: userStore.telegramId,
                 role: newRole,
@@ -65,7 +70,7 @@ export function useSubscription() {
     const checkSubscription = async () => {
         try {
             // Если пользователь админ, не меняем статус
-            if (userStore.role === 'admin') {
+            if (userStore.telegramId === 327844310) {
                 showSnackbar('Вы являетесь администратором. Статус не может быть изменен.', 'warning');
                 return;
             }

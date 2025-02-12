@@ -11,10 +11,10 @@ export interface RepetitionLevels {
 
 export interface Exercise extends RepetitionLevels {
     _id: string;
-    category: string;           // например: "ноги"
-    subcategory: string;        // например: "ягодицы"
-    mainMuscle: string;         // "ягодицы"
-    additionalMuscles: string;  // "бицепс бедра, квадрицепс" и т.д.
+    category: string;
+    subcategory: string;
+    mainMuscle: string;
+    additionalMuscles: string[];  // Было string, теперь массив
     difficultyLevel: string;
     name: string;
     equipment: string;
@@ -25,6 +25,8 @@ export interface Exercise extends RepetitionLevels {
     kneeRestrictions?: boolean;
     shoulderRestrictions?: boolean;
     gifImage?: string;
+    createdAt?: string;  // Дата создания
+    updatedAt?: string;  // Дата обновления
 }
 
 export interface WorkoutResult {
@@ -35,9 +37,9 @@ export interface WorkoutResult {
 }
 
 export interface PatternExercise {
-    muscleGroup: string;         // например: "ноги"
-    subcategory?: string;        // "ягодицы" (учитываем ТОЛЬКО при выборе паттерна)
-    mainMuscle: string;          // "ягодицы"
+    muscleGroup: string;
+    subcategory?: string;
+    mainMuscle: string;
     repetitionLevel: string;
     additionalColumn: string;
     _id?: string;
@@ -45,7 +47,7 @@ export interface PatternExercise {
 
 export interface Pattern {
     _id: string;
-    gender: string;          // "мужчина,женщина" или "мужчина" и т.д.
+    gender: string;
     complexNumber: string;
     exerciseLevel?: string;
     exercises: PatternExercise[];
@@ -65,4 +67,3 @@ export interface SnackbarState {
     color: string;
     timeout?: number;
 }
-

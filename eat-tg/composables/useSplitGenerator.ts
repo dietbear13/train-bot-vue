@@ -496,7 +496,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
 
     /**
      * Отправка готового плана в Telegram
-     * (непосредственно в чат пользователю, например).
+     * непосредственно в чат пользователю.
      */
     async function sendWorkoutPlan() {
         if (!params.telegramUserId.value) {

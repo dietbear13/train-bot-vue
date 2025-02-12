@@ -1,6 +1,6 @@
 import { type Ref } from 'vue'
 
-import type { Exercise, WorkoutResult, Pattern } from '~/components/training/TrainingByMuscles.vue'
+import type { Exercise, WorkoutResult, Pattern } from '../components/training/TrainingByMuscles.vue'
 
 // Вспомогательные функции
 function getSets(reps: number): number {
