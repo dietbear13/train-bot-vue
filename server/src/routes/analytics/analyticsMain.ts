@@ -131,12 +131,13 @@ router.post('/analytics/save-workout', async (req: Request, res: Response) => {
  *   goal: string,         // цель (Похудение, Общие, ...)
  *   splitType: string,    // тип сплита
  *   splitId: string,      // конкретный ID сплита
- *   timestamp?: number    // (опционально) Временная метка
+ *   timestamp?: number,   // (опционально) Временная метка
+ *   plan?: any            // Полный план (массив дней, упражнений и т.д.)
  * }
  */
 router.post('/analytics/save-sended-workout', async (req: Request, res: Response) => {
     try {
-        const { userId, gender, goal, splitType, splitId, timestamp } = req.body;
+        const { userId, gender, goal, splitType, splitId, timestamp, plan } = req.body;
 
         if (!userId || !gender || !splitType || !splitId) {
             return res.status(400).json({
@@ -159,7 +160,8 @@ router.post('/analytics/save-sended-workout', async (req: Request, res: Response
                 splitId,
             },
             timestamp: timestamp || Date.now(),
-            isSended: true, // вот здесь отмечаем, что тренировка "отправлена"
+            isSended: true, // отмечаем, что тренировка "отправлена"
+            plan: plan || null // <-- Сохраняем полный план
         };
 
         user.trainingHistory = user.trainingHistory || [];

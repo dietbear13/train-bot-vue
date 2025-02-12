@@ -1,5 +1,5 @@
 // src/routes/bot/logExercises.ts
-
+// удалить маршрут
 import { Router, Request, Response } from 'express';
 import { bot } from './botInstance';
 import User from '../../models/User';

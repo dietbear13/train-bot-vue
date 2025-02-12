@@ -281,6 +281,24 @@ function toggleLike(postId: string) {
   )
 }
 
+// Отслеживаем изменения лайков и отправляем их на сервер
+watch(
+    () => posts.value.map(post => post.userLiked),
+    (newLikes, oldLikes) => {
+      newLikes.forEach((liked, index) => {
+        const oldLiked = oldLikes[index]
+        if (liked !== oldLiked) {
+          const postId = posts.value[index].id
+          sendLikeToServer(
+              telegramUserId.value ? telegramUserId.value.toString() : null,
+              postId,
+              liked
+          )
+        }
+      })
+    }
+)
+
 // Отправка данных лайка на сервер
 async function sendLikeToServer(
     telegramId: string | null,

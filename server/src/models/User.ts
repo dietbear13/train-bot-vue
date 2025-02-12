@@ -1,4 +1,3 @@
-// models/User.ts
 import mongoose, { Schema, Document } from 'mongoose'
 
 export interface IKbzhuHistory {
@@ -30,6 +29,7 @@ export interface ITrainingHistory {
     }
     timestamp: number // UNIX timestamp
     isSended?: boolean
+    plan?: any // <-- добавляем сюда объект с полным планом
 }
 
 export interface IReferral {
@@ -49,20 +49,19 @@ export interface IStarDonationPress {
     timestamp: number // UNIX timestamp
 }
 
-// Новая структура для истории колбэков рассылок
 export interface ISurveyCallback {
     surveyId: string
     messageId: string
-    callbackAt: string   // теперь именно callbackAt, как и ожидает TS
+    callbackAt: string
     answeredAt: Date
 }
 
 export interface IUser extends Document {
     telegramId: number
     role: 'admin' | 'freeUser' | 'paidUser'
-    dateAdded: number // UNIX timestamp
-    datePaid?: number // UNIX timestamp
-    datePaidUntil?: number // UNIX timestamp
+    dateAdded: number
+    datePaid?: number
+    datePaidUntil?: number
     kbzhuHistory?: IKbzhuHistory[]
     trainingHistory?: ITrainingHistory[]
     referrals: IReferral[]
@@ -118,6 +117,7 @@ const UserSchema: Schema = new Schema<IUser>({
             },
             timestamp: { type: Number, required: true },
             isSended: { type: Boolean, default: false },
+            plan: { type: Schema.Types.Mixed }, // <-- Здесь храним весь план
         },
     ],
     referrals: {
@@ -149,7 +149,6 @@ const UserSchema: Schema = new Schema<IUser>({
         ],
         default: [],
     },
-    // Добавляем историю колбэков рассылок
     surveyCallbacks: {
         type: [SurveyCallbackSchema],
         default: [],

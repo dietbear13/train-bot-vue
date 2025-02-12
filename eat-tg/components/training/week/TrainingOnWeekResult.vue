@@ -22,13 +22,14 @@
         пересоздать всю неделю
       </v-btn>
 
+      <!-- Основная кнопка отправки пользователю сообщения с планом -->
       <v-btn
           block
           color="primary"
           rounded="xl"
           height="36px"
           :disabled="!telegramUserId"
-          @click="emitSendWorkoutPlan"
+          @click="emitSendWorkoutPlanWithData"
       >
         <v-icon>mdi-send</v-icon>
         Отправить сообщением
@@ -134,6 +135,7 @@
         </div>
       </div>
 
+      <!-- Дублирующая кнопка снизу (на случай, если список тренировок длинный) -->
       <v-btn
           block
           color="primary"
@@ -141,7 +143,7 @@
           icon
           height="36px"
           :disabled="!telegramUserId"
-          @click="emitSendWorkoutPlan"
+          @click="emitSendWorkoutPlanWithData"
       >
         <v-icon>mdi-send</v-icon>
         Отправить сообщением
@@ -171,11 +173,11 @@
 </template>
 
 <script lang="ts">
-import {defineComponent, type PropType, ref} from 'vue'
+import { defineComponent, type PropType, ref } from 'vue'
 import BottomSheetWithClose from '../../../components/shared/BottomSheetWithClose.vue'
 import AdminExerciseButton from '../../../components/userAndAdmin/AdminExerciseButton.vue'
 import ExerciseInfo from '../../../components/training/ExerciseInfo.vue'
-import {useApi} from '../../../composables/useApi'
+import { useApi } from '../../../composables/useApi'
 
 interface Exercise {
   _id: string
@@ -225,7 +227,7 @@ export default defineComponent({
   },
   emits: [
     'update:showBottomSheet',
-    'sendWorkoutPlan',
+    'sendWorkoutPlan', // уже был, будем передавать сюда ещё и данные
     'regenerateWholeSplit',
     'refreshDayExercises',
     'increaseRepsSplit',
@@ -265,7 +267,16 @@ export default defineComponent({
 
     // Эмиты
     const emitRegenerateWholeSplit = () => emit('regenerateWholeSplit')
+
+    // (Старая функция) — оставляем, если нужна
     const emitSendWorkoutPlan = () => emit('sendWorkoutPlan')
+
+    // Новая функция, которая передаёт весь план «наружу»
+    const emitSendWorkoutPlanWithData = () => {
+      // Передаём наружу финальный план
+      emit('sendWorkoutPlan', props.finalPlan)
+    }
+
     const emitRefreshDayExercises = (dayIndex: number) => emit('refreshDayExercises', dayIndex)
     const emitIncreaseRepsSplit = (exercisesArr: Exercise[], index: number) =>
         emit('increaseRepsSplit', exercisesArr, index)
@@ -276,6 +287,7 @@ export default defineComponent({
     const emitRegenerateExerciseSplit = (exercisesArr: Exercise[], index: number, dayIndex: number) =>
         emit('regenerateExerciseSplit', exercisesArr, index, dayIndex)
 
+    // Диалог удаления упражнения
     const dialog = ref<{
       show: boolean
       exercise: Exercise | null
@@ -319,6 +331,7 @@ export default defineComponent({
       formatExerciseName,
       emitRegenerateWholeSplit,
       emitSendWorkoutPlan,
+      emitSendWorkoutPlanWithData,
       emitRefreshDayExercises,
       emitIncreaseRepsSplit,
       emitDecreaseRepsSplit,

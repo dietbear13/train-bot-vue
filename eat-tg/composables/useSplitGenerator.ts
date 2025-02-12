@@ -40,7 +40,7 @@ interface UseSplitGeneratorParams {
     showBottomSheet: Ref<boolean>
     errorMessages: Ref<string[]>
     showSnackbar: (msg: string, color?: string) => void
-    telegramUserId: Ref<number | null>
+    telegramUserId: Ref<number | null | undefined>
     selectedSplitRef: Ref<SplitItem | null>
 }
 
@@ -92,7 +92,7 @@ function getSets(reps: number): number {
     return 3
 }
 
-/** Случайный уровень нагрузки (пример) */
+/** Случайный уровень нагрузки */
 function getRandomLoadLevel(): string {
     const r = Math.random()
     if (r < 0.5) return 'средняя'
@@ -128,21 +128,21 @@ function tryFindExercise(
     repetitionLevel: string,
     genderStr: string,
     usedIds: Set<string>,
-    goal: string,              // <-- Добавили сюда goal
+    goal: string,              // <-- Добавили goal
     maxTries: number = 500
 ): { exercise: Exercise; reps: number; sets: number } | null {
     let attempt = 0
 
     while (attempt < maxTries) {
         attempt++
-        // Фильтруем упражнения, которые ещё не использовали
+        // Фильтруем упражнения, которые ещё не использованы
         const availableExercises = matchingExercises.filter(e => !usedIds.has(e._id))
         if (availableExercises.length === 0) {
             console.warn('Нет доступных упражнений для подбора.')
             break
         }
 
-        // Случайная выборка упражнения
+        // Случайная выборка
         const selectedExercise = availableExercises[Math.floor(Math.random() * availableExercises.length)]
         // Случайный уровень нагрузки
         const randomLoad = getRandomLoadLevel()
@@ -165,8 +165,7 @@ function tryFindExercise(
         // Случайно берём один вариант из массива
         let chosenReps = repsArray[Math.floor(Math.random() * repsArray.length)]
 
-        // === ДОБАВЛЯЕМ НОВУЮ ЛОГИКУ ДЛЯ goal ===
-        // Если goal === 'Похудение', 'Общие' или 'Массонабор', подменяем reps:
+        // === ДОБАВЛЯЕМ ЛОГИКУ ДЛЯ goal ===
         if (goal === 'Похудение') {
             // Похудение: случайно 15 или 20
             const variants = [15, 20]
@@ -180,7 +179,7 @@ function tryFindExercise(
             const variants = [6,8,10,12]
             chosenReps = variants[Math.floor(Math.random() * variants.length)]
         }
-        // Если goal не установлен (или не совпал с перечисленными) — оставляем reps как есть
+
         const sets = getSets(chosenReps)
 
         return {
@@ -204,7 +203,7 @@ function generateExercisesFromPattern(
 ): FoundExercise[] {
     const exList: FoundExercise[] = []
 
-    // Если есть '|' — значит несколько вариантов на выбор
+    // Если есть '|' — значит несколько вариантов
     let chosenVariant = pattern
     if (pattern.includes('|')) {
         const splitted = pattern.split('|')
@@ -235,7 +234,6 @@ function generateExercisesFromPattern(
             return exList
         }
 
-        // Фильтруем упражнения из базы
         const matchingExercises = allExercises.filter(e => {
             return (
                 e.mainMuscle.toLowerCase() === mainMuscle.toLowerCase() &&
@@ -254,14 +252,13 @@ function generateExercisesFromPattern(
             return exList
         }
 
-        // Пытаемся найти одно подходящее
         const repetitionLevel = getRandomLoadLevel()
         const found = tryFindExercise(
             matchingExercises,
             repetitionLevel,
             gender,
             usedIdsInDay,
-            goal,               // <-- передаём goal
+            goal, // <-- передаём goal
             maxTries
         )
 
@@ -336,7 +333,7 @@ function generateExercisesFromPattern(
                 repetitionLevel,
                 gender,
                 usedIdsInDay,
-                goal,          // <-- передаём goal
+                goal, // <-- передаём goal
                 maxTries
             )
             if (!found) {
@@ -399,9 +396,14 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
     }
 
     /**
-     * Генерация плана сплита с учётом пола (gender), выбранного сплита (chosenSplit) и цели (goal)
+     * Генерация плана сплита с учётом пола, выбранного сплита и цели
      */
-    async function generateSplitPlan(gender: string, chosenSplit: SplitItem, goal: string) {
+    async function generateSplitPlan(
+        gender: string,
+        chosenSplit: SplitItem,
+        goal: string,
+        finalPlanRef: Ref<GeneratedDay[]>
+    ) {
         params.errorMessages.value = []
         if (!chosenSplit) {
             params.errorMessages.value.push('Не выбран сплит.')
@@ -413,7 +415,6 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
         params.isGenerating.value = true
 
         try {
-            // Парсим chosenSplit.splitDays, например "3(пн,ср,пт)"
             const matchDays = chosenSplit.splitDays.match(/^(\d+)\(([^)]+)\)/)
             if (!matchDays) {
                 params.errorMessages.value.push(`Некорректное поле splitDays: ${chosenSplit.splitDays}`)
@@ -427,7 +428,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
             const weekDays = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
 
             // Очищаем предыдущий результат
-            finalPlan.value = []
+            finalPlanRef.value = []
 
             // Для чередования паттернов
             let patternIndex = 0
@@ -435,11 +436,10 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
             for (let i = 0; i < weekDays.length; i++) {
                 const currentDay = weekDays[i]
 
-                // Если в массиве dayNamesArr есть текущий день — значит тренировка
                 if (dayNamesArr.includes(currentDay)) {
                     const maxIndex = chosenSplit.days.length
                     if (maxIndex === 0) {
-                        finalPlan.value.push({ dayName: dayName(i), exercises: [] })
+                        finalPlanRef.value.push({ dayName: dayName(i), exercises: [] })
                         continue
                     }
 
@@ -448,34 +448,34 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
 
                     const currentPatternDay = chosenSplit.days[safeIndex]
                     if (!currentPatternDay) {
-                        finalPlan.value.push({ dayName: dayName(i), exercises: [] })
+                        finalPlanRef.value.push({ dayName: dayName(i), exercises: [] })
                         continue
                     }
 
                     const exList: FoundExercise[] = []
                     const usedIdsInDay = new Set<string>()
 
-                    // Генерируем все упражнения для этого дня
+                    // Генерируем все упражнения
                     for (const pat of currentPatternDay.patternOrExercise) {
                         const result = generateExercisesFromPattern(
                             pat,
                             gender,
                             usedIdsInDay,
                             exercises.value,
-                            goal,             // <-- передаём goal
+                            goal,
                             255
                         )
                         exList.push(...result)
                     }
 
-                    finalPlan.value.push({
+                    finalPlanRef.value.push({
                         dayName: dayName(i),
                         exercises: exList,
                         patternOrExercise: currentPatternDay.patternOrExercise
                     })
                 } else {
                     // День отдыха
-                    finalPlan.value.push({
+                    finalPlanRef.value.push({
                         dayName: dayName(i),
                         exercises: []
                     })
@@ -496,6 +496,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
 
     /**
      * Отправка готового плана в Telegram
+     * (непосредственно в чат пользователю, например).
      */
     async function sendWorkoutPlan() {
         if (!params.telegramUserId.value) {
@@ -503,10 +504,9 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
             return
         }
 
-        console.log('Отправляемый план тренировок:', finalPlan.value)
+        console.log('Отправляемый план тренировок (из finalPlan):', finalPlan.value)
 
         try {
-            console.log('params', params)
             await apiRequest('post', 'send-detailed-plan', {
                 userId: params.telegramUserId.value,
                 plan: finalPlan.value,
@@ -529,8 +529,13 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
     }
 
     /** Перегенерация одного упражнения (по тому же originalPattern) */
-    function regenerateExercise(dayIndex: number, exerciseIndex: number, gender: string) {
-        const day = finalPlan.value[dayIndex]
+    function regenerateExercise(
+        dayIndex: number,
+        exerciseIndex: number,
+        gender: string,
+        finalPlanRef: Ref<GeneratedDay[]>
+    ) {
+        const day = finalPlanRef.value[dayIndex]
         if (!day) return
 
         const oldEx = day.exercises[exerciseIndex]
@@ -543,15 +548,13 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
             }
         })
 
-        // Генерируем новое
+        // Генерируем новое упражнение
         const newExList = generateExercisesFromPattern(
             oldEx.originalPattern,
             gender,
             usedIdsInDay,
             exercises.value,
-            // здесь goal тоже можно передавать, если хотите сохранять ту же логику,
-            // но в текущем коде goal не сохранён в упражнении, так что можно либо ''
-            '',
+            '', // goal можно передавать, если нужно
             255
         )
 
@@ -574,8 +577,6 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
                 gender,
                 usedIdsInDay,
                 exercises.value,
-                // здесь тоже можно передавать какую-то цель,
-                // если хотите одинаковую логику
                 '',
                 255
             )
@@ -585,7 +586,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
         day.exercises = exList
     }
 
-    // Пример увеличения/уменьшения повт./подходов
+    // Пример увеличения/уменьшения повторений
     function increaseReps(dayIndex: number, exerciseIndex: number) {
         const ex = finalPlan.value[dayIndex]?.exercises[exerciseIndex]
         if (ex) {

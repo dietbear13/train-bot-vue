@@ -1,4 +1,4 @@
-<!-- training/TrainingOnWeek.vue -->
+<!-- /training/TrainingOnWeek.vue -->
 <template>
   <!-- Проверка роли (roleLoading) -->
   <div v-if="roleLoading">
@@ -55,15 +55,14 @@
           :isLoading="isLoading"
           :telegramUserId="telegramUserId"
           :refreshingDays="refreshingDays"
-          @sendWorkoutPlan="sendWorkoutPlan"
-          @regenerateWholeSplit="regenerateWholeSplit"
-          @refreshDayExercises="refreshDayExercises"
-          @increaseRepsSplit="increaseRepsSplit"
-          @decreaseRepsSplit="decreaseRepsSplit"
-          @removeExerciseSplit="removeExerciseSplit"
-          @regenerateExerciseSplit="regenerateExerciseSplit"
-          @logExercises="logExercises"
-          :openExerciseInfo="openExerciseInfo"
+          @sendWorkoutPlan="sendWorkoutPlan($event)"
+      @regenerateWholeSplit="regenerateWholeSplit"
+      @refreshDayExercises="refreshDayExercises"
+      @increaseRepsSplit="increaseRepsSplit"
+      @decreaseRepsSplit="decreaseRepsSplit"
+      @removeExerciseSplit="removeExerciseSplit"
+      @regenerateExerciseSplit="regenerateExerciseSplit"
+      :openExerciseInfo="openExerciseInfo"
       />
     </div>
   </div>
@@ -132,6 +131,19 @@ interface TelegramUserData {
   language_code?: string
 }
 
+interface Exercise {
+  _id: string
+  name: string
+  sets: number
+  reps: number
+  originalPattern?: string
+}
+interface DayPlan {
+  dayName: string
+  exercises: Exercise[]
+  patternOrExercise?: string[]
+}
+
 export default defineComponent({
   name: 'TrainingOnWeek',
   components: {
@@ -154,7 +166,6 @@ export default defineComponent({
 
     const allSplits = ref<SplitItem[]>([])
     const selectedSplit = ref<SplitItem | null>(null)
-    // Изменяем тип с string | null на string | undefined
     const selectedSplitId = ref<string | undefined>(undefined)
     const selectedSplitType = ref<string | undefined>(undefined)
 
@@ -166,7 +177,6 @@ export default defineComponent({
     const refreshingDays = ref<Record<number, boolean>>({})
 
     const userData = ref<TelegramUserData | null>(null)
-    // Изменяем тип с number | null на number | undefined
     const telegramUserId = ref<number | undefined>(undefined)
     const initData = ref<any>(null)
 
@@ -232,10 +242,11 @@ export default defineComponent({
       }
     })
 
+    // Сюда складываем сгенерированный план (7 дней)
+    const finalPlan = ref<DayPlan[]>([])
+
     // Подключаем composable для генерации и отправки плана
-    // Здесь мы деструктурируем функцию отправки плана из хука под именем sendDetailedWorkoutPlan
     const {
-      finalPlan,
       generateSplitPlan,
       regenerateExercise,
       sendWorkoutPlan: sendDetailedWorkoutPlan,
@@ -251,8 +262,9 @@ export default defineComponent({
 
     /**
      * Функция отправки данных в аналитику (/analytics/save-sended-workout)
+     * Дополнена: теперь передаём и сам план (finalPlan).
      */
-    const sendAnalyticsWorkoutPlan = async () => {
+    const sendAnalyticsWorkoutPlan = async (plan: DayPlan[]) => {
       if (!telegramUserId.value) {
         showSnackbar('Нет telegramUserId — не можем сохранить.', 'error')
         return
@@ -267,7 +279,8 @@ export default defineComponent({
         goal: goal.value,
         splitType: selectedSplit.value.split,
         splitId: selectedSplit.value._id,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        plan // <-- ВАЖНО: Передаём полный план
       }
       try {
         const response = await apiRequest<any>('POST', '/analytics/save-sended-workout', payload)
@@ -281,12 +294,39 @@ export default defineComponent({
     }
 
     /**
-     * Объединённая функция, которая сначала отправляет данные в аналитику, а затем вызывает
-     * функцию из хука для отправки детального плана
+     * Получаем план из дочернего компонента и делаем две вещи:
+     * 1. Отправляем данные в аналитику (включая план).
+     * 2. Отправляем подробный план пользователю (функция `sendDetailedWorkoutPlan` из composable).
      */
-    const sendWorkoutPlan = async () => {
-      await sendAnalyticsWorkoutPlan()
+    const sendWorkoutPlan = async (plan: DayPlan[]) => {
+      // 1. Аналитика
+      await sendAnalyticsWorkoutPlan(plan)
+
+      // 2. Отправляем пользователю в чат
       await sendDetailedWorkoutPlan()
+
+      // 3. Отправляем админу подробный лог упражнений
+      try {
+        if (!telegramUserId.value) {
+          showSnackbar('Нет telegramUserId — не можем логировать.', 'error')
+          return
+        }
+        const response = await apiRequest('post', 'bot/admin/log-exercises', {
+          userId: telegramUserId.value,
+          plan
+        })
+        showSnackbar('Лог плана успешно отправлен админу!', 'success')
+        console.log('Ответ от /bot/admin/log-exercises:', response)
+      } catch (err: any) {
+        if (err.response) {
+          showSnackbar(
+              `Ошибка: ${err.response.data.message || 'Не удалось отправить лог.'}`,
+              'error'
+          )
+        } else {
+          showSnackbar('Не удалось отправить лог.', 'error')
+        }
+      }
     }
 
     async function realGenerateSplitWorkout() {
@@ -296,7 +336,8 @@ export default defineComponent({
         return
       }
       console.log('Начало генерации сплита (реальный вызов).')
-      await generateSplitPlan(gender.value, selectedSplit.value, goal.value)
+      // Именно в composable генерируется объект finalPlan
+      await generateSplitPlan(gender.value, selectedSplit.value, goal.value, finalPlan)
       console.log('Генерация сплита (реальный вызов) завершена.')
     }
 
@@ -327,9 +368,9 @@ export default defineComponent({
         const launchParams = retrieveLaunchParams()
         initData.value = launchParams.initData
         if (initData.value && initData.value.user) {
-          const user = initData.value.user // гарантированно получаем данные пользователя
+          const user = initData.value.user
           userData.value = user
-          telegramUserId.value = user.id  // теперь safe, так как user точно не null
+          telegramUserId.value = user.id
         } else {
           console.error('Нет данных пользователя (Telegram).')
           showSnackbar('Нет данных пользователя (Telegram).', 'error')
@@ -344,7 +385,7 @@ export default defineComponent({
       refreshingDays.value[dayIndex] = true
       await new Promise(resolve => setTimeout(resolve, 600))
       for (let exIndex = 0; exIndex < finalPlan.value[dayIndex].exercises.length; exIndex++) {
-        await regenerateExercise(dayIndex, exIndex, gender.value)
+        await regenerateExercise(dayIndex, exIndex, gender.value, finalPlan)
       }
       refreshingDays.value[dayIndex] = false
     }
@@ -360,35 +401,7 @@ export default defineComponent({
       await generateSplitWorkout()
     }
 
-    const logExercises = async (exercise: any) => {
-      if (userStore.role !== 'admin') {
-        showSnackbar('Доступ запрещён.', 'error')
-        return
-      }
-      const requestData = {
-        userId: userStore.telegramId,
-        exercise: {
-          name: exercise.name,
-          sets: exercise.sets,
-          reps: exercise.reps
-        }
-      }
-      try {
-        const response = await apiRequest('post', 'bot/admin/log-exercises', requestData)
-        showSnackbar('Сообщение успешно отправлено!', 'success')
-        console.log(`Сообщение "${exercise.name}" отправлено админу. Ответ:`, response)
-      } catch (err: any) {
-        if (err.response) {
-          showSnackbar(
-              `Ошибка: ${err.response.data.message || 'Не удалось отправить сообщение.'}`,
-              'error'
-          )
-        } else {
-          showSnackbar('Не удалось отправить сообщение.', 'error')
-        }
-      }
-    }
-
+    // Для изменения повторений (увеличение/уменьшение)
     const standardRepsValues = [4, 5, 6, 8, 10, 12, 15, 20, 24, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180]
     function getSets(reps: number): number {
       if (reps === 4) return 6
@@ -433,13 +446,14 @@ export default defineComponent({
     }
 
     const regenerateExerciseSplit = (exercisesArr: any, index: number, dayIndex: number) => {
-      regenerateExercise(dayIndex, index, gender.value)
+      regenerateExercise(dayIndex, index, gender.value, finalPlan)
     }
 
     const onSelectSplitId = (newVal: string) => {
       selectedSplitId.value = newVal
     }
 
+    // Для просмотра GIF или описания упражнения
     const showExerciseInfo = ref(false)
     const selectedExercise = ref<any>(null)
     const openExerciseInfo = (exercise: any) => {
@@ -482,7 +496,6 @@ export default defineComponent({
       decreaseRepsSplit,
       removeExerciseSplit,
       regenerateExerciseSplit,
-      logExercises,
       showSnackbar,
       onSelectSplitId,
       showExerciseInfo,
