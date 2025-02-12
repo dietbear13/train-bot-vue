@@ -54,14 +54,17 @@ export const checkUserSubscription = async (user: IUser): Promise<string> => {
         const chatMember = await bot.getChatMember(channelUsername, user.telegramId);
         const isSubscribed = chatMember.status !== 'left' && chatMember.status !== 'kicked';
 
-        if (isSubscribed && user.role !== 'paidUser') {
-            user.role = 'paidUser';
-            await user.save();
-            console.log(`Обновлена роль на paidUser у пользователя: ${user.telegramId}`);
-        } else if (!isSubscribed && user.role === 'paidUser') {
-            user.role = 'freeUser';
-            await user.save();
-            console.log(`Пользователь ${user.telegramId} отписался, роль изменена на freeUser.`);
+        // Исключаем админа из проверки подписки
+        if (user.role !== 'admin') {
+            if (isSubscribed && user.role !== 'paidUser') {
+                user.role = 'paidUser';
+                await user.save();
+                console.log(`Обновлена роль на paidUser у пользователя: ${user.telegramId}`);
+            } else if (!isSubscribed && user.role === 'paidUser') {
+                user.role = 'freeUser';
+                await user.save();
+                console.log(`Пользователь ${user.telegramId} отписался, роль изменена на freeUser.`);
+            }
         }
 
         return user.role;
@@ -80,6 +83,16 @@ export const updateUserRole = async (
     datePaid?: number,
     datePaidUntil?: number
 ): Promise<IUser | null> => {
+    const user = await User.findOne({ telegramId });
+
+    if (!user) return null;
+
+    // Запрещаем изменять роль админа
+    if (user.role === 'admin' && role !== 'admin') {
+        console.log(`Попытка изменить роль администратора ${telegramId} предотвращена.`);
+        return user; // Возвращаем без изменений
+    }
+
     return User.findOneAndUpdate(
         { telegramId },
         { role, datePaid, datePaidUntil },
