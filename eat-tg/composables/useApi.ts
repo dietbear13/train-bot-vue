@@ -1,54 +1,53 @@
-/* /composables/useApi.ts */
 import axios, { type AxiosInstance, type AxiosRequestConfig, type Method } from 'axios'
+import { useUserStore } from '../stores/userStore'
 
-// Базовые URL для основных и резервных серверов
 const primaryBaseURL = 'https://fitnesstgbot.ru/api/'
 
-// Создаём экземпляр Axios с основным базовым URL
 const axiosInstance: AxiosInstance = axios.create({
     baseURL: primaryBaseURL,
     timeout: 15000,
-    headers: {"Authorization": `jjk37Gj34HKVvd8234gFcvKqw67fAw`},
+    headers: { "Authorization": `jjk37Gj34HKVvd8234gFcvKqw67fAw` },
 })
 
-
-/**
- * Composable useApi для управления API-запросами.
- */
 export function useApi() {
-    /**
-     * Функция для отправки API-запросов.
-     *
-     * @template T - Тип данных, которые ожидаются в ответе.
-     * @param method - HTTP-метод запроса (GET, POST, и т.д.).
-     * @param endpoint - Конечная точка API (например, 'exercises').
-     * @param data - Данные для отправки в теле запроса (для методов POST, PUT и т.д.).
-     * @param params - Параметры запроса (для методов GET).
-     * @returns Promise с данными типа T.
-     */
+    const userStore = useUserStore();
+
     const apiRequest = async <T>(
         method: Method,
         endpoint: string,
         data?: any,
         params?: any
     ): Promise<T> => {
+        // Проверяем, есть ли уже сохраненные данные
+        if (method === 'get') {
+            if (endpoint === 'splits' && userStore.splits.length) return userStore.splits as T;
+            if (endpoint === 'exercises' && userStore.exercises.length) return userStore.exercises as T;
+        }
+
         const config: AxiosRequestConfig = {
             method,
             url: endpoint,
             data,
             params,
-        }
+        };
 
         try {
-            const response = await axiosInstance(config)
-            return response.data
+            const response = await axiosInstance(config);
+
+            // Сохраняем загруженные данные в Pinia
+            if (method === 'get') {
+                if (endpoint === 'splits') userStore.setSplits(response.data);
+                if (endpoint === 'exercises') userStore.setExercises(response.data);
+            }
+
+            return response.data;
         } catch (error) {
             console.error(`Ошибка при запросе к ${endpoint}:`, error);
             throw error;
         }
-    }
+    };
 
     return {
         apiRequest,
-    }
+    };
 }

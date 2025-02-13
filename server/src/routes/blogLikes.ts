@@ -120,7 +120,6 @@ router.get('/blog-likes/all', async (req: Request, res: Response) => {
         ];
 
         const results = await User.aggregate(pipeline);
-        console.log('Aggregated likes:', results);
 
         // Преобразуем _id в postId
         const counts = results.map(r => ({

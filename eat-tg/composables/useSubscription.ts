@@ -12,21 +12,18 @@ export function useSubscription() {
     const userStore = useUserStore();
     const { apiRequest } = useApi();
 
-    // Настройки для вывода сообщений через Snackbar
     const snackbar = ref({
         show: false,
         message: '',
-        color: 'info', // 'success', 'error', 'info', 'warning'
+        color: 'info',
         timeout: 1500,
     });
 
-    // Удобный метод для отображения сообщений
     const showSnackbar = (message: string, color: string = 'info') => {
         snackbar.value.message = message;
         snackbar.value.color = color;
         snackbar.value.show = true;
     };
-
     /**
      * Обновление роли пользователя в базе данных и в Pinia-хранилище
      * @param newRole 'freeUser' | 'paidUser'
@@ -68,36 +65,25 @@ export function useSubscription() {
      *    если sub — updateUserRoleInDB('paidUser'), либо ничего не меняем, если уже такой статус.
      */
     const checkSubscription = async () => {
-        if (isCheckingSubscription.value || userStore.role !== 'freeUser') return; // Избегаем повторных запросов
-
-        isCheckingSubscription.value = true;
+        if (userStore.subscriptionChecked) return;
 
         try {
-            if (userStore.telegramId === 327844310) {
-                showSnackbar('Вы администратор. Статус не изменяется.', 'warning');
-                return;
-            }
-
             const response = await apiRequest('post', 'check-subscription', {
                 telegramId: userStore.telegramId,
             });
 
             if (response.data.isSubscribed) {
-                if (userStore.role !== 'paidUser') {
-                    await updateUserRoleInDB('paidUser');
-                    showSnackbar('Подтверждаю подписку! У тебя полный доступ.', 'success');
-                }
+                userStore.setRole('paidUser');
+                showSnackbar('Подтверждаю подписку! У тебя полный доступ.', 'success');
             } else {
-                if (userStore.role === 'paidUser') {
-                    await updateUserRoleInDB('freeUser');
-                    showSnackbar('Вы отписались. Статус изменён на "Без подписки".', 'error');
-                }
+                userStore.setRole('freeUser');
+                showSnackbar('Вы не подписаны.', 'error');
             }
+
+            userStore.setSubscriptionChecked();
         } catch (error) {
             console.error('Ошибка при проверке подписки:', error);
-            showSnackbar('Ошибка при проверке подписки. Сообщите разработчику.', 'error');
-        } finally {
-            isCheckingSubscription.value = false;
+            showSnackbar('Ошибка при проверке подписки.', 'error');
         }
     };
 
