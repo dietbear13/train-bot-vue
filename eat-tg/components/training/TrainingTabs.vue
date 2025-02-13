@@ -1,7 +1,7 @@
 <template>
   <v-container class="training-container">
     <!-- Табы -->
-    <v-tabs
+   <v-tabs
         v-model="activeTab"
         background-color="transparent"
         dark
@@ -13,7 +13,7 @@
         hide-slider
         class="custom-tabs"
     >
-      <!-- Вкладка 1: главная (аналитика как основная страница) -->
+<!--     Вкладка 1: главная (аналитика как основная страница)-->
       <v-tab
           class="custom-tab px-1"
           style="border-radius: 16px"
@@ -23,7 +23,7 @@
         Прога на неделю
       </v-tab>
 
-      <!-- Вкладка 2: с URL-параметром workout-muscles -->
+<!--      Вкладка 2: с URL-параметром workout-muscles -->
       <v-tab
           class="custom-tab px-1"
           style="border-radius: 16px"
@@ -33,7 +33,7 @@
         На одну мышцу
       </v-tab>
 
-      <!-- Вкладка 3: с URL-параметром exercise-search -->
+<!--       Вкладка 3: с URL-параметром exercise-search-->
       <v-tab
           class="custom-tab px-1"
           style="border-radius: 16px"
@@ -44,10 +44,10 @@
       </v-tab>
     </v-tabs>
 
-    <!-- Содержимое активной вкладки -->
-    <div class="tab-content mt-2">
+<!--     Содержимое активной вкладки-->
+<!--   <div class="tab-content mt-2">
       <component :is="currentComponent" :tab="currentTab" />
-    </div>
+    </div>-->
   </v-container>
 </template>
 
@@ -71,36 +71,42 @@ const tabMap: Record<TabKey, number> = {
 }
 
 // Инициализация роутера и текущего маршрута
-const route = useRoute()
-const router = useRouter()
+
+/*const route = useRoute()
+const router = useRouter()*/
 
 // Текущая вкладка из query-параметра или 'main' по умолчанию
 const currentTab = computed<TabKey>(() => {
-  const queryTab = route.query.tab
+  // console.log('current tab',  route.query.tab)
+  /*const queryTab = route.query.tab
   if (
       typeof queryTab === 'string' &&
       (queryTab === 'main' || queryTab === 'workout-muscles' || queryTab === 'exercise-search')
   ) {
     return queryTab as TabKey
-  }
+  }*/
   return 'main'
 })
 
 // Активный индекс вкладки (без ошибки, так как currentTab.value имеет тип TabKey)
 const activeTab = ref<number>(tabMap[currentTab.value])
+// const activeTab = ref<number>(1)
 
 // Функция переключения вкладок и установки query-параметра
 function changeTab(tabName: TabKey) {
-  if (currentTab.value !== tabName) {
+  /*if (currentTab.value !== tabName) {
     router.push({
       path: route.path, // или укажите '/' для главной страницы
       query: { tab: tabName }
     })
-  }
+  }*/
 }
 
+
 // Определяем, какой компонент отображать на основе текущей вкладки
+/*
 const currentComponent = computed(() => {
+  console.log('currentTab', currentTab.value)
   switch (currentTab.value) {
     case 'main':
       return TrainingOnWeek
@@ -109,12 +115,14 @@ const currentComponent = computed(() => {
     case 'exercise-search':
       return ExerciseSearch
     default:
+      console.log('currentTab def', currentTab.value)
       return TrainingOnWeek
   }
 })
+*/
 
 // Следим за изменением query-параметра tab
-watch(
+/*watch(
     () => route.query.tab,
     (newTab) => {
       if (
@@ -128,10 +136,10 @@ watch(
       }
     },
     { immediate: true }
-)
+)*/
 
 // При монтировании проверяем наличие корректного параметра и, если его нет, перенаправляем на main
-onMounted(() => {
+/*onMounted(() => {
   const queryTab = route.query.tab
   if (
       typeof queryTab !== 'string' ||
@@ -139,7 +147,12 @@ onMounted(() => {
   ) {
     router.replace({ path: route.path, query: { tab: 'main' } })
   }
-})
+})*/
+/*onMounted(() => {
+  if (!route.query.tab || tabMap[route.query.tab as string] === undefined) {
+    router.replace({ path: route.path, query: { tab: 'main' } })
+  }
+})*/
 </script>
 
 <style scoped>

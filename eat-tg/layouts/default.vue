@@ -2,7 +2,7 @@
   <v-app>
     <v-main>
       <Transition :name="transitionName" mode="out-in">
-        <NuxtPage />
+        <NuxtPage/>
       </Transition>
     </v-main>
 
@@ -74,6 +74,7 @@ const transitionName = computed(() => {
 watch(
     () => route.path,
     (newPath, oldPath) => {
+      console.log("paths: ",oldPath, newPath);
       const currentItem = menuItems.find((item) => item.path === newPath);
       const previousItem = menuItems.find((item) => item.path === oldPath);
 

@@ -44,5 +44,5 @@ export const useUserStore = defineStore('user', {
             this.subscriptionChecked = true;
         }
     },
-    persist: true, // Включаем сохранение данных в localStorage
+    // persist: true, // Включаем сохранение данных в localStorage
 });

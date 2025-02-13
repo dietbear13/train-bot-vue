@@ -2,10 +2,11 @@
 <template>
   <!-- Компонент TrainingTabs отвечает за отображение и логику табов -->
   <TrainingTabs />
+<!--  <p>12412412</p>-->
 </template>
 
 <script setup lang="ts">
-import TrainingTabs from '~/components/training/TrainingTabs.vue'
+import TrainingTabs from '../components/training/TrainingTabs.vue'
 </script>
 
 <style scoped>

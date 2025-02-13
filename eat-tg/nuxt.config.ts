@@ -23,8 +23,12 @@ export default defineNuxtConfig({
     '@mdi/font/css/materialdesignicons.min.css'
   ],
 
-  ssr: false,
+  plugins: [
+    '~/plugins/pinia',
+    '~/plugins/vuetify',
+  ],
 
+  ssr: false,
   runtimeConfig: {
     telegramBotApiKey: process.env.TELEGRAM_BOT_API_KEY || '',
     public: {
@@ -38,8 +42,9 @@ export default defineNuxtConfig({
   },
 
   modules: [
+    // 'pinia-plugin-persistedstate/nuxt',
     '@nuxt/fonts',
-    '@pinia/nuxt',
+    // '@pinia/nuxt',
     '@nuxtjs/device',
     [
       'nuxt-yandex-metrika',
