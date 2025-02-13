@@ -339,7 +339,7 @@ export default defineComponent({
     }
 
     onMounted(async () => {
-      if (!userStore.splits.length) await loadSplits();
+      if (!userStore.hasSplits) await loadSplits();
 
       if (process.client) {
         const launchParams = retrieveLaunchParams()

@@ -20,7 +20,17 @@ export function useApi() {
     ): Promise<T> => {
         // Проверяем, есть ли уже сохраненные данные
         if (method === 'get') {
-            if (endpoint === 'splits' && userStore.splits.length) return userStore.splits as T;
+            if (endpoint === 'splits') {
+                if (!userStore.hasSplits) {
+                    console.log('🔄  Загружаем сплиты с API...');
+                    const response = await axiosInstance({ method, url: endpoint, data, params });
+                    userStore.setSplits(response.data);
+                    return response.data;
+                } else {
+                    console.log('✅  Используем кэшированные сплиты.');
+                    return userStore.splits as T;
+                }
+            }
             if (endpoint === 'exercises' && userStore.exercises.length) return userStore.exercises as T;
         }
 
