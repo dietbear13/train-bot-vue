@@ -103,6 +103,9 @@ import Editor from '@tinymce/tinymce-vue'
 import { useRuntimeConfig } from '#imports'
 import { useApi } from '../../composables/useApi'
 
+import { useUserStore } from '../../stores/userStore'
+const userStore = useUserStore()
+
 /** Интерфейс для статьи блога */
 interface IBlogItem {
   _id: string
@@ -156,7 +159,13 @@ const tinymceInit = {
 const { apiRequest } = useApi()
 
 onMounted(async () => {
-  await loadPosts()
+  if (!userStore.blogArticles.length) {
+    console.log('🔄 Загружаем статьи блога с API...')
+    await loadPosts()
+  } else {
+    console.log('✅ Используем кешированные статьи блога.')
+    posts.value = userStore.blogArticles
+  }
 })
 
 // Загрузка списка постов

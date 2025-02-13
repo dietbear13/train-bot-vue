@@ -14,7 +14,7 @@ export interface Exercise extends RepetitionLevels {
     category: string;
     subcategory: string;
     mainMuscle: string;
-    additionalMuscles: string[];  // Было string, теперь массив
+    additionalMuscles: string[];
     difficultyLevel: string;
     name: string;
     equipment: string;
@@ -28,6 +28,8 @@ export interface Exercise extends RepetitionLevels {
     createdAt?: string;  // Дата создания
     updatedAt?: string;  // Дата обновления
 }
+
+
 
 export interface WorkoutResult {
     _id: string;

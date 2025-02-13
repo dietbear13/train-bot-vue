@@ -2,7 +2,15 @@
 
 import { ref } from 'vue';
 import { useUserStore } from '../stores/userStore';
-import { useApi } from '~/composables/useApi';
+import { useApi } from './useApi';
+
+/** Интерфейс для ответа API */
+interface SubscriptionResponse {
+    success: boolean;
+    data: {
+        isSubscribed: boolean;
+    };
+}
 
 /**
  * Composable для проверки подписки.
@@ -24,6 +32,7 @@ export function useSubscription() {
         snackbar.value.color = color;
         snackbar.value.show = true;
     };
+
     /**
      * Обновление роли пользователя в базе данных и в Pinia-хранилище
      * @param newRole 'freeUser' | 'paidUser'
@@ -35,7 +44,7 @@ export function useSubscription() {
                 return;
             }
 
-            const response = await apiRequest('post', 'update-userAndAdmin-role', {
+            const response = await apiRequest<SubscriptionResponse>('post', 'update-userAndAdmin-role', {
                 telegramId: userStore.telegramId,
                 role: newRole,
             });
@@ -57,18 +66,12 @@ export function useSubscription() {
 
     /**
      * Основная функция проверки подписки
-     * Вызывается как вручную (со страницы профиля), так и автоматически (из UserInit).
-     * Внутри:
-     *  - Если роль = admin, выходим, статус не меняем.
-     *  - Делаем запрос на бэкенд 'check-subscription', проверяем реальную подписку.
-     *  - При необходимости (если unsub) делаем updateUserRoleInDB('freeUser'),
-     *    если sub — updateUserRoleInDB('paidUser'), либо ничего не меняем, если уже такой статус.
      */
     const checkSubscription = async () => {
         if (userStore.subscriptionChecked) return;
 
         try {
-            const response = await apiRequest('post', 'check-subscription', {
+            const response = await apiRequest<SubscriptionResponse>('post', 'check-subscription', {
                 telegramId: userStore.telegramId,
             });
 

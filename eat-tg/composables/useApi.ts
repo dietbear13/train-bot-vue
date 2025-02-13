@@ -1,13 +1,13 @@
-import axios, { type AxiosInstance, type AxiosRequestConfig, type Method } from 'axios'
-import { useUserStore } from '../stores/userStore'
+import axios, { type AxiosInstance, type AxiosRequestConfig, type Method } from 'axios';
+import { useUserStore } from '../stores/userStore';
 
-const primaryBaseURL = 'https://fitnesstgbot.ru/api/'
+const primaryBaseURL = 'https://fitnesstgbot.ru/api/';
 
 const axiosInstance: AxiosInstance = axios.create({
     baseURL: primaryBaseURL,
     timeout: 15000,
     headers: { "Authorization": `jjk37Gj34HKVvd8234gFcvKqw67fAw` },
-})
+});
 
 export function useApi() {
     const userStore = useUserStore();
@@ -18,10 +18,9 @@ export function useApi() {
         data?: any,
         params?: any
     ): Promise<T> => {
-        // Проверяем, есть ли уже сохраненные данные
         if (method === 'get') {
             if (endpoint === 'splits') {
-                if (!userStore.hasSplits) {
+                if (userStore.splits.length === 0) { // ФИКС: заменено userStore.hasSplits
                     console.log('🔄  Загружаем сплиты с API...');
                     const response = await axiosInstance({ method, url: endpoint, data, params });
                     userStore.setSplits(response.data);
@@ -32,6 +31,11 @@ export function useApi() {
                 }
             }
             if (endpoint === 'exercises' && userStore.exercises.length) return userStore.exercises as T;
+
+            if (endpoint === 'blog-articles' && userStore.blogArticles.length) {
+                console.log('✅ Используем кэшированные статьи блога.');
+                return userStore.blogArticles as T;
+            }
         }
 
         const config: AxiosRequestConfig = {
@@ -44,10 +48,10 @@ export function useApi() {
         try {
             const response = await axiosInstance(config);
 
-            // Сохраняем загруженные данные в Pinia
             if (method === 'get') {
                 if (endpoint === 'splits') userStore.setSplits(response.data);
                 if (endpoint === 'exercises') userStore.setExercises(response.data);
+                if (endpoint === 'blog-articles') userStore.setBlogArticles(response.data);
             }
 
             return response.data;

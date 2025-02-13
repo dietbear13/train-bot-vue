@@ -1,6 +1,8 @@
 // ~/composables/useSplitGenerator.ts
 import { ref, onMounted, type Ref } from 'vue'
 import { useApi } from './useApi'
+import { useUserStore } from '../stores/userStore'
+import {Exercise, RepetitionLevels} from './types';
 
 // ======================= Интерфейсы =======================
 interface FoundExercise {
@@ -8,7 +10,6 @@ interface FoundExercise {
     name: string
     sets: number
     reps: number
-    /** Оригинальный паттерн (ex:..., pa:...) для перегенерации */
     originalPattern?: string
 }
 
@@ -35,40 +36,21 @@ interface GeneratedDay {
 }
 
 interface UseSplitGeneratorParams {
-    isLoading: Ref<boolean>
-    isGenerating: Ref<boolean>
-    showBottomSheet: Ref<boolean>
-    errorMessages: Ref<string[]>
-    showSnackbar: (msg: string, color?: string) => void
-    telegramUserId: Ref<number | null | undefined>
-    selectedSplitRef: Ref<SplitItem | null>
+    isLoading: Ref<boolean>;
+    isGenerating: Ref<boolean>;
+    showBottomSheet: Ref<boolean>;
+    errorMessages: Ref<string[]>;
+    showSnackbar: (msg: string, color?: string) => void;
+    telegramUserId: Ref<number | null | undefined>;
+    selectedSplitRef: Ref<SplitItem | null>;
 }
 
-interface Exercise {
-    _id: string
-    name: string
-    category: string
-    typeExercise: string
-    mainMuscle: string
-    additionalMuscles: string
-    difficultyLevel: string
-    maleRepsLight: string
-    maleRepsMedium: string
-    maleRepsHeavy: string
-    femaleRepsLight: string
-    femaleRepsMedium: string
-    femaleRepsHeavy: string
-    // Остальные поля
-}
 
-interface RepetitionLevels {
-    maleRepsLight: string
-    maleRepsMedium: string
-    maleRepsHeavy: string
-    femaleRepsLight: string
-    femaleRepsMedium: string
-    femaleRepsHeavy: string
-}
+// ======================= Основные зависимости =======================
+const { apiRequest } = useApi();
+const userStore = useUserStore();
+const exercises = ref<Exercise[]>([]);
+
 
 // ======================= Константы и вспомогательные =======================
 const levelMapping: { [key: string]: string } = {
@@ -378,18 +360,23 @@ function dayName(index: number): string {
 // ======================= ОСНОВНОЙ ХУК =======================
 export default function useSplitGenerator(params: UseSplitGeneratorParams) {
     const finalPlan = ref<GeneratedDay[]>([])
-    const { apiRequest } = useApi()
-    const exercises = ref<Exercise[]>([])
 
     // При монтировании загружаем упражнения
-    onMounted(() => {
-        loadExercises()
+    onMounted(async () => {
+        if (userStore.exercises.length === 0) {
+            console.log('🔄 Загружаем упражнения с API...');
+            const data = await apiRequest<Exercise[]>('get', 'exercises');
+            userStore.setExercises(data);
+            exercises.value = data;
+        } else {
+            console.log('✅  Используем кешированные упражнения.');
+        }
     })
 
     async function loadExercises() {
         try {
             const data = await apiRequest<Exercise[]>('get', 'exercises')
-            exercises.value = Array.isArray(data) ? data : []
+            exercises.value = data
         } catch (err) {
             console.error('Ошибка при загрузке упражнений:', err)
         }

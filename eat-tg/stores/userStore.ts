@@ -1,4 +1,11 @@
-import { defineStore } from 'pinia'
+import { defineStore } from 'pinia';
+import { Exercise } from "../composables/types";
+
+interface BlogArticle {
+    id: number;
+    title: string;
+    content: string;
+}
 
 export const useUserStore = defineStore('user', {
     state: () => ({
@@ -8,6 +15,7 @@ export const useUserStore = defineStore('user', {
         savedWorkouts: [] as { dayName: string; exercises: { name: string; sets: number; reps: number }[] }[],
         exercises: [] as Exercise[], // Кэшируем список упражнений
         splits: [] as any[], // Кэшируем тренировочные сплиты
+        blogArticles: [] as BlogArticle[], // ФИКС: добавили отсутствующее поле
         subscriptionChecked: false, // Флаг для предотвращения повторных проверок
     }),
     actions: {
@@ -25,6 +33,9 @@ export const useUserStore = defineStore('user', {
         },
         setExercises(exercises: Exercise[]) {
             this.exercises = exercises;
+        },
+        setBlogArticles(articles: BlogArticle[]) {
+            this.blogArticles = articles;
         },
         setSplits(splits: any[]) {
             this.splits = splits;
