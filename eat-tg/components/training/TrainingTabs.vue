@@ -45,10 +45,10 @@
     </v-tabs>
 
 <!--     Содержимое активной вкладки-->
-<!--   <div class="tab-content mt-2">
+    <div class="tab-content mt-2">
       <component :is="currentComponent" :tab="currentTab" />
-    </div>-->
-  </v-container>
+    </div>
+    </v-container>
 </template>
 
 <script setup lang="ts">
@@ -72,19 +72,19 @@ const tabMap: Record<TabKey, number> = {
 
 // Инициализация роутера и текущего маршрута
 
-/*const route = useRoute()
-const router = useRouter()*/
+const route = useRoute()
+const router = useRouter()
 
 // Текущая вкладка из query-параметра или 'main' по умолчанию
 const currentTab = computed<TabKey>(() => {
   // console.log('current tab',  route.query.tab)
-  /*const queryTab = route.query.tab
+  const queryTab = route.query.tab
   if (
       typeof queryTab === 'string' &&
       (queryTab === 'main' || queryTab === 'workout-muscles' || queryTab === 'exercise-search')
   ) {
     return queryTab as TabKey
-  }*/
+  }
   return 'main'
 })
 
@@ -94,17 +94,17 @@ const activeTab = ref<number>(tabMap[currentTab.value])
 
 // Функция переключения вкладок и установки query-параметра
 function changeTab(tabName: TabKey) {
-  /*if (currentTab.value !== tabName) {
+  if (currentTab.value !== tabName) {
     router.push({
       path: route.path, // или укажите '/' для главной страницы
       query: { tab: tabName }
     })
-  }*/
+  }
 }
 
 
 // Определяем, какой компонент отображать на основе текущей вкладки
-/*
+
 const currentComponent = computed(() => {
   console.log('currentTab', currentTab.value)
   switch (currentTab.value) {
@@ -119,10 +119,10 @@ const currentComponent = computed(() => {
       return TrainingOnWeek
   }
 })
-*/
+
 
 // Следим за изменением query-параметра tab
-/*watch(
+watch(
     () => route.query.tab,
     (newTab) => {
       if (
@@ -136,10 +136,10 @@ const currentComponent = computed(() => {
       }
     },
     { immediate: true }
-)*/
+)
 
 // При монтировании проверяем наличие корректного параметра и, если его нет, перенаправляем на main
-/*onMounted(() => {
+onMounted(() => {
   const queryTab = route.query.tab
   if (
       typeof queryTab !== 'string' ||
@@ -147,12 +147,12 @@ const currentComponent = computed(() => {
   ) {
     router.replace({ path: route.path, query: { tab: 'main' } })
   }
-})*/
-/*onMounted(() => {
+})
+onMounted(() => {
   if (!route.query.tab || tabMap[route.query.tab as string] === undefined) {
     router.replace({ path: route.path, query: { tab: 'main' } })
   }
-})*/
+})
 </script>
 
 <style scoped>
