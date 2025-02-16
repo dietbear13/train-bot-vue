@@ -45,8 +45,8 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import KbzhuCalculator from '../../components/nutrition/KbzhuCalculator.vue'
-import NutritionAdvice from '../../components/nutrition/NutritionAdvice.vue'
+import KbzhuCalculator from './KbzhuCalculator.vue'
+import NutritionAdvice from './NutritionAdvice.vue'
 
 // Инициализация роутера и текущего маршрута
 const route = useRoute()

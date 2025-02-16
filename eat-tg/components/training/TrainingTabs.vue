@@ -1,44 +1,38 @@
+<!--components\nutrition\NutritionTabs.vue-->
+
 <template>
   <v-container class="training-container">
     <!-- Табы -->
-   <v-tabs
+    <v-tabs
         v-model="activeTab"
         background-color="transparent"
         dark
         fixed-tabs
         grow
-        mobile-breakpoint="md"
-        direction="horizontal"
         align-tabs="center"
         hide-slider
         class="custom-tabs"
     >
-<!--     Вкладка 1: главная (аналитика как основная страница)-->
       <v-tab
           class="custom-tab px-1"
           style="border-radius: 16px"
           :class="{ 'active-tab': activeTab === 0 }"
-          @click="changeTab('main')"
       >
         Прога на неделю
       </v-tab>
 
-<!--      Вкладка 2: с URL-параметром workout-muscles -->
       <v-tab
           class="custom-tab px-1"
           style="border-radius: 16px"
           :class="{ 'active-tab': activeTab === 1 }"
-          @click="changeTab('workout-muscles')"
       >
         На одну мышцу
       </v-tab>
 
-<!--       Вкладка 3: с URL-параметром exercise-search-->
       <v-tab
           class="custom-tab px-1"
           style="border-radius: 16px"
           :class="{ 'active-tab': activeTab === 2 }"
-          @click="changeTab('exercise-search')"
       >
         Вики
       </v-tab>
@@ -55,8 +49,8 @@
 import { ref, watch, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-// Импорт внутренних компонентов
-import TrainingOnWeek from './TrainingOnWeek.vue'
+// Импорт компонентов вкладок
+import TrainingOnWeek from './week/TrainingOnWeek.vue'
 import TrainingByMuscles from './TrainingByMuscles.vue'
 import ExerciseSearch from './ExerciseSearch.vue'
 
@@ -78,13 +72,13 @@ const router = useRouter()
 // Текущая вкладка из query-параметра или 'main' по умолчанию
 const currentTab = computed<TabKey>(() => {
   // console.log('current tab',  route.query.tab)
-  const queryTab = route.query.tab
-  if (
-      typeof queryTab === 'string' &&
-      (queryTab === 'main' || queryTab === 'workout-muscles' || queryTab === 'exercise-search')
-  ) {
-    return queryTab as TabKey
-  }
+  const currentTab = computed<TabKey>(() => {
+    let queryTab = route.query.tab
+    if (Array.isArray(queryTab)) {
+      queryTab = queryTab[0]
+    }
+    return typeof queryTab === 'string' && queryTab in tabMap ? queryTab as TabKey : 'main'
+  })
   return 'main'
 })
 
@@ -125,13 +119,12 @@ const currentComponent = computed(() => {
 watch(
     () => route.query.tab,
     (newTab) => {
-      if (
-          typeof newTab === 'string' &&
-          (newTab === 'main' || newTab === 'workout-muscles' || newTab === 'exercise-search')
-      ) {
+      if (Array.isArray(newTab)) {
+        newTab = newTab[0]
+      }
+      if (typeof newTab === 'string' && newTab in tabMap) {
         activeTab.value = tabMap[newTab as TabKey]
       } else {
-        // Если параметр некорректен, переходим на вкладку main
         router.replace({ path: route.path, query: { tab: 'main' } })
       }
     },
@@ -161,8 +154,8 @@ onMounted(() => {
 }
 
 .active-tab {
-  color: #ffffff !important;  /* Белый цвет текста активной вкладки */
-  background-color: #43a047;    /* Цвет фона активной вкладки */
+  color: #ffffff !important; /* Белый цвет текста активной вкладки */
+  background-color: #43a047; /* Цвет фона активной вкладки */
 }
 
 .custom-tabs {

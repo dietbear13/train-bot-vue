@@ -13,10 +13,17 @@ export const useUserStore = defineStore('user', {
         role: 'freeUser' as 'admin' | 'freeUser' | 'paidUser',
         kbzhuHistory: [] as { timestamp: number; kbzhuResult: any }[],
         savedWorkouts: [] as { dayName: string; exercises: { name: string; sets: number; reps: number }[] }[],
-        exercises: [] as Exercise[], // Кэшируем список упражнений
-        splits: [] as any[], // Кэшируем тренировочные сплиты
-        blogArticles: [] as BlogArticle[], // ФИКС: добавили отсутствующее поле
-        subscriptionChecked: false, // Флаг для предотвращения повторных проверок
+        exercises: [] as Exercise[],
+        splits: [] as any[],
+        blogArticles: [] as BlogArticle[],
+        subscriptionChecked: false,
+
+        // Массив всех пользователей
+        users: [] as any[],
+
+        // trainingHistory станет словарём,
+        // ключ = telegramId, значение = массив тренировок (или объект)
+        trainingHistory: {} as Record<number, any[]>,
     }),
     actions: {
         setTelegramId(id: number) {
@@ -42,7 +49,16 @@ export const useUserStore = defineStore('user', {
         },
         setSubscriptionChecked() {
             this.subscriptionChecked = true;
-        }
+        },
+
+        setUsers(usersData: any[]) {
+            this.users = usersData;
+        },
+
+        // Храним ключ = telegramId, значение = массив тренировок
+        setTrainingHistory(telegramId: number, history: any[]) {
+            this.trainingHistory[telegramId] = history;
+        },
     },
-    // persist: true, // Включаем сохранение данных в localStorage
+    // persist: true, // если используете pinia-plugin-persist
 });

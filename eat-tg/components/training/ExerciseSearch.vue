@@ -10,7 +10,10 @@
     />
 
     <!-- Блок с фильтрами (раскрывающийся) -->
-    <ExerciseFilters v-model="selectedFilters" :exercises="exercises" />
+    <ExerciseFilters
+        v-model="selectedFilters"
+        :exercises="exercises"
+    />
 
     <!-- Фиксированная кнопка открытия BottomSheet -->
     <v-btn
@@ -82,6 +85,14 @@ interface WorkoutItem extends Exercise {
   sets: number;
   reps: number;
 }
+
+defineProps({
+  tab: {
+    type: String,
+    default: 'exercise-search'
+  }
+})
+
 
 export default defineComponent({
   name: 'ExerciseSearch',

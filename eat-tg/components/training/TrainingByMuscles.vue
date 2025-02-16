@@ -326,9 +326,9 @@ import { defineComponent, ref, onMounted } from 'vue'
 import draggable from 'vuedraggable'
 import { retrieveLaunchParams } from '@telegram-apps/sdk'
 import AddExercise from './AddExercise.vue'
-import BottomSheetWithClose from '~/components/shared/BottomSheetWithClose.vue'
-import useWorkoutGenerator from '~/composables/useWorkoutGenerator'
-import { useApi } from '~/composables/useApi' // Импортируем apiRequest
+import BottomSheetWithClose from '../../components/shared/BottomSheetWithClose.vue'
+import useWorkoutGenerator from '../../composables/useWorkoutGenerator'
+import { useApi } from '../../composables/useApi' // Импортируем apiRequest
 
 // --- Интерфейсы ---
 interface RepetitionLevels {
@@ -397,6 +397,14 @@ interface SnackbarState {
   color: string
   timeout?: number
 }
+
+defineProps({
+  tab: {
+    type: String,
+    default: 'workout-muscles'
+  }
+})
+
 
 export default defineComponent({
   name: 'TrainingByMuscles',

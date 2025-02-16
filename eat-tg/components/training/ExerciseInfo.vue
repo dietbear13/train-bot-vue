@@ -172,8 +172,8 @@
 
 <script lang="ts">
 import { defineComponent, computed } from 'vue';
-import type { Exercise } from '~/composables/types';
-import BottomSheetWithClose from '~/components/shared/BottomSheetWithClose.vue';
+import type { Exercise } from '../../composables/types';
+import BottomSheetWithClose from '../../components/shared/BottomSheetWithClose.vue';
 
 export default defineComponent({
   name: 'ExerciseInfo',

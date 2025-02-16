@@ -56,13 +56,13 @@
           :telegramUserId="telegramUserId"
           :refreshingDays="refreshingDays"
           @sendWorkoutPlan="sendWorkoutPlan($event)"
-      @regenerateWholeSplit="regenerateWholeSplit"
-      @refreshDayExercises="refreshDayExercises"
-      @increaseRepsSplit="increaseRepsSplit"
-      @decreaseRepsSplit="decreaseRepsSplit"
-      @removeExerciseSplit="removeExerciseSplit"
-      @regenerateExerciseSplit="regenerateExerciseSplit"
-      :openExerciseInfo="openExerciseInfo"
+          @regenerateWholeSplit="regenerateWholeSplit"
+          @refreshDayExercises="refreshDayExercises"
+          @increaseRepsSplit="increaseRepsSplit"
+          @decreaseRepsSplit="decreaseRepsSplit"
+          @removeExerciseSplit="removeExerciseSplit"
+          @regenerateExerciseSplit="regenerateExerciseSplit"
+          :openExerciseInfo="openExerciseInfo"
       />
     </div>
   </div>
@@ -94,14 +94,15 @@
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted, watch } from 'vue'
 import { retrieveLaunchParams } from '@telegram-apps/sdk'
-import { useUserStore } from '../../stores/userStore'
-import { useApi } from '../../composables/useApi'
-import useSplitGenerator from '../../composables/useSplitGenerator'
+import { useUserStore } from '../../../stores/userStore'
+import { useApi } from '../../../composables/useApi'
+import useSplitGenerator from '../../../composables/useSplitGenerator'
 
 // Импортируем компоненты
-import TrainingOnWeekInputs from '../../components/training/week/TrainingOnWeekInputs.vue'
-import TrainingOnWeekResult from '../../components/training/week/TrainingOnWeekResult.vue'
-import ExerciseInfo from '../../components/training/ExerciseInfo.vue'
+import TrainingOnWeekInputs from './TrainingOnWeekInputs.vue'
+import TrainingOnWeekResult from './TrainingOnWeekResult.vue'
+import ExerciseInfo from '../ExerciseInfo.vue'
+
 
 interface SnackbarState {
   show: boolean
@@ -282,7 +283,7 @@ export default defineComponent({
         timestamp: Date.now(),
         plan // <-- ВАЖНО: Передаём полный план
       }
-      console.log('🚨 payload', payload)
+      console.log('payload', payload)
       try {
         const response = await apiRequest<any>('POST', '/analytics/save-sended-workout', payload)
         console.log('Ответ от /analytics/save-sended-workout:', response)

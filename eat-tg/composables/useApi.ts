@@ -18,9 +18,10 @@ export function useApi() {
         data?: any,
         params?: any
     ): Promise<T> => {
+        // Логика кэширования
         if (method === 'get') {
             if (endpoint === 'splits') {
-                if (userStore.splits.length === 0) { // ФИКС: заменено userStore.hasSplits
+                if (userStore.splits.length === 0) {
                     console.log('🔄  Загружаем сплиты с API...');
                     const response = await axiosInstance({ method, url: endpoint, data, params });
                     userStore.setSplits(response.data);
@@ -30,14 +31,24 @@ export function useApi() {
                     return userStore.splits as T;
                 }
             }
-            if (endpoint === 'exercises' && userStore.exercises.length) return userStore.exercises as T;
+
+            if (endpoint === 'exercises' && userStore.exercises.length) {
+                console.log('✅ Используем кэшированные упражнения.');
+                return userStore.exercises as T;
+            }
 
             if (endpoint === 'blog-articles' && userStore.blogArticles.length) {
                 console.log('✅ Используем кэшированные статьи блога.');
                 return userStore.blogArticles as T;
             }
+
+            if (endpoint === 'users' && userStore.users.length) {
+                console.log('✅ Используем кэшированные данные пользователей.');
+                return userStore.users as T;
+            }
         }
 
+        // Если кэш не подошёл, делаем запрос:
         const config: AxiosRequestConfig = {
             method,
             url: endpoint,
@@ -49,9 +60,31 @@ export function useApi() {
             const response = await axiosInstance(config);
 
             if (method === 'get') {
-                if (endpoint === 'splits') userStore.setSplits(response.data);
-                if (endpoint === 'exercises') userStore.setExercises(response.data);
-                if (endpoint === 'blog-articles') userStore.setBlogArticles(response.data);
+                // Сохранение в store
+                if (endpoint === 'splits') {
+                    userStore.setSplits(response.data);
+                } else if (endpoint === 'exercises') {
+                    userStore.setExercises(response.data);
+                } else if (endpoint === 'blog-articles') {
+                    userStore.setBlogArticles(response.data);
+                } else if (endpoint === 'users') {
+                    // Тут response.data = { users: [...] }
+                    const usersArray = response.data.users;
+                    userStore.setUsers(usersArray);
+
+                    // Ищем нужного пользователя по userStore.telegramId
+                    const currentId = userStore.telegramId;
+                    if (currentId) {
+                        const matchingUser = usersArray.find((u: any) => u.telegramId === currentId);
+                        if (matchingUser && matchingUser.trainingHistory) {
+                            // Сохраняем тренировочную историю только текущего пользователя
+                            userStore.setTrainingHistory(currentId, matchingUser.trainingHistory);
+                        } else {
+                            // Если не нашли / нет trainingHistory — обнуляем
+                            userStore.setTrainingHistory(currentId, []);
+                        }
+                    }
+                }
             }
 
             return response.data;
