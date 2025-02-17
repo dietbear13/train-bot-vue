@@ -32,17 +32,17 @@ export function useApi() {
                 }
             }
 
-            if (endpoint === 'exercises' && userStore.exercises.length) {
+            else if (endpoint === 'exercises' && userStore.exercises.length) {
                 console.log('✅ Используем кэшированные упражнения.');
                 return userStore.exercises as T;
             }
 
-            if (endpoint === 'blog-articles' && userStore.blogArticles.length) {
+            else if (endpoint === 'blog-articles' && userStore.blogArticles.length) {
                 console.log('✅ Используем кэшированные статьи блога.');
                 return userStore.blogArticles as T;
             }
 
-            if (endpoint === 'users' && userStore.users.length) {
+            else if (endpoint === 'users' && userStore.users.length) {
                 console.log('✅ Используем кэшированные данные пользователей.');
                 return userStore.users as T;
             }
@@ -70,6 +70,8 @@ export function useApi() {
                 } else if (endpoint === 'users') {
                     // Тут response.data = { users: [...] }
                     const usersArray = response.data.users;
+                    console.log('👀 usersArray', usersArray, response.data);
+
                     userStore.setUsers(usersArray);
 
                     // Ищем нужного пользователя по userStore.telegramId

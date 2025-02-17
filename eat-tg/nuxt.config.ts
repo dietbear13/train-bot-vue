@@ -41,11 +41,12 @@ export default defineNuxtConfig({
     },
   },
 
+  // devtools: { enabled: true },
+
   modules: [
-    // 'pinia-plugin-persistedstate/nuxt',
     '@nuxt/fonts',
-    // '@pinia/nuxt',
     '@nuxtjs/device',
+    // '@nuxt/devtools',
     [
       'nuxt-yandex-metrika',
       {

@@ -60,5 +60,5 @@ export const useUserStore = defineStore('user', {
             this.trainingHistory[telegramId] = history;
         },
     },
-    // persist: true, // если используете pinia-plugin-persist
+    persist: true, // если используете pinia-plugin-persist
 });
