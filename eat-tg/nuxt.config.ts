@@ -73,7 +73,7 @@ export default defineNuxtConfig({
           configFile: 'assets/variable.scss'
         }
       }),
-
+      '~/plugins/fetchUserData'
     ],
   },
 
