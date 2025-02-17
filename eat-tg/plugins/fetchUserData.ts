@@ -15,7 +15,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     }
 
     else if (!userStore.blogArticles.length) {
-        userStore.setBlogArticles(await apiRequest('GET', 'blog-articles'))
+        userStore.setBlogArticles(await apiRequest('GET', 'blog'))
     }
 
     else if (!userStore.users.length) {

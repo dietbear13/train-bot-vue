@@ -122,7 +122,7 @@ onMounted(async () => {
     );
 
     if (!response.users) {
-      console.error('кбжу кард профиль - Ответ не содержит массива users');
+      console.error('Ответ не содержит массива users');
       return;
     }
 

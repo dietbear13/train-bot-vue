@@ -37,7 +37,7 @@ export function useApi() {
                 return userStore.exercises as T;
             }
 
-            else if (endpoint === 'blog-articles' && userStore.blogArticles.length) {
+            else if (endpoint === 'blog' && userStore.blogArticles.length) {
                 console.log('✅ Используем кэшированные статьи блога.');
                 return userStore.blogArticles as T;
             }
@@ -65,7 +65,7 @@ export function useApi() {
                     userStore.setSplits(response.data);
                 } else if (endpoint === 'exercises') {
                     userStore.setExercises(response.data);
-                } else if (endpoint === 'blog-articles') {
+                } else if (endpoint === 'blog') {
                     userStore.setBlogArticles(response.data);
                 } else if (endpoint === 'users') {
                     // Тут response.data = { users: [...] }
