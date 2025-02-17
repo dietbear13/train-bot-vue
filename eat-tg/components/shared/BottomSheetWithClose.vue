@@ -2,7 +2,6 @@
 <template>
   <v-bottom-sheet
       v-model="internalModel"
-      :max-width="maxWidth"
       :persistent="persistent"
       class="rounded-t-xl"
       min-width="'95%'"
@@ -47,10 +46,6 @@ export default defineComponent({
     persistent: {
       type: Boolean,
       default: false
-    },
-    maxWidth: {
-      type: String,
-      default: '600px'
     }
   },
   emits: ['update:modelValue'],

@@ -2,10 +2,10 @@
   <BottomSheetWithClose
       v-model="dialogLocal"
       title="Сохранённые тренировки"
-      :min-height="'95%'"
+      :min-height="'100%'"
   >
     <v-list lines="two">
-      <!-- Перебираем тренировки -->
+      <!-- Перебираем тренировки, у которых isSended = true -->
       <div
           v-for="(workout, index) in savedWorkouts"
           :key="workout._id"
@@ -32,24 +32,24 @@
               style="border-radius: 16px"
           >
             <v-card-title>
-              Детали тренировки
+              {{ currentSplit?.split }}
             </v-card-title>
             <v-card-subtitle>
-              {{ formatDate(savedWorkouts[expandedWorkout].timestamp) }}
+              {{ formatDate(currentWorkout?.timestamp || 0) }}
             </v-card-subtitle>
 
-            <!-- Новые поля: goal и splitType, выводим под подзаголовком -->
+            <!-- Отображаем goal, splitType -->
             <v-card-text class="mt-2">
-              <strong>Цель:</strong> {{ savedWorkouts[expandedWorkout].formData?.goal }}<br>
-              <strong>Тип сплита:</strong> {{ savedWorkouts[expandedWorkout].formData?.splitType }}
+              <strong>Цель:</strong> {{ currentWorkout?.formData?.goal }}<br>
+              {{ currentSplit?.splitComment }}
             </v-card-text>
 
             <!-- Прозрачные панели без видимых границ -->
-            <v-card variant="tonal" style="border-radius: 16px">
+            <v-card style="border-radius: 16px">
               <v-expansion-panels>
                 <!-- Перебираем дни, у которых есть упражнения -->
                 <v-expansion-panel
-                    v-for="(day, i) in savedWorkouts[expandedWorkout].plan?.filter(d => d.exercises.length > 0)"
+                    v-for="(day, i) in currentWorkout?.plan?.filter(d => d.exercises.length > 0)"
                     :key="i"
                 >
                   <template #title>
@@ -68,13 +68,17 @@
                           :key="exercise._id"
                           @click="openExerciseInfo(exercise)"
                       >
-                        <v-list-item-title>
-                          <v-icon color="secondary" class="me-2">mdi-dumbbell</v-icon>
-                          {{ exercise.name }}
-                        </v-list-item-title>
-                        <v-list-item-subtitle>
-                          {{ exercise.sets }}×{{ exercise.reps }}
-                        </v-list-item-subtitle>
+                        <!-- Не менять тег v-list-item-content - небаг, а фича.
+                             Левая вертикальная колонка (иконка и число повторений), справа текст упражнения -->
+                        <v-list-item-content class="d-flex align-center">
+                          <div class="d-flex flex-column align-center me-3">
+                            <v-icon color="secondary" class="mb-1">mdi-dumbbell</v-icon>
+                            <span class="text-caption">{{ exercise.sets }}×{{ exercise.reps }}</span>
+                          </div>
+                          <v-card-text class="text-break">
+                            {{ exercise.name }}
+                          </v-card-text>
+                        </v-list-item-content>
                       </v-list-item>
                     </v-list>
                   </v-expansion-panel-text>
@@ -95,18 +99,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import BottomSheetWithClose from '../shared/BottomSheetWithClose.vue';
 import ExerciseInfo from '../training/ExerciseInfo.vue';
 import { useUserStore } from '../../stores/userStore';
+import { useApi } from '../../composables/useApi'; // <-- Ваш импорт API, поправьте путь при необходимости
 
+// Типы
 interface Exercise {
   _id: string;
   name: string;
   sets: number;
   reps: number;
   originalPattern?: string;
-  // Если есть другие поля (gifImage, technique и т.д.) — дописывайте
+  // Если есть другие поля (gifImage, technique и т.д.) — допишите
 }
 
 interface WorkoutDay {
@@ -119,25 +125,31 @@ interface Workout {
   timestamp: number;
   isSended: boolean;
   plan?: WorkoutDay[];
-  // Добавляем formData с goal, splitType (и любыми другими полями)
   formData?: {
     goal?: string;
     splitType?: string;
+    splitId?: string;
     [key: string]: any;
   };
 }
 
-// Принимаем prop modelValue (чтобы управлять видимостью шторки через v-model)
+interface SplitData {
+  _id: string;
+  split: string;
+  splitComment: string;
+  [key: string]: any;
+}
+
+// Принимаем prop modelValue (для управления BottomSheet через v-model)
 const props = defineProps<{
   modelValue: boolean;
 }>();
 
 const emits = defineEmits(['update:modelValue']);
 
-// Локальная переменная "dialogLocal", чтобы связать её с внутренним BottomSheet
+// Для управления видимостью шторки (BottomSheet)
 const dialogLocal = ref(props.modelValue);
 
-// Следим за изменениями из родителя (Admin.vue)
 watch(
     () => props.modelValue,
     (val) => {
@@ -145,34 +157,61 @@ watch(
     }
 );
 
-// И если внутри WorkoutsCardProfile человек закроет/откроет BottomSheet
-// — уведомляем родителя (emit).
 watch(dialogLocal, (val) => {
   emits('update:modelValue', val);
 });
 
-// Получаем данные из Pinia-хранилища
 const userStore = useUserStore();
+const { apiRequest } = useApi();
 
-// Индекс текущей «раскрытой» тренировки
+// Индекс «раскрытой» тренировки
 const expandedWorkout = ref<number | null>(null);
 
-// Для открытия информации об упражнении
+// Для ExerciseInfo
 const showExerciseInfoSheet = ref(false);
 const selectedExercise = ref<Exercise | null>(null);
 
-// Фильтруем только те тренировки, у которых isSended = true
+/**
+ * Все тренировки (isSended = true)
+ */
 const savedWorkouts = computed<Workout[]>(() => {
   const tid = userStore.telegramId;
   if (!tid) return [];
+  // Берём массив, соответствующий этому telegramId
   const workouts = userStore.trainingHistory[tid] || [];
+  // Фильтруем по isSended === true
   return workouts.filter((w: Workout) => w.isSended === true);
 });
 
+/**
+ * Текущая раскрытая тренировка
+ */
+const currentWorkout = computed<Workout | null>(() => {
+  if (expandedWorkout.value === null) {
+    return null;
+  }
+  return savedWorkouts.value[expandedWorkout.value] || null;
+});
+
+/**
+ * Ищем нужный объект сплита из userStore.splits
+ */
+const currentSplit = computed<SplitData | null>(() => {
+  const splitId = currentWorkout.value?.formData?.splitId;
+  if (!splitId) return null;
+  return userStore.splits.find((s: SplitData) => s._id === splitId) || null;
+});
+
+/**
+ * Развернуть / свернуть выбранный индекс
+ */
 function toggleWorkout(index: number) {
   expandedWorkout.value = expandedWorkout.value === index ? null : index;
 }
 
+/**
+ * Форматировать дату
+ */
 function formatDate(timestamp: number) {
   return new Date(timestamp).toLocaleString('ru-RU', {
     day: '2-digit',
@@ -184,30 +223,50 @@ function formatDate(timestamp: number) {
 }
 
 /**
- * При клике по упражнению:
- * 1) Ищем в userStore.exercises полное описание (gifImage, technique и т.п.).
- * 2) Если нашли — объединяем данные (включая sets/reps).
- * 3) Открываем шторку (ExerciseInfo).
+ * При клике по упражнению открываем ExerciseInfo
  */
 function openExerciseInfo(exercise: Exercise) {
-  const foundExercise = userStore.exercises.find(e => e._id === exercise._id);
-
-  if (foundExercise) {
+  const found = userStore.exercises.find((e) => e._id === exercise._id);
+  if (found) {
     selectedExercise.value = {
-      ...foundExercise,
+      ...found,
       sets: exercise.sets,
-      reps: exercise.reps
+      reps: exercise.reps,
     };
   } else {
     selectedExercise.value = exercise;
   }
-
   showExerciseInfoSheet.value = true;
 }
+
+/**
+ * onMounted: соберём все splitId из тренировок,
+ * сразу загрузим данные о сплитах (если ещё не загружены).
+ */
+onMounted(async () => {
+  try {
+    // Загружаем сплиты, если их ещё нет
+    if (userStore.splits.length === 0) {
+      await apiRequest<any[]>('get', 'splits');
+    }
+
+    // Собираем все splitId из тренировок
+    const neededSplitIds = new Set<string>();
+    for (const w of savedWorkouts.value) {
+      if (w.formData?.splitId) {
+        neededSplitIds.add(w.formData.splitId);
+      }
+    }
+    console.log('Нужные splitIds:', Array.from(neededSplitIds));
+
+    // Если какие-то не найдены - можно сделать отдельный запрос
+  } catch (error) {
+    console.error('Ошибка при загрузке сплитов:', error);
+  }
+});
 </script>
 
 <style scoped>
-/* Убираем фоновый цвет и границы у панели */
 .transparent-panel {
   background-color: transparent !important;
   border: none !important;

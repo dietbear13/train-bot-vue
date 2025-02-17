@@ -8,9 +8,8 @@
       block
       color="primary"
       class="my-3"
-      size="large"
       elevation="1"
-      rounded="pills"
+      rounded="xl"
       @click="showSavedWorkouts = true"
   >
     📋 Сохранённые тренировки
