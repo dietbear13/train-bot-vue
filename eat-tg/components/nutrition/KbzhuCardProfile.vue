@@ -121,11 +121,14 @@ onMounted(async () => {
         'users'
     );
 
+    console.log('📥 API Response:', response);
+
     if (!response.users) {
-      console.error('Ответ не содержит массива users');
+      console.error('🚨 Ответ не содержит массива users');
       return;
     }
 
+    console.log('🔍 userStore.telegramId:', userStore.telegramId);
     const currentUser = response.users.find(
         (u) => u.telegramId === userStore.telegramId
     );
@@ -134,10 +137,17 @@ onMounted(async () => {
       return;
     }
 
+    if (!currentUser.kbzhuHistory || currentUser.kbzhuHistory.length === 0) {
+      console.warn('ℹ️ У пользователя нет истории KБЖУ.');
+      return;
+    }
+
+
     if (currentUser.kbzhuHistory && currentUser.kbzhuHistory.length > 0) {
       const sortedHistory = [...currentUser.kbzhuHistory].sort(
           (a, b) => b.timestamp - a.timestamp
       );
+      console.log('🗂️ Отсортированная история KБЖУ:', sortedHistory);
       userKbzhu.value = sortedHistory[0].kbzhuResult;
       userTimestamp.value = sortedHistory[0].timestamp;
     }

@@ -22,88 +22,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
-import { useApi } from '../../composables/useApi';
-import { useUserStore } from '../../stores/userStore';
+import { ref } from 'vue';
 import WorkoutsCardProfile from './WorkoutsCardProfile.vue';
 import KbzhuCardProfile from "../nutrition/KbzhuCardProfile.vue";
+// Путь поправьте под реальную структуру
 
-interface IKbzhuResult {
-  calories: number;
-  extraCalories: number;
-  proteins: number;
-  fats: number;
-  carbs: number;
-}
-
-interface IKbzhuHistoryItem {
-  formData: Record<string, any>;
-  kbzhuResult: IKbzhuResult;
-  timestamp: number;
-  _id: string;
-}
-
-interface IUser {
-  _id: string;
-  telegramId: number;
-  role: string;
-  dateAdded: number;
-  kbzhuHistory: IKbzhuHistoryItem[];
-  referrals: any[];
-}
-
-const { apiRequest } = useApi();
-const userStore = useUserStore();
-
-const userKbzhu = ref<IKbzhuResult | null>(null);
-const userTimestamp = ref<number | null>(null);
-const isLoading = ref<boolean>(true);
+// Локальный стейт, чтобы управлять BottomSheet
 const showSavedWorkouts = ref(false);
-
-onMounted(async () => {
-  try {
-    const response = await apiRequest<{ users?: IUser[]; error?: string }>(
-        'get',
-        'users'
-    );
-
-    if (!response.users) {
-      console.error('ProfileAdmin Ответ не содержит массива users');
-      return;
-    }
-
-    const currentUser = response.users.find(
-        (u) => u.telegramId === userStore.telegramId
-    );
-    if (!currentUser) {
-      console.warn('Текущий пользователь не найден в списке /users');
-      return;
-    }
-
-    if (currentUser.kbzhuHistory && currentUser.kbzhuHistory.length > 0) {
-      const sortedHistory = [...currentUser.kbzhuHistory].sort(
-          (a, b) => b.timestamp - a.timestamp
-      );
-      userKbzhu.value = sortedHistory[0].kbzhuResult;
-      userTimestamp.value = sortedHistory[0].timestamp;
-    }
-  } catch (error) {
-    console.error('Ошибка при получении пользователей:', error);
-  } finally {
-    isLoading.value = false;
-  }
-});
-
-const latestKbzhuResult = computed(() => userKbzhu.value); // ✅ Связываем с userKbzhu
-const latestKbzhuTimestamp = computed(() => userTimestamp.value); // ✅ Связываем с userTimestamp
-
-const formattedDate = computed(() => {
-  if (!userTimestamp.value) return '';
-  const date = new Date(userTimestamp.value);
-  return date.toLocaleDateString('ru-RU', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-});
 </script>
