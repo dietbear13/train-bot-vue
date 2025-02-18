@@ -14,10 +14,8 @@
             @click="toggleWorkout(index)"
             class="py-2"
         >
-          <v-list-item-title>
-            <v-icon color="primary" class="me-2">mdi-calendar</v-icon>
-            {{ formatDate(workout.timestamp) }}
-          </v-list-item-title>
+          <v-icon color="primary" class="me-2">mdi-calendar</v-icon>
+          {{ formatDate(workout.timestamp) }}
         </v-list-item>
 
         <!-- Разделитель между элементами списка -->
@@ -27,7 +25,7 @@
         <v-expand-transition>
           <v-card
               v-if="expandedWorkout === index"
-              class="mx-2 my-1 pa-2"
+              class="mx-2 px-2"
               elevation="1"
               style="border-radius: 16px"
           >
@@ -42,6 +40,12 @@
             <v-card-text class="mt-2">
               <strong>Цель:</strong> {{ currentWorkout?.formData?.goal }}<br>
               {{ currentSplit?.splitComment }}
+              <v-btn color="primary" rounded="xl">
+                поделиться тренировкой
+              </v-btn>
+              <v-btn color="primary" rounded="xl">
+                редактировать тренировку
+              </v-btn>
             </v-card-text>
 
             <!-- Прозрачные панели без видимых границ -->
@@ -54,7 +58,7 @@
                 >
                   <template #title>
                     <v-card elevation="0" class="transparent-panel">
-                      <v-card-text class="text-h6 text-primary d-flex align-center my-1">
+                      <v-card-text class="text-h6 text-primary d-flex align-center pa-0">
                         <v-icon color="primary" class="me-2">mdi-calendar-edit</v-icon>
                         {{ day.dayName }}
                       </v-card-text>
@@ -62,25 +66,28 @@
                   </template>
 
                   <v-expansion-panel-text>
-                    <v-list density="compact" lines="two">
-                      <v-list-item
-                          v-for="exercise in day.exercises"
-                          :key="exercise._id"
-                          @click="openExerciseInfo(exercise)"
-                      >
-                        <!-- Не менять тег v-list-item-content - небаг, а фича.
-                             Левая вертикальная колонка (иконка и число повторений), справа текст упражнения -->
-                        <v-list-item-content class="d-flex align-center">
-                          <div class="d-flex flex-column align-center me-3">
-                            <v-icon color="secondary" class="mb-1">mdi-dumbbell</v-icon>
-                            <span class="text-caption">{{ exercise.sets }}×{{ exercise.reps }}</span>
-                          </div>
-                          <v-card-text class="text-break">
-                            {{ exercise.name }}
-                          </v-card-text>
-                        </v-list-item-content>
-                      </v-list-item>
-                    </v-list>
+                    <!-- Вот здесь обёрнут список упражнений в карточку variant="tonal" -->
+                    <v-card variant="tonal" style="border-radius:16px;">
+                      <v-list density="compact" lines="two" class="py-0">
+                        <v-list-item
+                            v-for="exercise in day.exercises"
+                            :key="exercise._id"
+                            @click="openExerciseInfo(exercise)"
+                            class="py-0"
+                        >
+                          <!-- Левая вертикальная колонка (иконка и число повторений), справа текст упражнения -->
+                          <v-list-item-content class="d-flex align-center py-0">
+                            <div class="d-flex flex-column align-center me-3">
+                              <v-icon color="secondary" class="mb-1">mdi-dumbbell</v-icon>
+                              <span class="text-caption">{{ exercise.sets }}×{{ exercise.reps }}</span>
+                            </div>
+                            <v-card-text class="text-break">
+                              {{ exercise.name }}
+                            </v-card-text>
+                          </v-list-item-content>
+                        </v-list-item>
+                      </v-list>
+                    </v-card>
                   </v-expansion-panel-text>
                 </v-expansion-panel>
               </v-expansion-panels>

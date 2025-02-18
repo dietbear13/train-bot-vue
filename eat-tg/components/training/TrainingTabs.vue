@@ -71,16 +71,13 @@ const router = useRouter()
 
 // Текущая вкладка из query-параметра или 'main' по умолчанию
 const currentTab = computed<TabKey>(() => {
-  // console.log('current tab',  route.query.tab)
-  const currentTab = computed<TabKey>(() => {
-    let queryTab = route.query.tab
-    if (Array.isArray(queryTab)) {
-      queryTab = queryTab[0]
-    }
-    return typeof queryTab === 'string' && queryTab in tabMap ? queryTab as TabKey : 'main'
-  })
-  return 'main'
+  let queryTab = route.query.tab
+  if (Array.isArray(queryTab)) {
+    queryTab = queryTab[0]
+  }
+  return typeof queryTab === 'string' && queryTab in tabMap ? queryTab as TabKey : 'main'
 })
+
 
 // Активный индекс вкладки (без ошибки, так как currentTab.value имеет тип TabKey)
 const activeTab = ref<number>(tabMap[currentTab.value])

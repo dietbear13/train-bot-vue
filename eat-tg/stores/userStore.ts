@@ -71,6 +71,7 @@ export const useUserStore = defineStore('user', {
         setTrainingHistory(telegramId: number, history: any[]) {
             this.trainingHistory[telegramId] = history;
         },
+        hasSplits: false,
 
         // Проверка актуальности кэша
         isCacheValid(timestamp: number | null, maxAgeMs = 10 * 60 * 1000) {
