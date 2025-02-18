@@ -116,22 +116,22 @@ const isLoading = ref<boolean>(true);
 
 onMounted(async () => {
   try {
-    const response = await apiRequest<{ users?: IUser[]; error?: string }>(
-        'get',
-        'users'
-    );
-
+    // Указываем, что ожидаем массив пользователей
+    const response = await apiRequest<IUser[]>('get', 'users');
     console.log('📥 API Response:', response);
 
-    if (!response.users) {
-      console.error('🚨 Ответ не содержит массива users');
+    // Проверяем, что это действительно массив
+    if (!Array.isArray(response)) {
+      console.error('🚨 Ответ не является массивом пользователей');
       return;
     }
 
+    // Ищем пользователя по telegramId
     console.log('🔍 userStore.telegramId:', userStore.telegramId);
-    const currentUser = response.users.find(
+    const currentUser = response.find(
         (u) => u.telegramId === userStore.telegramId
     );
+
     if (!currentUser) {
       console.warn('Текущий пользователь не найден в списке /users');
       return;
@@ -142,15 +142,14 @@ onMounted(async () => {
       return;
     }
 
+    // Сортируем по убыванию timestamp, чтобы взять самую свежую запись
+    const sortedHistory = [...currentUser.kbzhuHistory].sort(
+        (a, b) => b.timestamp - a.timestamp
+    );
+    console.log('🗂️ Отсортированная история KБЖУ:', sortedHistory);
 
-    if (currentUser.kbzhuHistory && currentUser.kbzhuHistory.length > 0) {
-      const sortedHistory = [...currentUser.kbzhuHistory].sort(
-          (a, b) => b.timestamp - a.timestamp
-      );
-      console.log('🗂️ Отсортированная история KБЖУ:', sortedHistory);
-      userKbzhu.value = sortedHistory[0].kbzhuResult;
-      userTimestamp.value = sortedHistory[0].timestamp;
-    }
+    userKbzhu.value = sortedHistory[0].kbzhuResult;
+    userTimestamp.value = sortedHistory[0].timestamp;
   } catch (error) {
     console.error('Ошибка при получении пользователей:', error);
   } finally {

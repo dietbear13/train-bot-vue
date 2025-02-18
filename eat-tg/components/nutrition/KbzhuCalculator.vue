@@ -401,7 +401,7 @@ const selectGender = (gender: string) => {
   // Пример автозаполнения при выборе пола
   if (gender === 'мужчина') {
     formData.height = 175;
-    formData.weight = 90;
+    formData.weight = 80;
     formData.age = 30;
   } else if (gender === 'женщина') {
     formData.height = 170;
@@ -592,7 +592,7 @@ const sendKbzhuResult = async () => {
   console.log('Отправка результатов для Telegram ID:', telegramUserId.value, 'kbzhuResult:', kbzhuResult.value);
 
   try {
-    await apiRequest('post', 'bot/send-kbzhu', {
+    await apiRequest('post', 'send-kbzhu', {
       userId: telegramUserId.value,
       kbzhuResult: kbzhuResult.value,
     });

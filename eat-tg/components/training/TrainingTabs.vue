@@ -1,4 +1,4 @@
-<!--components\nutrition\NutritionTabs.vue-->
+<!--components\training\TrainingTabs.vue-->
 
 <template>
   <v-container class="training-container">

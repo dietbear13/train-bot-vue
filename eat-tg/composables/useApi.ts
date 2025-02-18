@@ -11,6 +11,7 @@ const axiosInstance: AxiosInstance = axios.create({
 
 export function useApi() {
     const userStore = useUserStore();
+    userStore.loadCache(); // Загружаем данные из localStorage
 
     const apiRequest = async <T>(
         method: Method,
@@ -18,37 +19,24 @@ export function useApi() {
         data?: any,
         params?: any
     ): Promise<T> => {
-        // Логика кэширования
         if (method === 'get') {
-            if (endpoint === 'splits') {
-                if (userStore.splits.length === 0) {
-                    console.log('🔄  Загружаем сплиты с API...');
-                    const response = await axiosInstance({ method, url: endpoint, data, params });
-                    userStore.setSplits(response.data);
-                    return response.data;
-                } else {
-                    console.log('✅  Используем кэшированные сплиты.');
-                    return userStore.splits as T;
+            // Кэшируемые данные на 1 час
+            if (['splits', 'exercises', 'blog', 'dietsList'].includes(endpoint)) {
+                const cache = userStore[endpoint as keyof typeof userStore] as any;
+                if (cache && cache.data && cache.data.length > 0 && userStore.isCacheValid(cache.timestamp)) {
+                    console.log(`✅ Используем кэшированные данные для ${endpoint}.`);
+                    return cache.data as T;
                 }
             }
 
-            else if (endpoint === 'exercises' && userStore.exercises.length) {
-                console.log('✅ Используем кэшированные упражнения.');
-                return userStore.exercises as T;
-            }
-
-            else if (endpoint === 'blog' && userStore.blogArticles.length) {
-                console.log('✅ Используем кэшированные статьи блога.');
-                return userStore.blogArticles as T;
-            }
-
-            else if (endpoint === 'users' && userStore.users.length) {
-                console.log('✅ Используем кэшированные данные пользователей.');
+            // `users` всегда запрашиваем с сервера, т.к. они реактивные
+            if (endpoint === 'users' && userStore.users.length > 0) {
+                console.log('✅ Используем реактивные данные пользователей.');
                 return userStore.users as T;
             }
         }
 
-        // Если кэш не подошёл, делаем запрос:
+        // Если кэша нет или устарел, делаем запрос
         const config: AxiosRequestConfig = {
             method,
             url: endpoint,
@@ -60,38 +48,30 @@ export function useApi() {
             const response = await axiosInstance(config);
 
             if (method === 'get') {
-                // Сохранение в store
                 if (endpoint === 'splits') {
                     userStore.setSplits(response.data);
                 } else if (endpoint === 'exercises') {
                     userStore.setExercises(response.data);
                 } else if (endpoint === 'blog') {
                     userStore.setBlogArticles(response.data);
+                } else if (endpoint === 'dietsList') {
+                    userStore.setDietsList(response.data);
                 } else if (endpoint === 'users') {
-                    // Тут response.data = { users: [...] }
-                    const usersArray = response.data.users;
+                    const usersArray = Array.isArray(response.data) ? response.data : response.data.users;
                     console.log('👀 usersArray', usersArray, response.data);
 
-                    userStore.setUsers(usersArray);
-
-                    // Ищем нужного пользователя по userStore.telegramId
-                    const currentId = userStore.telegramId;
-                    if (currentId) {
-                        const matchingUser = usersArray.find((u: any) => u.telegramId === currentId);
-                        if (matchingUser && matchingUser.trainingHistory) {
-                            // Сохраняем тренировочную историю только текущего пользователя
-                            userStore.setTrainingHistory(currentId, matchingUser.trainingHistory);
-                        } else {
-                            // Если не нашли / нет trainingHistory — обнуляем
-                            userStore.setTrainingHistory(currentId, []);
-                        }
+                    if (!usersArray) {
+                        console.error('❌ Ошибка: API не вернул массив пользователей.', response.data);
+                        throw new Error('API не вернул массив пользователей.');
                     }
+
+                    userStore.setUsers(usersArray);
                 }
             }
 
             return response.data;
         } catch (error) {
-            console.error(`Ошибка при запросе к ${endpoint}:`, error);
+            console.error(`❌ Ошибка при запросе к ${endpoint}:`, error);
             throw error;
         }
     };
