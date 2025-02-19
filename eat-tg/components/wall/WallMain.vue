@@ -1,6 +1,6 @@
 <template>
   <v-container>
-    <v-card class="pa-5">
+    <v-card class="py-1">
       <v-card-title>🔥 Стена тренировок</v-card-title>
       <v-card-subtitle>Выберите тренировку, чтобы сохранить или лайкнуть</v-card-subtitle>
 
@@ -18,8 +18,11 @@ const userStore = useUserStore();
 
 // Загружаем тренировки всех пользователей с isSended = true
 const allWorkouts = computed(() => {
-  return userStore.allUsers
-      .flatMap(user => user.trainingHistory.filter(w => w.isSended === true));
+  console.log("📌 userStore.users", userStore.users);
+
+  return userStore.users.flatMap(user =>
+      user.trainingHistory ? user.trainingHistory.filter(w => w.isSended === true) : []
+  );
 });
 
 // Сортируем по лайкам
