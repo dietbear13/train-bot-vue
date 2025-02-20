@@ -50,10 +50,11 @@
 import { ref, watch, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-// Импорт компонентов вкладок
-import TrainingOnWeek from './week/TrainingOnWeek.vue'
-import TrainingByMuscles from './TrainingByMuscles.vue'
-import ExerciseSearch from './ExerciseSearch.vue'
+import { defineAsyncComponent } from 'vue';
+
+const TrainingOnWeek = defineAsyncComponent(() => import('./week/TrainingOnWeek.vue'));
+const TrainingByMuscles = defineAsyncComponent(() => import('./TrainingByMuscles.vue'));
+const ExerciseSearch = defineAsyncComponent(() => import('./ExerciseSearch.vue'));
 
 // Определяем тип для ключей вкладок
 type TabKey = 'main' | 'workoutMuscles' | 'exerciseSearch'
@@ -64,6 +65,8 @@ const tabMap: Record<TabKey, number> = {
   workoutMuscles: 1,
   exerciseSearch: 2
 }
+
+
 
 // Инициализация роутера и текущего маршрута
 
@@ -79,12 +82,19 @@ const currentTab = computed<TabKey>(() => {
   }
   return typeof queryTab === 'string' && queryTab in tabMap ? queryTab as TabKey : 'main'
 })
+console.log('🚨 currentTab:', currentTab.value);
 
 
 // Активный индекс вкладки (без ошибки, так как currentTab.value имеет тип TabKey)
 const activeTab = ref<number>(0) // По умолчанию - первая вкладка
 
-console.log('🚨 currentTab:', currentTab.value);
+watch(activeTab, (newIndex) => {
+  const newTab = Object.keys(tabMap).find((key) => tabMap[key as TabKey] === newIndex) as TabKey;
+  if (newTab && newTab !== currentTab.value) {
+    router.push({ path: route.path, query: { tab: newTab } });
+  }
+});
+
 
 watch(currentTab, (newTab) => {
   activeTab.value = tabMap[newTab] ?? 0; // Если что-то пошло не так, дефолтное значение 0
