@@ -12,18 +12,13 @@
 import { onMounted, ref } from 'vue';
 import './assets/global.css'; // Здесь можно хранить глобальные стили, например для user-select
 import UserInit from './components/shared/UserInit.vue';
+import { useUserStore } from './stores/userStore'
 
 const loading = ref(true);
 
-const userStore = useUserStore()
 const { apiRequest } = useApi()
 
-onMounted(async () => {
-  await apiRequest('GET', 'splits', undefined, undefined, true)
-  await apiRequest('GET', 'exercises', undefined, undefined, true)
-  await apiRequest('GET', 'blog', undefined, undefined, true)
-  await apiRequest('GET', 'users', undefined, undefined, true)
-})
+const userStore = useUserStore()
 
 
 onMounted(() => {

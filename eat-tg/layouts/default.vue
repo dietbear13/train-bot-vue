@@ -32,6 +32,13 @@
 import { ref, watch, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { onMounted } from "vue";
+import { useUserStore } from "../stores/userStore";
+
+const userStore = useUserStore();
+
+onMounted(async () => {
+  await userStore.fetchUserData();
+});
 
 const router = useRouter();
 const route = useRoute();

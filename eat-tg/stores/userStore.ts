@@ -99,6 +99,17 @@ export const useUserStore = defineStore('user', {
             this.blogArticles = JSON.parse(localStorage.getItem('blogCache') || '{"data":[],"timestamp":0}');
             this.dietsList = JSON.parse(localStorage.getItem('dietsCache') || '{"data":[],"timestamp":0}');
         },
+        async forceLoadData() {
+            const { apiRequest } = useApi();
+            this.splits = { data: await apiRequest('GET', 'splits'), timestamp: Date.now() };
+            this.exercises = { data: await apiRequest('GET', 'exercises'), timestamp: Date.now() };
+            this.blogArticles = { data: await apiRequest('GET', 'blog'), timestamp: Date.now() };
+            this.users = await apiRequest('GET', 'users');
+
+            localStorage.setItem('splitsCache', JSON.stringify(this.splits));
+            localStorage.setItem('exercisesCache', JSON.stringify(this.exercises));
+            localStorage.setItem('blogCache', JSON.stringify(this.blogArticles));
+        }
     },
     persist: true,
 });
