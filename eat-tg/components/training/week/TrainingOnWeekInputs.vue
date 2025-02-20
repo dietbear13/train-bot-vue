@@ -35,7 +35,11 @@
       </v-card>
 
       <!-- Выбор цели тренировок (показывается после выбора пола) -->
-      <v-card v-if="formData.gender" class="mb-2 dark-background" variant="tonal">
+      <v-card
+          v-if="formData.gender"
+          class="mb-2 dark-background"
+          variant="tonal"
+      >
         <v-card-text class="pa-1">
           <v-slide-group
               v-model="formData.goal"
@@ -130,7 +134,9 @@
                       :class="['split-content', { 'truncate': formData.splitId !== split._id }]"
                       class="mb-4"
                   >
-                    <v-card-text style="padding: 4px" v-if="split.splitComment">{{ split.splitComment }}</v-card-text>
+                    <v-card-text style="padding: 4px" v-if="split.splitComment">
+                      {{ split.splitComment }}
+                    </v-card-text>
                   </div>
                   <!-- Чип с уровнем сложности -->
                   <v-chip
@@ -152,20 +158,10 @@
         </v-card-text>
       </v-card>
 
-      <v-btn
-          icon
-          @click="showInjuryFilters = true"
-          class="mb-2"
-          rounded="xl"
-      >
-        Фильтр упражнений
-        <v-icon class="ml-1">mdi-account-injury-outline</v-icon>
-      </v-btn>
-
-
       <!-- Если нет доступных сплитов -->
       <v-card
-          v-else-if="formData.gender && uniqueSplitTypes.length === 0"
+          v-if="formData.gender"
+          v-show="uniqueSplitTypes.length === 0"
           class="my-2 dark-background pa-2"
           variant="tonal"
       >
@@ -175,32 +171,49 @@
       </v-card>
 
       <!-- Кнопка "Сгенерировать" (появляется только если выбран сплит) -->
-      <v-btn
+      <v-btn-group
+        class="pr-2"
+        style="width:100%"
+      >
+        <v-btn
           v-if="formData.splitId"
           color="success"
           class="mt-1"
           rounded="xl"
-          width="100%"
+          width="75%"
           :disabled="isAnimating || isGenerating"
           @click="onGenerateSplit"
-      >
-        <!-- Три состояния кнопки: -->
-        <span v-if="isAnimating">Генерирую.. </span>
-        <span v-else-if="isGenerating">Создаю.. </span>
-        <span v-else>Создать</span>
+        >
+          <!-- Три состояния кнопки: -->
+          <span v-if="isAnimating">Генерирую.. </span>
+          <span v-else-if="isGenerating">Создаю.. </span>
+          <span v-else>Создать</span>
 
-        <v-icon right :class="{ rotatingDumbbell: isAnimating || isGenerating }">
-          mdi-dumbbell
-        </v-icon>
-      </v-btn>
+          <v-icon right :class="{ rotatingDumbbell: isAnimating || isGenerating }">
+            mdi-dumbbell
+          </v-icon>
+        </v-btn>
+
+        <!-- Кнопка для фильтров -->
+        <v-btn
+          v-if="formData.splitId"
+          class="ml-1"
+          rounded="xl"
+          color="primary"
+          width="25%"
+          @click="showInjuryFilters = !showInjuryFilters"
+        >
+          <v-icon>mdi-filter-variant</v-icon> Травмы
+        </v-btn>
+      </v-btn-group>
 
       <!-- Ошибки -->
       <v-alert
-          v-if="errorMessages.length > 0"
-          type="error"
-          class="mt-2"
-          dismissible
-          @input="errorMessages.splice(0, errorMessages.length)"
+        v-if="errorMessages.length > 0"
+        type="error"
+        class="mt-2"
+        dismissible
+        @input="errorMessages.splice(0, errorMessages.length)"
       >
         <ul>
           <li v-for="(msg, index) in errorMessages" :key="index">
@@ -210,22 +223,28 @@
       </v-alert>
     </v-form>
 
-    <v-btn
-        class="ml-2"
-        rounded="xl"
-        color="primary"
-        @click="showInjuryFilters = !showInjuryFilters"
-    >
-      <v-icon>mdi-filter-variant</v-icon> Фильтр
-    </v-btn>
-
+    <!-- Разворачиваем фильтры -->
     <v-expand-transition>
-      <v-card v-if="showInjuryFilters" class="pa-3 mt-2 dark-background">
+      <v-card v-if="showInjuryFilters" class="pa-0 mt-2 dark-background">
         <v-card-title>Фильтры по травмам</v-card-title>
-        <v-card-text>
-          <v-checkbox v-model="injuryFilters.spine" label="Спина"></v-checkbox>
-          <v-checkbox v-model="injuryFilters.knee" label="Колени"></v-checkbox>
-          <v-checkbox v-model="injuryFilters.shoulder" label="Плечи"></v-checkbox>
+        <v-card-text class="px-1 pb-1 pt-0">
+          <!-- Привязка к localInjuryFilters -->
+          <p>Фильтр по травмам сильно уменьшит число упражнений, из которых создаются программы тренировок. Ставьте, если острая фаза или прямые противопоказания.</p>
+          <v-checkbox
+              v-model="localInjuryFilters.spine"
+              label="Позвоночник"
+              hide-details
+          ></v-checkbox>
+          <v-checkbox
+              v-model="localInjuryFilters.knee"
+              label="Коленные суставы"
+              hide-details
+          ></v-checkbox>
+          <v-checkbox
+              v-model="localInjuryFilters.shoulder"
+              label="Плечевые суставы"
+              hide-details
+          ></v-checkbox>
         </v-card-text>
       </v-card>
     </v-expand-transition>
@@ -235,18 +254,33 @@
 <script lang="ts">
 import { defineComponent, ref, reactive, watch, onMounted, type PropType } from 'vue'
 import { useUserStore } from '../../../stores/userStore'
-import { useApi } from '../../../composables/useApi';
+import { useApi } from '../../../composables/useApi'
 
 interface Split {
-  _id: string;
-  split: string;
-  splitComment?: string;
-  difficultyLevelSplit: number | string;
+  _id: string
+  split: string
+  splitComment?: string
+  difficultyLevelSplit: number | string
 }
 
 export default defineComponent({
   name: 'TrainingOnWeekInputs',
   props: {
+    /**
+     * Пробрасываем из родителя объект injuryFilters
+     */
+    injuryFilters: {
+      type: Object as PropType<{
+        spine: boolean
+        knee: boolean
+        shoulder: boolean
+      }>,
+      default: () => ({
+        spine: false,
+        knee: false,
+        shoulder: false
+      })
+    },
     genders: {
       type: Array as PropType<string[]>,
       required: true
@@ -307,68 +341,74 @@ export default defineComponent({
     'generateSplitWorkout'
   ],
   setup(props, { emit }) {
-    const { apiRequest } = useApi();
-    const userStore = useUserStore(); // Используем store
+    const { apiRequest } = useApi()
+    const userStore = useUserStore()
 
     // formData: локальное хранилище выбранных опций (gender, splitType, splitId, goal)
     const formData = reactive({
       gender: props.gender || '',
       splitType: props.selectedSplitType || '',
       splitId: props.selectedSplitId || '',
-      goal: props.goal || '',
-    });
+      goal: props.goal || ''
+    })
 
-    const injuryFilters = reactive({
-      spine: false,
-      knee: false,
-      shoulder: false
-    });
+    // Локальный объект для фильтров,
+    // чтобы управлять чекбоксами в этом компоненте
+    const localInjuryFilters = reactive({
+      spine: props.injuryFilters.spine,
+      knee: props.injuryFilters.knee,
+      shoulder: props.injuryFilters.shoulder
+    })
 
-    watch(injuryFilters, (newFilters) => {
-      console.log("Выбранные фильтры:", newFilters);
-      emit("update:injuryFilters", newFilters);
-    }, { deep: true });
+    // Следим за изменениями локальных фильтров и пробрасываем наружу
+    watch(
+        localInjuryFilters,
+        (newVal) => {
+          emit('update:injuryFilters', newVal)
+        },
+        { deep: true }
+    )
 
-    const trainingGoals = ref<string[]>(['Похудение', 'Общие', 'Массонабор']);
-    const showInjuryFilters = ref(false);
+    const trainingGoals = ref<string[]>(['Похудение', 'Общие', 'Массонабор'])
+    const showInjuryFilters = ref(false)
 
-    // telegramId теперь берётся из store
-    const telegramId = ref<number | null>(null);
+    // telegramId берём из store
+    const telegramId = ref<number | null>(null)
 
     onMounted(() => {
-      telegramId.value = userStore.telegramId;
-      console.log('telegramId из userStore:', telegramId.value);
-    });
+      telegramId.value = userStore.telegramId
+      console.log('telegramId из userStore:', telegramId.value)
+    })
 
     const selectGender = (option: string) => {
-      formData.gender = option;
-      emit('update:gender', option);
-    };
+      formData.gender = option
+      emit('update:gender', option)
+    }
 
     const selectGoal = (goal: string) => {
-      formData.goal = goal;
-      emit('update:goal', goal);
-    };
+      formData.goal = goal
+      emit('update:goal', goal)
+    }
 
     const selectSplitType = (type: string) => {
-      formData.splitType = type;
-      emit('update:selectedSplitType', type);
-    };
+      formData.splitType = type
+      emit('update:selectedSplitType', type)
+    }
 
     const selectSplit = (split: Split) => {
-      formData.splitId = split._id;
-      emit('update:selectedSplitId', split._id);
-    };
+      formData.splitId = split._id
+      emit('update:selectedSplitId', split._id)
+    }
 
     const onGenerateSplit = async () => {
       if (props.errorMessages.length > 0) {
-        console.warn('Есть ошибки, не генерируем тренировку.');
-        return;
+        console.warn('Есть ошибки, не генерируем тренировку.')
+        return
       }
 
       try {
         if (!telegramId.value) {
-          console.warn('Нет telegramId, данные не будут сохранены.');
+          console.warn('Нет telegramId, данные не будут сохранены.')
         } else {
           const payload = {
             userId: telegramId.value,
@@ -376,19 +416,19 @@ export default defineComponent({
             goal: formData.goal,
             splitType: formData.splitType,
             splitId: formData.splitId,
-            timestamp: Date.now(),
-          };
+            timestamp: Date.now()
+          }
 
-          const response = await apiRequest<any>('POST', '/analytics/save-workout', payload);
-          console.log('Ответ от сервера:', response);
+          const response = await apiRequest<any>('POST', '/analytics/save-workout', payload)
+          console.log('Ответ от сервера:', response)
         }
       } catch (err) {
-        console.error('Ошибка при сохранении:', err);
-        props.errorMessages.push('Ошибка при сохранении на сервере.');
+        console.error('Ошибка при сохранении:', err)
+        props.errorMessages.push('Ошибка при сохранении на сервере.')
       }
 
-      emit('generateSplitWorkout');
-    };
+      emit('generateSplitWorkout')
+    }
 
     const getDifficultyColor = (level: number | string): string => {
       const numericLevel = Number(level)
@@ -419,28 +459,33 @@ export default defineComponent({
     }
 
     // Логирование splitsToShow
-    watch(() => props.splitsToShow, (newSplits) => {
-      console.log('splitsToShow updated:', newSplits)
-      newSplits.forEach(s => {
-        console.log('Full Split Object:', s)
-      })
-    }, { immediate: true, deep: true })
+    watch(
+        () => props.splitsToShow,
+        (newSplits) => {
+          console.log('splitsToShow updated:', newSplits)
+          newSplits.forEach((s) => {
+            console.log('Full Split Object:', s)
+          })
+        },
+        { immediate: true, deep: true }
+    )
 
     return {
       formData,
-      telegramId: telegramId,
+      telegramId,
       selectGender,
+      selectGoal,
       selectSplitType,
       selectSplit,
       onGenerateSplit,
       getDifficultyColor,
       getDifficultyLabel,
       trainingGoals,
-      selectGoal,
-      showInjuryFilters
-    };
+      showInjuryFilters,
+      localInjuryFilters
+    }
   }
-});
+})
 </script>
 
 <style scoped>

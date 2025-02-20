@@ -29,53 +29,55 @@
     <div v-else>
       <!-- Компонент выбора пола, цели, типа сплита -->
       <TrainingOnWeekInputs
-          :genders="genders"
-          :gender="gender"
-          :uniqueSplitTypes="uniqueSplitTypes"
-          :selectedSplitType="selectedSplitType"
-          :splitsToShow="splitsToShow"
-          :selectedSplitId="selectedSplitId"
-          :selectedSplit="selectedSplit"
-          :isLoading="isLoading"
-          :isGenerating="isGenerating"
-          :errorMessages="errorMessages"
-          :isAnimating="isAnimating"
-          :injuryFilters="injuryFilters"
-          @update:gender="gender = $event"
-          @update:goal="goal = $event"
-          @update:selectedSplitType="selectedSplitType = $event"
-          @update:selectedSplitId="onSelectSplitId"
-          @generateSplitWorkout="generateSplitWorkout"
+        :genders="genders"
+        :gender="gender"
+        :uniqueSplitTypes="uniqueSplitTypes"
+        :selectedSplitType="selectedSplitType"
+        :splitsToShow="splitsToShow"
+        :selectedSplitId="selectedSplitId"
+        :selectedSplit="selectedSplit"
+        :isLoading="isLoading"
+        :isGenerating="isGenerating"
+        :errorMessages="errorMessages"
+        :isAnimating="isAnimating"
+        :injuryFilters="injuryFilters"
+
+        @update:gender="gender = $event"
+        @update:goal="goal = $event"
+        @update:selectedSplitType="selectedSplitType = $event"
+        @update:selectedSplitId="onSelectSplitId"
+        @generateSplitWorkout="generateSplitWorkout"
+        @update:injuryFilters="val => injuryFilters = val"
       />
 
       <!-- Компонент результата (готовая «неделя») -->
       <TrainingOnWeekResult
-          v-model:showBottomSheet="showBottomSheet"
-          :selectedSplit="selectedSplit"
-          :finalPlan="finalPlan"
-          :isLoading="isLoading"
-          :telegramUserId="telegramUserId"
-          :refreshingDays="refreshingDays"
-          @sendWorkoutPlan="sendWorkoutPlan($event)"
-          @regenerateWholeSplit="regenerateWholeSplit"
-          @refreshDayExercises="refreshDayExercises"
-          @increaseRepsSplit="increaseRepsSplit"
-          @decreaseRepsSplit="decreaseRepsSplit"
-          @removeExerciseSplit="removeExerciseSplit"
-          @regenerateExerciseSplit="regenerateExerciseSplit"
-          :openExerciseInfo="openExerciseInfo"
+        v-model:showBottomSheet="showBottomSheet"
+        :selectedSplit="selectedSplit"
+        :finalPlan="finalPlan"
+        :isLoading="isLoading"
+        :telegramUserId="telegramUserId"
+        :refreshingDays="refreshingDays"
+        @sendWorkoutPlan="sendWorkoutPlan($event)"
+        @regenerateWholeSplit="regenerateWholeSplit"
+        @refreshDayExercises="refreshDayExercises"
+        @increaseRepsSplit="increaseRepsSplit"
+        @decreaseRepsSplit="decreaseRepsSplit"
+        @removeExerciseSplit="removeExerciseSplit"
+        @regenerateExerciseSplit="regenerateExerciseSplit"
+        :openExerciseInfo="openExerciseInfo"
       />
     </div>
   </div>
 
   <!-- Глобальный Snackbar -->
   <v-snackbar
-      v-model="snackbar.show"
-      :color="snackbar.color"
-      :timeout="snackbar.timeout"
-      top
-      right
-      multi-line
+    v-model="snackbar.show"
+    :color="snackbar.color"
+    :timeout="snackbar.timeout"
+    top
+    right
+    multi-line
   >
     {{ snackbar.message }}
     <template #actions>
@@ -87,8 +89,8 @@
 
   <!-- Компонент для подробностей упражнения (ExerciseInfo) -->
   <ExerciseInfo
-      v-model="showExerciseInfo"
-      :exercise="selectedExercise"
+    v-model="showExerciseInfo"
+    :exercise="selectedExercise"
   />
 </template>
 
@@ -99,11 +101,10 @@ import { useUserStore } from '../../../stores/userStore'
 import { useApi } from '../../../composables/useApi'
 import useSplitGenerator from '../../../composables/useSplitGenerator'
 
-// Импортируем компоненты
+// Импорт компонентов
 import TrainingOnWeekInputs from './TrainingOnWeekInputs.vue'
 import TrainingOnWeekResult from './TrainingOnWeekResult.vue'
 import ExerciseInfo from '../ExerciseInfo.vue'
-
 
 interface SnackbarState {
   show: boolean
@@ -161,7 +162,7 @@ export default defineComponent({
     )
     const { apiRequest } = useApi()
 
-    // Состояния и параметры компонента
+    // Состояния и параметры
     const goal = ref<string>('')
     const genders = ['Мужчина', 'Женщина']
     const gender = ref<string>('')
@@ -196,35 +197,41 @@ export default defineComponent({
       console.log(`Snackbar: ${msg} (color: ${color})`)
     }
 
+    // Родительский стейт для фильтров
     const injuryFilters = ref({
       spine: false,
       knee: false,
       shoulder: false
-    });
+    })
 
     const selectedSplitComment = ref<string | null>(null)
 
     const availableSplits = computed(() => {
       if (!gender.value) return []
-      return allSplits.value.filter(split =>
+      return allSplits.value.filter((split) =>
           split.gender.toLowerCase().includes(gender.value.toLowerCase())
       )
     })
 
     const uniqueSplitTypes = computed(() => {
-      const types = availableSplits.value.map(split => split.split)
+      const types = availableSplits.value.map((split) => split.split)
       return Array.from(new Set(types))
     })
 
     const splitsToShow = computed(() => {
       if (!selectedSplitType.value) return []
       const sameTypeSplits = availableSplits.value.filter(
-          s => s.split === selectedSplitType.value && s.splitComment
+          (s) => s.split === selectedSplitType.value && s.splitComment
       )
-      const uniqueComments = Array.from(new Set(sameTypeSplits.map(s => s.splitComment)))
-      return uniqueComments.map(comment => {
-        const sameCommentSplits = sameTypeSplits.filter(s => s.splitComment === comment)
-        const randomSplit = sameCommentSplits[Math.floor(Math.random() * sameCommentSplits.length)]
+      const uniqueComments = Array.from(
+          new Set(sameTypeSplits.map((s) => s.splitComment))
+      )
+      return uniqueComments.map((comment) => {
+        const sameCommentSplits = sameTypeSplits.filter(
+            (s) => s.splitComment === comment
+        )
+        const randomSplit =
+            sameCommentSplits[Math.floor(Math.random() * sameCommentSplits.length)]
         return {
           _id: randomSplit._id,
           split: randomSplit.split,
@@ -235,7 +242,7 @@ export default defineComponent({
     })
 
     watch(selectedSplitId, (newId) => {
-      const split = availableSplits.value.find(s => s._id === newId)
+      const split = availableSplits.value.find((s) => s._id === newId)
       if (split) {
         selectedSplit.value = split
         selectedSplitComment.value = split.splitComment ?? null
@@ -250,14 +257,14 @@ export default defineComponent({
       }
     })
 
-    // Сюда складываем сгенерированный план (7 дней)
+    // Храним финальный план (7 дней)
     const finalPlan = ref<DayPlan[]>([])
 
-    // Подключаем composable для генерации и отправки плана
+    // Composable для генерации
     const {
       generateSplitPlan,
       regenerateExercise,
-      sendWorkoutPlan: sendDetailedWorkoutPlan,
+      sendWorkoutPlan: sendDetailedWorkoutPlan
     } = useSplitGenerator({
       isLoading,
       isGenerating,
@@ -268,10 +275,7 @@ export default defineComponent({
       selectedSplitRef: selectedSplit
     })
 
-    /**
-     * Функция отправки данных в аналитику (/analytics/save-sended-workout)
-     * Дополнена: теперь передаём и сам план (finalPlan).
-     */
+    // Отправка данных в аналитику + сам план
     const sendAnalyticsWorkoutPlan = async (plan: DayPlan[]) => {
       if (!telegramUserId.value) {
         showSnackbar('Нет telegramUserId — не можем сохранить.', 'error')
@@ -288,25 +292,27 @@ export default defineComponent({
         splitType: selectedSplit.value.split,
         splitId: selectedSplit.value._id,
         timestamp: Date.now(),
-        plan // <-- ВАЖНО: Передаём полный план
+        plan
       }
       console.log('payload', payload)
       try {
-        const response = await apiRequest<any>('POST', '/analytics/save-sended-workout', payload)
+        const response = await apiRequest<any>(
+            'POST',
+            '/analytics/save-sended-workout',
+            payload
+        )
         console.log('Ответ от /analytics/save-sended-workout:', response)
         showSnackbar('Тренировка отправлена и сохранена!', 'success')
       } catch (err) {
         console.error('Ошибка при сохранении отправленной тренировки:', err)
-        errorMessages.value.push('Ошибка при сохранении отправленной тренировки на сервере.')
+        errorMessages.value.push(
+            'Ошибка при сохранении отправленной тренировки на сервере.'
+        )
         showSnackbar('Не удалось отправить тренировку на сервер.', 'error')
       }
     }
 
-    /**
-     * Получаем план из дочернего компонента и делаем две вещи:
-     * 1. Отправляем данные в аналитику (включая план).
-     * 2. Отправляем подробный план пользователю (функция `sendDetailedWorkoutPlan` из composable).
-     */
+    // Отправка плана (две части: аналитика + реальная отправка)
     const sendWorkoutPlan = async (plan: DayPlan[]) => {
       console.log('Передача в sendWorkoutPlan:', plan)
       await sendAnalyticsWorkoutPlan(plan)
@@ -320,8 +326,13 @@ export default defineComponent({
         return
       }
       console.log('Начало генерации сплита (реальный вызов).')
-      // Именно в composable генерируется объект finalPlan
-      await generateSplitPlan(gender.value, selectedSplit.value, goal.value, finalPlan, injuryFilters.value)
+      await generateSplitPlan(
+          gender.value,
+          selectedSplit.value,
+          goal.value,
+          finalPlan,
+          injuryFilters.value // <-- Передаём фильтры
+      )
       console.log('Генерация сплита (реальный вызов) завершена.')
     }
 
@@ -330,7 +341,7 @@ export default defineComponent({
       isAnimating.value = true
       isLoading.value = true
       const delayTime = 1500 + Math.random() * 1000
-      await new Promise(resolve => setTimeout(resolve, delayTime))
+      await new Promise((resolve) => setTimeout(resolve, delayTime))
       await realGenerateSplitWorkout()
       console.log('Родитель: выключаем анимацию.')
       isAnimating.value = false
@@ -347,7 +358,7 @@ export default defineComponent({
     }
 
     onMounted(async () => {
-      if (!userStore.hasSplits) await loadSplits();
+      if (!userStore.hasSplits) await loadSplits()
 
       if (process.client) {
         const launchParams = retrieveLaunchParams()
@@ -368,8 +379,12 @@ export default defineComponent({
     const refreshDayExercises = async (dayIndex: number) => {
       if (!finalPlan.value[dayIndex]) return
       refreshingDays.value[dayIndex] = true
-      await new Promise(resolve => setTimeout(resolve, 600))
-      for (let exIndex = 0; exIndex < finalPlan.value[dayIndex].exercises.length; exIndex++) {
+      await new Promise((resolve) => setTimeout(resolve, 600))
+      for (
+          let exIndex = 0;
+          exIndex < finalPlan.value[dayIndex].exercises.length;
+          exIndex++
+      ) {
         await regenerateExercise(dayIndex, exIndex, gender.value, finalPlan)
       }
       refreshingDays.value[dayIndex] = false
@@ -378,7 +393,9 @@ export default defineComponent({
     const regenerateWholeSplit = async () => {
       if (!selectedSplitType.value || !selectedSplitComment.value) return
       const matching = availableSplits.value.filter(
-          s => s.split === selectedSplitType.value && s.splitComment === selectedSplitComment.value
+          (s) =>
+              s.split === selectedSplitType.value &&
+              s.splitComment === selectedSplitComment.value
       )
       if (matching.length === 0) return
       const randomSplit = matching[Math.floor(Math.random() * matching.length)]
@@ -386,8 +403,11 @@ export default defineComponent({
       await generateSplitWorkout()
     }
 
-    // Для изменения повторений (увеличение/уменьшение)
-    const standardRepsValues = [4, 5, 6, 8, 10, 12, 15, 20, 24, 30, 45, 60, 75, 90, 105, 120, 135, 150, 165, 180]
+    // Логика изменения/удаления повторений
+    const standardRepsValues = [
+      4, 5, 6, 8, 10, 12, 15, 20, 24, 30, 45, 60, 75, 90, 105, 120, 135, 150,
+      165, 180
+    ]
     function getSets(reps: number): number {
       if (reps === 4) return 6
       if (reps === 5) return 5
@@ -430,7 +450,11 @@ export default defineComponent({
       exercisesArr.splice(index, 1)
     }
 
-    const regenerateExerciseSplit = (exercisesArr: any, index: number, dayIndex: number) => {
+    const regenerateExerciseSplit = (
+        exercisesArr: any,
+        index: number,
+        dayIndex: number
+    ) => {
       regenerateExercise(dayIndex, index, gender.value, finalPlan)
     }
 
@@ -485,7 +509,9 @@ export default defineComponent({
       onSelectSplitId,
       showExerciseInfo,
       selectedExercise,
-      openExerciseInfo
+      openExerciseInfo,
+      // ВАЖНО: injuryFilters в родительском стейте
+      injuryFilters
     }
   }
 })
