@@ -401,7 +401,7 @@ interface SnackbarState {
 // defineProps({
 //   tab: {
 //     type: String,
-//     default: 'workout-muscles'
+//     default: workoutMuscles
 //   }
 // })
 

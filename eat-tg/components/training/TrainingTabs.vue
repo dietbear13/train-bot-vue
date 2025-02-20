@@ -56,13 +56,13 @@ import TrainingByMuscles from './TrainingByMuscles.vue'
 import ExerciseSearch from './ExerciseSearch.vue'
 
 // Определяем тип для ключей вкладок
-type TabKey = 'main' | 'workout-muscles' | 'exercise-search'
+type TabKey = 'main' | 'workoutMuscles' | 'exerciseSearch'
 
 // Сопоставление параметров вкладок и их индексов
 const tabMap: Record<TabKey, number> = {
   main: 0,
-  'workout-muscles': 1,
-  'exercise-search': 2
+  workoutMuscles: 1,
+  exerciseSearch: 2
 }
 
 // Инициализация роутера и текущего маршрута
@@ -70,8 +70,6 @@ const tabMap: Record<TabKey, number> = {
 const route = useRoute()
 const router = useRouter()
 
-console.log('🚨 currentTab:', currentTab.value);
-console.log('🚨 currentComponent:', currentComponent.value);
 
 // Текущая вкладка из query-параметра или 'main' по умолчанию
 const currentTab = computed<TabKey>(() => {
@@ -85,6 +83,8 @@ const currentTab = computed<TabKey>(() => {
 
 // Активный индекс вкладки (без ошибки, так как currentTab.value имеет тип TabKey)
 const activeTab = ref<number>(0) // По умолчанию - первая вкладка
+
+console.log('🚨 currentTab:', currentTab.value);
 
 watch(currentTab, (newTab) => {
   activeTab.value = tabMap[newTab] ?? 0; // Если что-то пошло не так, дефолтное значение 0
@@ -114,10 +114,11 @@ const currentComponent = computed(() => {
   }
   return {
     main: TrainingOnWeek,
-    'workout-muscles': TrainingByMuscles,
-    'exercise-search': ExerciseSearch
+    workoutMuscles: TrainingByMuscles,
+    exerciseSearch: ExerciseSearch
   }[currentTab.value] ?? TrainingOnWeek;
 });
+console.log('🚨 currentComponent:', currentComponent.value);
 
 
 // Следим за изменением query-параметра tab
