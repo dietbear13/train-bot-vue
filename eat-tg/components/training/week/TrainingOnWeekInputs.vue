@@ -3,13 +3,6 @@
   <div>
     <v-form @submit.prevent="onGenerateSplit">
       <!-- Кнопка настроек -->
-      <v-btn icon
-             @click="showInjuryFilters = true"
-             class="mb-2"
-             rounded="xl"
-      >
-        <v-icon>mdi-cog</v-icon>
-      </v-btn>
 
       <!-- Выбор пола (показывается всегда) -->
       <v-card class="mb-2 dark-background" variant="tonal">
@@ -159,6 +152,17 @@
         </v-card-text>
       </v-card>
 
+      <v-btn
+          icon
+          @click="showInjuryFilters = true"
+          class="mb-2"
+          rounded="xl"
+      >
+        Фильтр упражнений
+        <v-icon class="ml-1">mdi-account-injury-outline</v-icon>
+      </v-btn>
+
+
       <!-- Если нет доступных сплитов -->
       <v-card
           v-else-if="formData.gender && uniqueSplitTypes.length === 0"
@@ -206,28 +210,31 @@
       </v-alert>
     </v-form>
 
-    <!-- Диалог фильтров по травмам (визуальный placeholder) -->
-    <v-dialog v-model="showInjuryFilters" max-width="400">
-      <v-card class="dark-background">
-        <v-card-title>
-          Фильтры по травмам
-          <v-spacer></v-spacer>
-          <v-btn rounded="xl" icon @click="showInjuryFilters = false">
-            <v-icon>mdi-close</v-icon>
-          </v-btn>
-        </v-card-title>
+    <v-btn
+        class="ml-2"
+        rounded="xl"
+        color="primary"
+        @click="showInjuryFilters = !showInjuryFilters"
+    >
+      <v-icon>mdi-filter-variant</v-icon> Фильтр
+    </v-btn>
+
+    <v-expand-transition>
+      <v-card v-if="showInjuryFilters" class="pa-3 mt-2 dark-background">
+        <v-card-title>Фильтры по травмам</v-card-title>
         <v-card-text>
-          <!-- Здесь появятся настройки фильтров по травмам -->
-          <p>Здесь появятся настройки фильтров по травмам.</p>
+          <v-checkbox v-model="injuryFilters.spine" label="Спина"></v-checkbox>
+          <v-checkbox v-model="injuryFilters.knee" label="Колени"></v-checkbox>
+          <v-checkbox v-model="injuryFilters.shoulder" label="Плечи"></v-checkbox>
         </v-card-text>
       </v-card>
-    </v-dialog>
+    </v-expand-transition>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent, ref, reactive, watch, onMounted, type PropType } from 'vue'
-import { retrieveLaunchParams } from '@telegram-apps/sdk'
+import { useUserStore } from '../../../stores/userStore'
 import { useApi } from '../../../composables/useApi';
 
 interface Split {
@@ -282,7 +289,6 @@ export default defineComponent({
       type: Boolean,
       default: false
     },
-    // Родитель теперь управляет анимацией: передаём isAnimating как проп
     isAnimating: {
       type: Boolean,
       default: false
@@ -296,12 +302,13 @@ export default defineComponent({
     'update:gender',
     'update:goal',
     'update:selectedSplitType',
-    'generateSplitWorkout',
-    // Добавляем, чтобы родитель мог отслеживать выбранный splitId (как в старой версии)
-    'update:selectedSplitId'
+    'update:selectedSplitId',
+    'update:injuryFilters',
+    'generateSplitWorkout'
   ],
   setup(props, { emit }) {
     const { apiRequest } = useApi();
+    const userStore = useUserStore(); // Используем store
 
     // formData: локальное хранилище выбранных опций (gender, splitType, splitId, goal)
     const formData = reactive({
@@ -309,75 +316,62 @@ export default defineComponent({
       splitType: props.selectedSplitType || '',
       splitId: props.selectedSplitId || '',
       goal: props.goal || '',
-    })
+    });
+
+    const injuryFilters = reactive({
+      spine: false,
+      knee: false,
+      shoulder: false
+    });
+
+    watch(injuryFilters, (newFilters) => {
+      console.log("Выбранные фильтры:", newFilters);
+      emit("update:injuryFilters", newFilters);
+    }, { deep: true });
 
     const trainingGoals = ref<string[]>(['Похудение', 'Общие', 'Массонабор']);
-
-    // Флаг для отображения диалога настроек фильтров по травмам
     const showInjuryFilters = ref(false);
 
-    // Следим за formData
-    watch(formData, (newVal) => {
-      console.log('formData изменился:', JSON.stringify(newVal))
-    }, { deep: true })
+    // telegramId теперь берётся из store
+    const telegramId = ref<number | null>(null);
 
-    // telegramUserId
-    const telegramUserId = ref<number | null>(null)
     onMounted(() => {
-      if (process.client) {
-        const launchParams = retrieveLaunchParams()
-        if (launchParams && launchParams.initData && launchParams.initData.user) {
-          const user = launchParams.initData.user
-          if (user && user.id) {
-            telegramUserId.value = Number(user.id)
-            console.log('telegramUserId:', telegramUserId.value)
-          } else {
-            console.error('Не удалось получить данные пользователя из Telegram.')
-            props.errorMessages.push('Не удалось получить данные пользователя. Убедитесь, что приложение запущено внутри Telegram.')
-          }
-        }
-      }
-    })
+      telegramId.value = userStore.telegramId;
+      console.log('telegramId из userStore:', telegramId.value);
+    });
 
     const selectGender = (option: string) => {
-      formData.gender = option
-      emit('update:gender', option)
-      console.log('Selected gender:', option)
-    }
+      formData.gender = option;
+      emit('update:gender', option);
+    };
 
     const selectGoal = (goal: string) => {
       formData.goal = goal;
       emit('update:goal', goal);
-      console.log('Selected training goal:', goal);
     };
 
     const selectSplitType = (type: string) => {
-      formData.splitType = type
-      emit('update:selectedSplitType', type)
-      console.log('Selected split type:', type)
-    }
+      formData.splitType = type;
+      emit('update:selectedSplitType', type);
+    };
 
     const selectSplit = (split: Split) => {
-      formData.splitId = split._id
-      emit('update:selectedSplitId', split._id)
-      console.log('Selected split:', split)
-    }
+      formData.splitId = split._id;
+      emit('update:selectedSplitId', split._id);
+    };
 
-    // Когда пользователь жмёт "Создать"
     const onGenerateSplit = async () => {
-      console.log('onGenerateSplit: отправляем данные на сервер');
-
       if (props.errorMessages.length > 0) {
         console.warn('Есть ошибки, не генерируем тренировку.');
         return;
       }
 
       try {
-        if (!telegramUserId.value) {
-          console.warn('Нет telegramUserId, данные не будут сохранены в базу.');
+        if (!telegramId.value) {
+          console.warn('Нет telegramId, данные не будут сохранены.');
         } else {
           const payload = {
-            userId: telegramUserId.value,
+            userId: telegramId.value,
             gender: formData.gender,
             goal: formData.goal,
             splitType: formData.splitType,
@@ -385,13 +379,12 @@ export default defineComponent({
             timestamp: Date.now(),
           };
 
-          const response = await apiRequest<any>('POST', '/analytics/save-workout', payload)
-          console.log('Ответ от /analytics/save-workout:', response)
+          const response = await apiRequest<any>('POST', '/analytics/save-workout', payload);
+          console.log('Ответ от сервера:', response);
         }
       } catch (err) {
-        console.error('Ошибка при сохранении тренировки:', err);
-        props.errorMessages.push('Ошибка при сохранении тренировки на сервере.');
-        return;
+        console.error('Ошибка при сохранении:', err);
+        props.errorMessages.push('Ошибка при сохранении на сервере.');
       }
 
       emit('generateSplitWorkout');
@@ -435,7 +428,7 @@ export default defineComponent({
 
     return {
       formData,
-      telegramUserId,
+      telegramId: telegramId,
       selectGender,
       selectSplitType,
       selectSplit,
@@ -445,9 +438,9 @@ export default defineComponent({
       trainingGoals,
       selectGoal,
       showInjuryFilters
-    }
+    };
   }
-})
+});
 </script>
 
 <style scoped>

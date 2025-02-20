@@ -2,7 +2,7 @@
 import { ref, onMounted, type Ref } from 'vue'
 import { useApi } from './useApi'
 import { useUserStore } from '../stores/userStore'
-import {Exercise, RepetitionLevels} from './types';
+import { Exercise, RepetitionLevels } from './types'
 
 // ======================= Интерфейсы =======================
 interface FoundExercise {
@@ -19,14 +19,14 @@ interface SplitDay {
 }
 
 interface SplitItem {
-    _id: string;
-    split: string;
-    splitComment?: string;
-    splitId: number;
-    gender: string;
-    splitDays: string;
-    days: SplitDay[];
-    difficultyLevelSplit?: number;
+    _id: string
+    split: string
+    splitComment?: string
+    splitId: number
+    gender: string
+    splitDays: string
+    days: SplitDay[]
+    difficultyLevelSplit?: number
 }
 
 interface GeneratedDay {
@@ -36,21 +36,26 @@ interface GeneratedDay {
 }
 
 interface UseSplitGeneratorParams {
-    isLoading: Ref<boolean>;
-    isGenerating: Ref<boolean>;
-    showBottomSheet: Ref<boolean>;
-    errorMessages: Ref<string[]>;
-    showSnackbar: (msg: string, color?: string) => void;
-    telegramUserId: Ref<number | null | undefined>;
-    selectedSplitRef: Ref<SplitItem | null>;
+    isLoading: Ref<boolean>
+    isGenerating: Ref<boolean>
+    showBottomSheet: Ref<boolean>
+    errorMessages: Ref<string[]>
+    showSnackbar: (msg: string, color?: string) => void
+    telegramUserId: Ref<number | null | undefined>
+    selectedSplitRef: Ref<SplitItem | null>
 }
 
+// Интерфейс для фильтров травм
+export interface InjuryFilters {
+    spine: boolean
+    knee: boolean
+    shoulder: boolean
+}
 
 // ======================= Основные зависимости =======================
-const { apiRequest } = useApi();
-const userStore = useUserStore();
-const exercises = ref<Exercise[]>([]);
-
+const { apiRequest } = useApi()
+const userStore = useUserStore()
+const exercises = ref<Exercise[]>([])
 
 // ======================= Константы и вспомогательные =======================
 const levelMapping: { [key: string]: string } = {
@@ -154,11 +159,11 @@ function tryFindExercise(
             chosenReps = variants[Math.floor(Math.random() * variants.length)]
         } else if (goal === 'Общие') {
             // Общие: случайно от 6 до 15
-            const variants = [8,10,12,15]
+            const variants = [8, 10, 12, 15]
             chosenReps = variants[Math.floor(Math.random() * variants.length)]
         } else if (goal === 'Массонабор') {
             // Массонабор: случайно от 6 до 12
-            const variants = [6,8,10,12]
+            const variants = [6, 8, 10, 12]
             chosenReps = variants[Math.floor(Math.random() * variants.length)]
         }
 
@@ -353,7 +358,7 @@ function generateExercisesFromPattern(
 
 /** Названия дней недели (0..6) */
 function dayName(index: number): string {
-    const days = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье']
+    const days = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье']
     return days[index % 7]
 }
 
@@ -364,12 +369,12 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
     // При монтировании загружаем упражнения
     onMounted(async () => {
         if (userStore.exercises.length === 0) {
-            console.log('🔄 Загружаем упражнения с API...');
-            const data = await apiRequest<Exercise[]>('get', 'exercises');
-            userStore.setExercises(data);
-            exercises.value = data;
+            console.log('🔄 Загружаем упражнения с API...')
+            const data = await apiRequest<Exercise[]>('get', 'exercises')
+            userStore.setExercises(data)
+            exercises.value = data
         } else {
-            console.log('✅  Используем кешированные упражнения.');
+            console.log('✅  Используем кешированные упражнения.')
         }
     })
 
@@ -383,13 +388,20 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
     }
 
     /**
-     * Генерация плана сплита с учётом пола, выбранного сплита и цели
+     * Генерация плана сплита с учётом пола, выбранного сплита, цели и фильтров по травмам.
+     *
+     * @param gender - выбранный пол
+     * @param chosenSplit - выбранный сплит
+     * @param goal - цель тренировок
+     * @param finalPlanRef - ссылка на финальный план
+     * @param injuryFilters - фильтры по травмам (исключаем упражнения с ограничениями)
      */
     async function generateSplitPlan(
         gender: string,
         chosenSplit: SplitItem,
         goal: string,
-        finalPlanRef: Ref<GeneratedDay[]>
+        finalPlanRef: Ref<GeneratedDay[]>,
+        injuryFilters: InjuryFilters
     ) {
         params.errorMessages.value = []
         if (!chosenSplit) {
@@ -417,6 +429,14 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
             // Очищаем предыдущий результат
             finalPlanRef.value = []
 
+            // Фильтруем упражнения согласно выбранным фильтрам по травмам
+            const filteredExercises = exercises.value.filter(e => {
+                if (injuryFilters.spine && e.spineRestrictions) return false
+                if (injuryFilters.knee && e.kneeRestrictions) return false
+                if (injuryFilters.shoulder && e.shoulderRestrictions) return false
+                return true
+            })
+
             // Для чередования паттернов
             let patternIndex = 0
 
@@ -442,13 +462,13 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
                     const exList: FoundExercise[] = []
                     const usedIdsInDay = new Set<string>()
 
-                    // Генерируем все упражнения
+                    // Генерируем все упражнения для данного дня, используя отфильтрованный список
                     for (const pat of currentPatternDay.patternOrExercise) {
                         const result = generateExercisesFromPattern(
                             pat,
                             gender,
                             usedIdsInDay,
-                            exercises.value,
+                            filteredExercises,
                             goal,
                             255
                         )
@@ -482,8 +502,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
     }
 
     /**
-     * Отправка готового плана в Telegram
-     * непосредственно в чат пользователю.
+     * Отправка готового плана в Telegram непосредственно в чат пользователю.
      */
     async function sendWorkoutPlan(plan: GeneratedDay[]) {
         if (!params.telegramUserId.value) {

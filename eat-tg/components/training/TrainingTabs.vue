@@ -38,7 +38,6 @@
       </v-tab>
     </v-tabs>
 
-     Содержимое активной вкладки
     <div class="tab-content mt-2">
       <component v-if="currentComponent" :is="currentComponent" :tab="currentTab" />
       <p v-else>Ошибка загрузки компонента</p>

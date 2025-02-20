@@ -40,6 +40,7 @@
           :isGenerating="isGenerating"
           :errorMessages="errorMessages"
           :isAnimating="isAnimating"
+          :injuryFilters="injuryFilters"
           @update:gender="gender = $event"
           @update:goal="goal = $event"
           @update:selectedSplitType="selectedSplitType = $event"
@@ -195,6 +196,12 @@ export default defineComponent({
       console.log(`Snackbar: ${msg} (color: ${color})`)
     }
 
+    const injuryFilters = ref({
+      spine: false,
+      knee: false,
+      shoulder: false
+    });
+
     const selectedSplitComment = ref<string | null>(null)
 
     const availableSplits = computed(() => {
@@ -314,7 +321,7 @@ export default defineComponent({
       }
       console.log('Начало генерации сплита (реальный вызов).')
       // Именно в composable генерируется объект finalPlan
-      await generateSplitPlan(gender.value, selectedSplit.value, goal.value, finalPlan)
+      await generateSplitPlan(gender.value, selectedSplit.value, goal.value, finalPlan, injuryFilters.value)
       console.log('Генерация сплита (реальный вызов) завершена.')
     }
 
