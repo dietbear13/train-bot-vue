@@ -116,46 +116,63 @@ const isLoading = ref<boolean>(true);
 
 onMounted(async () => {
   try {
-    // Указываем, что ожидаем массив пользователей
+    console.log('🚀 Начинаем загрузку KБЖУ...');
+
+    // Получаем список пользователей
     const response = await apiRequest<IUser[]>('get', 'users');
     console.log('📥 API Response:', response);
 
-    // Проверяем, что это действительно массив
+    // Проверяем, что response - это массив
     if (!Array.isArray(response)) {
-      console.error('🚨 Ответ не является массивом пользователей');
+      console.error('🚨 Ошибка: API вернул не массив пользователей!', response);
       return;
     }
 
-    // Ищем пользователя по telegramId
-    console.log('🔍 userStore:', userStore);
+    // Проверяем, есть ли у нас Telegram ID в userStore
+    if (!userStore.telegramId) {
+      console.warn('⚠️ Внимание: У пользователя нет telegramId в store! userStore:', userStore);
+      return;
+    }
+
+    // Фильтруем пользователей по telegramId
     const currentUser = response.find(
         (u) => u.telegramId === userStore.telegramId
     );
 
+    console.log('🔍 Пользователь найден:', currentUser);
+
     if (!currentUser) {
-      console.warn('Текущий пользователь не найден в списке /users');
+      console.warn('🚨 Ошибка: Текущий пользователь с ID', userStore.telegramId, 'не найден в списке /users');
       return;
     }
 
-    console.log('🔍 Записи:', currentUser.kbzhuHistory);
+    // Проверяем, есть ли у пользователя история KБЖУ
     if (!currentUser.kbzhuHistory || currentUser.kbzhuHistory.length === 0) {
       console.warn('ℹ️ У пользователя нет истории KБЖУ.');
       return;
     }
 
-    // Сортируем по убыванию timestamp, чтобы взять самую свежую запись
+    console.log('📜 История KБЖУ до сортировки:', currentUser.kbzhuHistory);
+
+    // Сортируем по убыванию timestamp
     const sortedHistory = [...currentUser.kbzhuHistory].sort(
         (a, b) => b.timestamp - a.timestamp
     );
-    console.log('🗂️ Отсортированная история KБЖУ:', sortedHistory);
-    console.log('🔍 Число отсортированных записей:', sortedHistory.length);
 
+    console.log('📌 Отсортированная история KБЖУ:', sortedHistory);
+    console.log('📊 Количество записей в истории:', sortedHistory.length);
+
+    // Берём самую последнюю запись
     userKbzhu.value = sortedHistory[0].kbzhuResult;
     userTimestamp.value = sortedHistory[0].timestamp;
+
+    console.log('✅ Выбранная запись для KБЖУ:', userKbzhu.value);
+
   } catch (error) {
-    console.error('Ошибка при получении пользователей:', error);
+    console.error('❌ Ошибка при получении пользователей:', error);
   } finally {
     isLoading.value = false;
+    console.log('✅ Загрузка KБЖУ завершена');
   }
 });
 

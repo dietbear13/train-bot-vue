@@ -30,9 +30,8 @@ export function useApi() {
             }
 
             // `users` всегда запрашиваем с сервера, т.к. они реактивные
-            if (endpoint === 'users' && userStore.users.length > 0) {
-                console.log('✅ Используем реактивные данные пользователей.');
-                return userStore.users as T;
+            if (endpoint === 'users') {
+                console.log('🚀 Запрос к API: users');
             }
         }
 

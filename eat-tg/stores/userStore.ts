@@ -31,6 +31,7 @@ export const useUserStore = defineStore('user', {
     actions: {
         setTelegramId(id: number) {
             this.telegramId = id;
+            this.resetUsers();
         },
         setRole(role: 'admin' | 'freeUser' | 'paidUser') {
             this.role = role;
@@ -65,8 +66,17 @@ export const useUserStore = defineStore('user', {
 
         // Реактивные пользователи (без localStorage)
         setUsers(usersData: any[]) {
+            console.log('🧹 Очистка старых пользователей перед обновлением...');
+            this.users = []; // Убираем устаревшие данные
             this.users = usersData;
         },
+
+        resetUsers() {
+            console.log('🗑️ Сбрасываем пользователей');
+            this.users = [];
+        },
+
+
 
         setTrainingHistory(telegramId: number, history: any[]) {
             this.trainingHistory[telegramId] = history;

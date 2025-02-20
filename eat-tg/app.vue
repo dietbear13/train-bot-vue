@@ -18,7 +18,15 @@ const loading = ref(true);
 
 const { apiRequest } = useApi()
 
+onMounted(async () => {
+  userStore.resetCache();
+  await userStore.forceLoadData();
+});
+
 const userStore = useUserStore()
+onMounted(async () => {
+  await userStore.forceLoadData();
+});
 
 
 onMounted(() => {
