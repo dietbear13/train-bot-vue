@@ -51,14 +51,14 @@
           <v-card class="post-card" outlined max-width="600">
             <v-card-text class="text-h6 blog-content d-block px-4 pt-4 pb-0">
               <!-- Якорь с уникальным id для поста -->
-              <a :id="`post-${post.id}`">{{ post.title }}</a>
+              <a :id="'post-${post.id}'">{{ post.title }}</a>
             </v-card-text>
 
             <v-card-text class="pb-0">
               <!-- Вывод HTML контента -->
               <div class="blog-content d-block" v-html="post.text"></div>
             </v-card-text>
-            <a :href="`#post-${post.id}`">Перейти к заголовку поста</a>
+            <a :href="'#post-${post.id}'">Перейти к заголовку поста</a>
 
             <v-card-actions>
               <v-spacer></v-spacer>
@@ -115,6 +115,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { retrieveLaunchParams } from '@telegram-apps/sdk'
 import { useApi } from '../../composables/useApi'
 import type { LikeResponse } from '../../types/LikeResponse'
+import { useUserStore } from '../../stores/userStore'
 
 // Расширенный тип ответа для обновления лайков
 interface ExtendedLikeResponse extends LikeResponse {
@@ -131,6 +132,7 @@ interface Post {
   userLiked: boolean
 }
 
+const userStore = useUserStore()
 const { apiRequest } = useApi()
 const telegramUserId = ref<number | null>(null)
 const posts = ref<Post[]>([])
@@ -196,6 +198,12 @@ onMounted(async () => {
     telegramUserId.value = Number(launchParams.initData.user.id)
   } else {
     console.error('Не удалось получить данные пользователя из Telegram.')
+  }
+
+  if (userStore.isCacheValid(userStore.blogArticles.timestamp)) {
+    posts.value = userStore.blogArticles.data
+    loading.value = false
+    return
   }
 
   try {

@@ -1,11 +1,11 @@
 <template>
-  <v-card class="pa-2 mb-3" elevation="3">
+  <v-card class="pa-1 mb-3" elevation="3" variant="tonal" style="border-radius: 16px">
     <!-- 🔹 Заголовок карточки -->
     <v-card-title class="text-h6 font-weight-bold d-flex align-center">
       <v-avatar size="40" class="me-3">
         <v-img src="https://cdn-icons-png.flaticon.com/512/4712/4712035.png" alt="User" />
       </v-avatar>
-      {{ workout.telegramId || "Неизвестный автор" }}
+      кОчка{{ workout.telegramId || "" }}
     </v-card-title>
 
     <!-- 🔹 Подзаголовок с датой и типом тренировки -->
@@ -60,14 +60,14 @@
 
         <!-- 🔹 Кнопки действий -->
     <v-card-actions>
-      <v-btn variant="tonal" color="green" @click="$emit('save')">
+      <v-btn variant="tonal" color="green" class="pl-3" rounded="xl" @click="$emit('save')">
         <v-icon start>mdi-content-save</v-icon> Сохранить себе
       </v-btn>
 
       <v-spacer></v-spacer>
 
-      <v-btn icon variant="flat" @click="$emit('like')" color="pink">
-        <span class="text-body-2">{{ workout.likes || 0 }}</span>
+      <span class="text-body-2 mr-1">{{ workout.likes || 0 }}</span>
+      <v-btn icon variant="text" @click="$emit('like')" color="pink">
         <v-icon>mdi-thumb-up</v-icon>
       </v-btn>
     </v-card-actions>

@@ -33,7 +33,7 @@
     />
 
     <!-- Диалог редактирования пользователя -->
-    <v-dialog v-model="userDialog" max-width="1000px" persistent>
+    <v-dialog v-model="userDialog" persistent>
       <v-card>
         <v-card-title class="text-h6">Управление пользователем</v-card-title>
 

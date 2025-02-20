@@ -31,6 +31,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { onMounted } from "vue";
 
 const router = useRouter();
 const route = useRoute();

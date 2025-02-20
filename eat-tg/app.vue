@@ -15,6 +15,17 @@ import UserInit from './components/shared/UserInit.vue';
 
 const loading = ref(true);
 
+const userStore = useUserStore()
+const { apiRequest } = useApi()
+
+onMounted(async () => {
+  await apiRequest('GET', 'splits', undefined, undefined, true)
+  await apiRequest('GET', 'exercises', undefined, undefined, true)
+  await apiRequest('GET', 'blog', undefined, undefined, true)
+  await apiRequest('GET', 'users', undefined, undefined, true)
+})
+
+
 onMounted(() => {
   // Предотвращение двойного тапа (мобильные устройства)
   let lastTap = 0;

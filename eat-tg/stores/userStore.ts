@@ -79,6 +79,19 @@ export const useUserStore = defineStore('user', {
             return Date.now() - timestamp < maxAgeMs;
         },
 
+        resetCache() {
+            localStorage.removeItem('exercisesCache');
+            localStorage.removeItem('splitsCache');
+            localStorage.removeItem('blogCache');
+            localStorage.removeItem('dietsCache');
+
+            this.exercises = { data: [], timestamp: 0 };
+            this.splits = { data: [], timestamp: 0 };
+            this.blogArticles = { data: [], timestamp: 0 };
+            this.dietsList = { data: [], timestamp: 0 };
+        },
+
+
         // Загрузка кэша из `localStorage`
         loadCache() {
             this.exercises = JSON.parse(localStorage.getItem('exercisesCache') || '{"data":[],"timestamp":0}');

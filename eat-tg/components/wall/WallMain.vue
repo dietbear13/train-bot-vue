@@ -2,9 +2,9 @@
   <v-container>
     <v-card class="py-1">
       <v-card-title>🔥 Стена тренировок</v-card-title>
-      <v-card-subtitle>Выберите тренировку, чтобы сохранить или лайкнуть</v-card-subtitle>
+      <v-card-subtitle>Отмечайте понравившиеся тренировки и сохраняйте в свой профиль.</v-card-subtitle>
 
-      <WallList :workouts="sortedWorkouts" @like="handleLike" @save="handleSave" />
+      <WallList class="mt-2" :workouts="sortedWorkouts" @like="handleLike" @save="handleSave" />
     </v-card>
   </v-container>
 </template>

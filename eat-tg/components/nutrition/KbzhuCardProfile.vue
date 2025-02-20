@@ -127,7 +127,7 @@ onMounted(async () => {
     }
 
     // Ищем пользователя по telegramId
-    console.log('🔍 userStore.telegramId:', userStore.telegramId);
+    console.log('🔍 userStore:', userStore);
     const currentUser = response.find(
         (u) => u.telegramId === userStore.telegramId
     );
@@ -137,6 +137,7 @@ onMounted(async () => {
       return;
     }
 
+    console.log('🔍 Записи:', currentUser.kbzhuHistory);
     if (!currentUser.kbzhuHistory || currentUser.kbzhuHistory.length === 0) {
       console.warn('ℹ️ У пользователя нет истории KБЖУ.');
       return;
@@ -147,6 +148,7 @@ onMounted(async () => {
         (a, b) => b.timestamp - a.timestamp
     );
     console.log('🗂️ Отсортированная история KБЖУ:', sortedHistory);
+    console.log('🔍 Число отсортированных записей:', sortedHistory.length);
 
     userKbzhu.value = sortedHistory[0].kbzhuResult;
     userTimestamp.value = sortedHistory[0].timestamp;
