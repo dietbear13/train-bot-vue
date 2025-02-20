@@ -200,16 +200,16 @@ onMounted(async () => {
     console.error('Не удалось получить данные пользователя из Telegram.')
   }
 
-  if (userStore.isCacheValid(userStore.blogArticles.timestamp)) {
-    posts.value = userStore.blogArticles.data
-    loading.value = false
-    return
-  }
+  // if (userStore.isCacheValid(userStore.blogArticles.timestamp)) {
+  //   posts.value = userStore.blogArticles.data
+  //   loading.value = false
+  //   return
+  // }
 
   try {
     // 1) Получаем список постов
     const blogData = await apiRequest<any[]>('GET', '/blog')
-    log('blogData =>', blogData)
+    console.log('📰 Загружены данные блога в карточке:', blogData);
 
     // Маппим данные постов
     const mappedPosts = blogData.map(item => ({

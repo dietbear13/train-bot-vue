@@ -111,9 +111,17 @@ export const useUserStore = defineStore('user', {
         },
         async forceLoadData() {
             const { apiRequest } = useApi();
+
             this.splits = { data: await apiRequest('GET', 'splits'), timestamp: Date.now() };
             this.exercises = { data: await apiRequest('GET', 'exercises'), timestamp: Date.now() };
-            this.blogArticles = { data: await apiRequest('GET', 'blog'), timestamp: Date.now() };
+            try {
+                const blogData = await apiRequest('GET', 'blog');
+                console.log('📰 Загружены данные блога:', blogData);
+                this.blogArticles = { data: blogData, timestamp: Date.now() };
+                localStorage.setItem('blogCache', JSON.stringify(this.blogArticles));
+            } catch (error) {
+                console.error('❌ Ошибка при загрузке блога:', error);
+            }
             this.users = await apiRequest('GET', 'users');
 
             localStorage.setItem('splitsCache', JSON.stringify(this.splits));

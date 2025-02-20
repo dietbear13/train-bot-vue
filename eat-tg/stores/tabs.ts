@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-
-export const useTabsStore = defineStore('tabs', () => {
+defineStore('tabs', () => {
     const activeTab = ref<'main' | 'workout-muscles' | 'exercise-search'>('main')
 
     function setTab(tab: 'main' | 'workout-muscles' | 'exercise-search') {
@@ -9,4 +8,4 @@ export const useTabsStore = defineStore('tabs', () => {
     }
 
     return { activeTab, setTab }
-})
+});

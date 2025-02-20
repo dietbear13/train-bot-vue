@@ -2,7 +2,7 @@
   <v-app>
     <v-main>
       <Transition :name="transitionName" mode="out-in">
-        <NuxtPage/>
+        <NuxtPage v-if="true"/>
       </Transition>
     </v-main>
 

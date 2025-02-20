@@ -86,13 +86,6 @@ interface WorkoutItem extends Exercise {
   reps: number;
 }
 
-defineProps({
-  tab: {
-    type: String,
-    default: 'exercise-search'
-  }
-})
-
 
 export default defineComponent({
   name: 'ExerciseSearch',

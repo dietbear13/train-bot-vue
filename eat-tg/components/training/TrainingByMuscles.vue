@@ -398,12 +398,12 @@ interface SnackbarState {
   timeout?: number
 }
 
-defineProps({
-  tab: {
-    type: String,
-    default: 'workout-muscles'
-  }
-})
+// defineProps({
+//   tab: {
+//     type: String,
+//     default: 'workout-muscles'
+//   }
+// })
 
 
 export default defineComponent({

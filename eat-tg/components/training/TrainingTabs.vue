@@ -38,9 +38,10 @@
       </v-tab>
     </v-tabs>
 
-<!--     Содержимое активной вкладки-->
+     Содержимое активной вкладки
     <div class="tab-content mt-2">
-      <component :is="currentComponent" :tab="currentTab" />
+      <component v-if="currentComponent" :is="currentComponent" :tab="currentTab" />
+      <p v-else>Ошибка загрузки компонента</p>
     </div>
     </v-container>
 </template>
@@ -69,6 +70,9 @@ const tabMap: Record<TabKey, number> = {
 const route = useRoute()
 const router = useRouter()
 
+console.log('🚨 currentTab:', currentTab.value);
+console.log('🚨 currentComponent:', currentComponent.value);
+
 // Текущая вкладка из query-параметра или 'main' по умолчанию
 const currentTab = computed<TabKey>(() => {
   let queryTab = route.query.tab
@@ -80,16 +84,23 @@ const currentTab = computed<TabKey>(() => {
 
 
 // Активный индекс вкладки (без ошибки, так как currentTab.value имеет тип TabKey)
-const activeTab = ref<number>(tabMap[currentTab.value])
-// const activeTab = ref<number>(1)
+const activeTab = ref<number>(0) // По умолчанию - первая вкладка
+
+watch(currentTab, (newTab) => {
+  activeTab.value = tabMap[newTab] ?? 0; // Если что-то пошло не так, дефолтное значение 0
+});
 
 // Функция переключения вкладок и установки query-параметра
 function changeTab(tabName: TabKey) {
+  if (!tabMap[tabName]) {
+    console.warn(`Попытка переключиться на несуществующую вкладку: ${tabName}`);
+    return;
+  }
   if (currentTab.value !== tabName) {
     router.push({
-      path: route.path, // или укажите '/' для главной страницы
+      path: route.path,
       query: { tab: tabName }
-    })
+    });
   }
 }
 
@@ -97,52 +108,37 @@ function changeTab(tabName: TabKey) {
 // Определяем, какой компонент отображать на основе текущей вкладки
 
 const currentComponent = computed(() => {
-  console.log('currentTab', currentTab.value)
-  switch (currentTab.value) {
-    case 'main':
-      return TrainingOnWeek
-    case 'workout-muscles':
-      return TrainingByMuscles
-    case 'exercise-search':
-      return ExerciseSearch
-    default:
-      console.log('currentTab def', currentTab.value)
-      return TrainingOnWeek
+  if (!currentTab.value || !(currentTab.value in tabMap)) {
+    console.warn(`Некорректный tab: ${currentTab.value}, устанавливаю по умолчанию.`);
+    return TrainingOnWeek; // По умолчанию
   }
-})
+  return {
+    main: TrainingOnWeek,
+    'workout-muscles': TrainingByMuscles,
+    'exercise-search': ExerciseSearch
+  }[currentTab.value] ?? TrainingOnWeek;
+});
 
 
 // Следим за изменением query-параметра tab
 watch(
     () => route.query.tab,
     (newTab) => {
-      if (Array.isArray(newTab)) {
-        newTab = newTab[0]
-      }
-      if (typeof newTab === 'string' && newTab in tabMap) {
-        activeTab.value = tabMap[newTab as TabKey]
-      } else {
-        router.replace({ path: route.path, query: { tab: 'main' } })
-      }
+      newTab = Array.isArray(newTab) ? newTab[0] : newTab;
+      activeTab.value = tabMap[newTab as TabKey] ?? 0;
     },
     { immediate: true }
-)
+);
 
 // При монтировании проверяем наличие корректного параметра и, если его нет, перенаправляем на main
 onMounted(() => {
-  const queryTab = route.query.tab
-  if (
-      typeof queryTab !== 'string' ||
-      !(queryTab === 'main' || queryTab === 'workout-muscles' || queryTab === 'exercise-search')
-  ) {
-    router.replace({ path: route.path, query: { tab: 'main' } })
+  const queryTab = Array.isArray(route.query.tab) ? route.query.tab[0] : route.query.tab;
+
+  if (!queryTab || !(queryTab in tabMap)) {
+    console.warn(`Некорректный query параметр: ${queryTab}, устанавливаю "main"`);
+    router.replace({ path: route.path, query: { tab: 'main' } });
   }
-})
-onMounted(() => {
-  if (!route.query.tab || tabMap[route.query.tab as string] === undefined) {
-    router.replace({ path: route.path, query: { tab: 'main' } })
-  }
-})
+});
 </script>
 
 <style scoped>
