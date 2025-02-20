@@ -170,6 +170,33 @@
         </v-card-text>
       </v-card>
 
+      <!-- Разворачиваем фильтры -->
+      <v-expand-transition>
+        <v-card v-if="showInjuryFilters" class="pa-0 my-2 dark-background">
+          <v-card-title>Фильтры по травмам</v-card-title>
+          <v-card-text class="px-1 pb-1 pt-0">
+            <!-- Привязка к localInjuryFilters -->
+            <p class="ml-1">Фильтр по травмам сильно уменьшит число упражнений, из которых создаются программы тренировок. Ставьте, если острая фаза или прямые противопоказания.</p>
+            <v-checkbox
+                v-model="localInjuryFilters.spine"
+                label="Позвоночник"
+                hide-details
+            ></v-checkbox>
+            <v-checkbox
+                v-model="localInjuryFilters.knee"
+                label="Коленные суставы"
+                hide-details
+            ></v-checkbox>
+            <v-checkbox
+                v-model="localInjuryFilters.shoulder"
+                label="Плечевые суставы"
+                hide-details
+            ></v-checkbox>
+          </v-card-text>
+        </v-card>
+      </v-expand-transition>
+
+
       <!-- Кнопка "Сгенерировать" (появляется только если выбран сплит) -->
       <v-btn-group
         class="pr-2"
@@ -223,31 +250,6 @@
       </v-alert>
     </v-form>
 
-    <!-- Разворачиваем фильтры -->
-    <v-expand-transition>
-      <v-card v-if="showInjuryFilters" class="pa-0 mt-2 dark-background">
-        <v-card-title>Фильтры по травмам</v-card-title>
-        <v-card-text class="px-1 pb-1 pt-0">
-          <!-- Привязка к localInjuryFilters -->
-          <p>Фильтр по травмам сильно уменьшит число упражнений, из которых создаются программы тренировок. Ставьте, если острая фаза или прямые противопоказания.</p>
-          <v-checkbox
-              v-model="localInjuryFilters.spine"
-              label="Позвоночник"
-              hide-details
-          ></v-checkbox>
-          <v-checkbox
-              v-model="localInjuryFilters.knee"
-              label="Коленные суставы"
-              hide-details
-          ></v-checkbox>
-          <v-checkbox
-              v-model="localInjuryFilters.shoulder"
-              label="Плечевые суставы"
-              hide-details
-          ></v-checkbox>
-        </v-card-text>
-      </v-card>
-    </v-expand-transition>
   </div>
 </template>
 

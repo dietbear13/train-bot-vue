@@ -367,26 +367,6 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
     const finalPlan = ref<GeneratedDay[]>([])
 
     // При монтировании загружаем упражнения
-    onMounted(async () => {
-        if (userStore.exercises.length === 0) {
-            console.log('🔄 Загружаем упражнения с API...')
-            const data = await apiRequest<Exercise[]>('get', 'exercises')
-            userStore.setExercises(data)
-            exercises.value = data
-        } else {
-            console.log('✅  Используем кешированные упражнения.')
-        }
-    })
-
-    async function loadExercises() {
-        try {
-            const data = await apiRequest<Exercise[]>('get', 'exercises')
-            exercises.value = data
-        } catch (err) {
-            console.error('Ошибка при загрузке упражнений:', err)
-        }
-    }
-
     /**
      * Генерация плана сплита с учётом пола, выбранного сплита, цели и фильтров по травмам.
      *
@@ -400,8 +380,8 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
         gender: string,
         chosenSplit: SplitItem,
         goal: string,
-        finalPlanRef: Ref<GeneratedDay[]>,
-        injuryFilters: InjuryFilters
+        injuryFilters: InjuryFilters,
+    finalPlanRef: Ref<GeneratedDay[]>
     ) {
         params.errorMessages.value = []
         if (!chosenSplit) {
@@ -429,6 +409,9 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
             // Очищаем предыдущий результат
             finalPlanRef.value = []
 
+            console.log('🚨 exercises.value:', exercises.value);
+
+
             // Фильтруем упражнения согласно выбранным фильтрам по травмам
             const filteredExercises = exercises.value.filter(e => {
                 if (injuryFilters.spine && e.spineRestrictions) return false
@@ -436,6 +419,8 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
                 if (injuryFilters.shoulder && e.shoulderRestrictions) return false
                 return true
             })
+
+            console.log('🚨 filteredExercises:', filteredExercises);
 
             // Для чередования паттернов
             let patternIndex = 0
@@ -470,7 +455,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
                             usedIdsInDay,
                             filteredExercises,
                             goal,
-                            255
+                            10000
                         )
                         exList.push(...result)
                     }
@@ -498,6 +483,26 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
         } finally {
             params.isLoading.value = false
             params.isGenerating.value = false
+        }
+    }
+
+    onMounted(async () => {
+        if (userStore.exercises.length === 0) {
+            console.log('🔄 Загружаем упражнения с API...')
+            const data = await apiRequest<Exercise[]>('get', 'exercises')
+            userStore.setExercises(data)
+            exercises.value = data
+        } else {
+            console.log('✅  Используем кешированные упражнения.')
+        }
+    })
+
+    async function loadExercises() {
+        try {
+            const data = await apiRequest<Exercise[]>('get', 'exercises')
+            exercises.value = data
+        } catch (err) {
+            console.error('Ошибка при загрузке упражнений:', err)
         }
     }
 
