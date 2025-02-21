@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { Exercise } from "../composables/types";
+import type { Exercise } from "../composables/types";
 
 interface BlogArticle {
     id: number;

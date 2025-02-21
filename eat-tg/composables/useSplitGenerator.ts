@@ -2,7 +2,7 @@
 import { ref, onMounted, type Ref } from 'vue'
 import { useApi } from './useApi'
 import { useUserStore } from '../stores/userStore'
-import { Exercise, RepetitionLevels } from './types'
+import type { Exercise, RepetitionLevels } from './types'
 
 // ======================= Интерфейсы =======================
 interface FoundExercise {
@@ -54,6 +54,7 @@ export interface InjuryFilters {
 
 // ======================= Основные зависимости =======================
 const { apiRequest } = useApi()
+// Здесь можно явно указать тип, чтобы TS не ругался на методы userStore.
 const userStore: ReturnType<typeof useUserStore> = useUserStore()
 // const userStore = useUserStore()
 
@@ -149,10 +150,8 @@ function tryFindExercise(
             continue
         }
 
-        // Случайно берём один вариант из массива
         let chosenReps = repsArray[Math.floor(Math.random() * repsArray.length)]
 
-        // === ДОБАВЛЯЕМ ЛОГИКУ ДЛЯ goal ===
         if (goal === 'Похудение') {
             const variants = [15, 20]
             chosenReps = variants[Math.floor(Math.random() * variants.length)]
@@ -403,8 +402,8 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
         gender: string,
         chosenSplit: SplitItem,
         goal: string,
-        injuryFilters: InjuryFilters,
-        finalPlanRef: Ref<GeneratedDay[]>
+        finalPlanRef: Ref<GeneratedDay[]>,
+        injuryFilters: InjuryFilters
     ) {
         params.errorMessages.value = []
         if (!chosenSplit) {
@@ -431,7 +430,9 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
             const weekDays = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
 
             // Очищаем предыдущий результат
+            console.log('📢 finalPlanRef.value:', finalPlanRef.value)
             finalPlanRef.value = []
+            console.log('📢 finalPlanRef.value:', finalPlanRef.value)
 
             console.log('🚨 exercises.value:', exercises.value)
             console.log('🚨 injuryFilters:', injuryFilters)

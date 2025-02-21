@@ -361,6 +361,7 @@ export default defineComponent({
       shoulder: props.injuryFilters.shoulder
     })
 
+
     // Следим за изменениями локальных фильтров и пробрасываем наружу
     watch(
         localInjuryFilters,

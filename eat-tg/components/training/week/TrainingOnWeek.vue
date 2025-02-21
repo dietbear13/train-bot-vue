@@ -204,6 +204,8 @@ export default defineComponent({
       shoulder: false
     })
 
+    console.log('📢 injuryFilters', injuryFilters)
+
     const selectedSplitComment = ref<string | null>(null)
 
     const availableSplits = computed(() => {
@@ -275,7 +277,10 @@ export default defineComponent({
       selectedSplitRef: selectedSplit
     })
 
-    // Отправка данных в аналитику + сам план
+    /**
+     * Функция отправки данных в аналитику (/analytics/save-sended-workout)
+     * Дополнена: теперь передаём и сам план (finalPlan).
+     */
     const sendAnalyticsWorkoutPlan = async (plan: DayPlan[]) => {
       if (!telegramUserId.value) {
         showSnackbar('Нет telegramUserId — не можем сохранить.', 'error')
@@ -326,6 +331,7 @@ export default defineComponent({
         return
       }
       console.log('Начало генерации сплита (реальный вызов).')
+      console.log('🚨 injuryFilters.value', injuryFilters.value)
       await generateSplitPlan(
           gender.value,
           selectedSplit.value,
