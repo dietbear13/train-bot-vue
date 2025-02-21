@@ -26,13 +26,21 @@
           style="border-radius: 16px"
           :class="{ 'active-tab': activeTab === 1 }"
       >
-        На одну мышцу
+        Стена программ
       </v-tab>
 
       <v-tab
           class="custom-tab px-1"
           style="border-radius: 16px"
           :class="{ 'active-tab': activeTab === 2 }"
+      >
+        На одну мышцу
+      </v-tab>
+
+      <v-tab
+          class="custom-tab px-1"
+          style="border-radius: 16px"
+          :class="{ 'active-tab': activeTab === 3 }"
       >
         Вики
       </v-tab>
@@ -54,15 +62,17 @@ import { defineAsyncComponent } from 'vue';
 const TrainingOnWeek = defineAsyncComponent(() => import('./week/TrainingOnWeek.vue'));
 const TrainingByMuscles = defineAsyncComponent(() => import('./TrainingByMuscles.vue'));
 const ExerciseSearch = defineAsyncComponent(() => import('./ExerciseSearch.vue'));
+const WallMain = defineAsyncComponent(() => import('../wall/WallMain.vue'));
 
 // Определяем тип для ключей вкладок
-type TabKey = 'main' | 'workoutMuscles' | 'exerciseSearch'
+type TabKey = 'main' | 'workoutMuscles' | 'exerciseSearch' | 'programWall'
 
 // Сопоставление параметров вкладок и их индексов
 const tabMap: Record<TabKey, number> = {
   main: 0,
-  workoutMuscles: 1,
-  exerciseSearch: 2
+  programWall: 1,
+  workoutMuscles: 2,
+  exerciseSearch: 3,
 }
 
 
@@ -124,7 +134,8 @@ const currentComponent = computed(() => {
   return {
     main: TrainingOnWeek,
     workoutMuscles: TrainingByMuscles,
-    exerciseSearch: ExerciseSearch
+    exerciseSearch: ExerciseSearch,
+    programWall: WallMain,
   }[currentTab.value] ?? TrainingOnWeek;
 });
 console.log('🚨 currentComponent:', currentComponent.value);
