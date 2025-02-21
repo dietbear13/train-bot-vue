@@ -205,9 +205,8 @@
         <v-btn
           v-if="formData.splitId"
           color="success"
-          class="mt-1"
           rounded="xl"
-          width="75%"
+          width="70%"
           :disabled="isAnimating || isGenerating"
           @click="onGenerateSplit"
         >
@@ -227,7 +226,7 @@
           class="ml-1"
           rounded="xl"
           color="primary"
-          width="25%"
+          width="30%"
           @click="showInjuryFilters = !showInjuryFilters"
         >
           <v-icon>mdi-filter-variant</v-icon> Травмы
