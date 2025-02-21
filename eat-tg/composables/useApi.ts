@@ -20,7 +20,7 @@ export function useApi() {
         params?: any
     ): Promise<T> => {
         if (method === 'get') {
-            // Кэшируемые данные на 1 час
+            // Кэшируемые данные
             if (['splits', 'exercises', 'blog', 'dietsList'].includes(endpoint)) {
                 const cache = userStore[endpoint as keyof typeof userStore] as any;
                 if (cache && cache.data && cache.data.length > 0 && userStore.isCacheValid(cache.timestamp)) {

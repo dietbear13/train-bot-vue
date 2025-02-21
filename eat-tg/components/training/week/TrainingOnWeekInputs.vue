@@ -379,7 +379,6 @@ export default defineComponent({
 
     onMounted(() => {
       telegramId.value = userStore.telegramId
-      console.log('telegramId из userStore:', telegramId.value)
     })
 
     const selectGender = (option: string) => {
@@ -460,17 +459,6 @@ export default defineComponent({
       }
     }
 
-    // Логирование splitsToShow
-    watch(
-        () => props.splitsToShow,
-        (newSplits) => {
-          console.log('splitsToShow updated:', newSplits)
-          newSplits.forEach((s) => {
-            console.log('Full Split Object:', s)
-          })
-        },
-        { immediate: true, deep: true }
-    )
 
     return {
       formData,

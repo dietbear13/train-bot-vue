@@ -590,7 +590,6 @@ export default defineComponent({
           ...exercise,
           _id: typeof exercise._id === 'string' ? exercise._id : exercise._id.$oid
         }))
-        console.log('Упражнения загружены:', exercises.value)
       } catch (error: any) {
         console.error('Ошибка при загрузке упражнений:', error.message)
         showSnackbar('Не удалось загрузить упражнения. Попробуйте позже.', 'error')
@@ -604,7 +603,6 @@ export default defineComponent({
           ...pattern,
           _id: typeof pattern._id === 'string' ? pattern._id : pattern._id.$oid
         }))
-        console.log('Загруженные паттерны:', patterns.value)
       } catch (error: any) {
         console.error('Ошибка при загрузке паттернов:', error.message)
         showSnackbar('Не удалось загрузить паттерны. Попробуйте позже.', 'error')

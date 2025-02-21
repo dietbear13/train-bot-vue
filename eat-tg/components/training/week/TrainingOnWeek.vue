@@ -29,55 +29,55 @@
     <div v-else>
       <!-- Компонент выбора пола, цели, типа сплита -->
       <TrainingOnWeekInputs
-        :genders="genders"
-        :gender="gender"
-        :uniqueSplitTypes="uniqueSplitTypes"
-        :selectedSplitType="selectedSplitType"
-        :splitsToShow="splitsToShow"
-        :selectedSplitId="selectedSplitId"
-        :selectedSplit="selectedSplit"
-        :isLoading="isLoading"
-        :isGenerating="isGenerating"
-        :errorMessages="errorMessages"
-        :isAnimating="isAnimating"
-        :injuryFilters="injuryFilters"
+          :genders="genders"
+          :gender="gender"
+          :uniqueSplitTypes="uniqueSplitTypes"
+          :selectedSplitType="selectedSplitType"
+          :splitsToShow="splitsToShow"
+          :selectedSplitId="selectedSplitId"
+          :selectedSplit="selectedSplit"
+          :isLoading="isLoading"
+          :isGenerating="isGenerating"
+          :errorMessages="errorMessages"
+          :isAnimating="isAnimating"
+          :injuryFilters="injuryFilters"
 
-        @update:gender="gender = $event"
-        @update:goal="goal = $event"
-        @update:selectedSplitType="selectedSplitType = $event"
-        @update:selectedSplitId="onSelectSplitId"
-        @generateSplitWorkout="generateSplitWorkout"
-        @update:injuryFilters="val => injuryFilters = val"
+          @update:gender="gender = $event"
+          @update:goal="goal = $event"
+          @update:selectedSplitType="selectedSplitType = $event"
+          @update:selectedSplitId="onSelectSplitId"
+          @generateSplitWorkout="generateSplitWorkout"
+          @update:injuryFilters="val => injuryFilters = val"
       />
 
       <!-- Компонент результата (готовая «неделя») -->
       <TrainingOnWeekResult
-        v-model:showBottomSheet="showBottomSheet"
-        :selectedSplit="selectedSplit"
-        :finalPlan="finalPlan"
-        :isLoading="isLoading"
-        :telegramUserId="telegramUserId"
-        :refreshingDays="refreshingDays"
-        @sendWorkoutPlan="sendWorkoutPlan($event)"
-        @regenerateWholeSplit="regenerateWholeSplit"
-        @refreshDayExercises="refreshDayExercises"
-        @increaseRepsSplit="increaseRepsSplit"
-        @decreaseRepsSplit="decreaseRepsSplit"
-        @removeExerciseSplit="removeExerciseSplit"
-        @regenerateExerciseSplit="regenerateExerciseSplit"
-        :openExerciseInfo="openExerciseInfo"
+          v-model:showBottomSheet="showBottomSheet"
+          :selectedSplit="selectedSplit"
+          :finalPlan="finalPlan"
+          :isLoading="isLoading"
+          :telegramUserId="telegramUserId"
+          :refreshingDays="refreshingDays"
+          @sendWorkoutPlan="sendWorkoutPlan($event)"
+          @regenerateWholeSplit="regenerateWholeSplit"
+          @refreshDayExercises="refreshDayExercises"
+          @increaseRepsSplit="increaseRepsSplit"
+          @decreaseRepsSplit="decreaseRepsSplit"
+          @removeExerciseSplit="removeExerciseSplit"
+          @regenerateExerciseSplit="regenerateExerciseSplit"
+          :openExerciseInfo="openExerciseInfo"
       />
     </div>
   </div>
 
   <!-- Глобальный Snackbar -->
   <v-snackbar
-    v-model="snackbar.show"
-    :color="snackbar.color"
-    :timeout="snackbar.timeout"
-    top
-    right
-    multi-line
+      v-model="snackbar.show"
+      :color="snackbar.color"
+      :timeout="snackbar.timeout"
+      top
+      right
+      multi-line
   >
     {{ snackbar.message }}
     <template #actions>
@@ -89,8 +89,8 @@
 
   <!-- Компонент для подробностей упражнения (ExerciseInfo) -->
   <ExerciseInfo
-    v-model="showExerciseInfo"
-    :exercise="selectedExercise"
+      v-model="showExerciseInfo"
+      :exercise="selectedExercise"
   />
 </template>
 
@@ -204,8 +204,6 @@ export default defineComponent({
       shoulder: false
     })
 
-    console.log('📢 injuryFilters', injuryFilters)
-
     const selectedSplitComment = ref<string | null>(null)
 
     const availableSplits = computed(() => {
@@ -279,7 +277,7 @@ export default defineComponent({
 
     /**
      * Функция отправки данных в аналитику (/analytics/save-sended-workout)
-     * Дополнена: теперь передаём и сам план (finalPlan).
+     * Дополнена: теперь передаём и сам план (finalPlan), а также injuryFilters.
      */
     const sendAnalyticsWorkoutPlan = async (plan: DayPlan[]) => {
       if (!telegramUserId.value) {
@@ -297,7 +295,9 @@ export default defineComponent({
         splitType: selectedSplit.value.split,
         splitId: selectedSplit.value._id,
         timestamp: Date.now(),
-        plan
+        plan,
+        // <-- Новый блок: сохраняем injuryFilters
+        injuryFilters: injuryFilters.value
       }
       console.log('payload', payload)
       try {
@@ -364,9 +364,12 @@ export default defineComponent({
     }
 
     onMounted(async () => {
-      if (!userStore.hasSplits) await loadSplits()
+      // Заменяем проверку userStore.hasSplits на загрузку, если массив пуст
+      if (allSplits.value.length === 0) {
+        await loadSplits()
+      }
 
-      if (process.client) {
+      if (typeof window !== 'undefined') {
         const launchParams = retrieveLaunchParams()
         initData.value = launchParams.initData
         if (initData.value && initData.value.user) {
@@ -382,6 +385,9 @@ export default defineComponent({
       roleLoading.value = false
     })
 
+    /**
+     * Перегенерация упражнений всего дня — учитываем injuryFilters
+     */
     const refreshDayExercises = async (dayIndex: number) => {
       if (!finalPlan.value[dayIndex]) return
       refreshingDays.value[dayIndex] = true
@@ -391,7 +397,8 @@ export default defineComponent({
           exIndex < finalPlan.value[dayIndex].exercises.length;
           exIndex++
       ) {
-        await regenerateExercise(dayIndex, exIndex, gender.value, finalPlan)
+        // Передаём injuryFilters
+        await regenerateExercise(dayIndex, exIndex, gender.value, finalPlan, injuryFilters.value)
       }
       refreshingDays.value[dayIndex] = false
     }
@@ -456,12 +463,16 @@ export default defineComponent({
       exercisesArr.splice(index, 1)
     }
 
+    /**
+     * Перегенерация одного упражнения, тоже с учётом injuryFilters
+     */
     const regenerateExerciseSplit = (
         exercisesArr: any,
         index: number,
         dayIndex: number
     ) => {
-      regenerateExercise(dayIndex, index, gender.value, finalPlan)
+      // Передаём injuryFilters как пятый параметр
+      regenerateExercise(dayIndex, index, gender.value, finalPlan, injuryFilters.value)
     }
 
     const onSelectSplitId = (newVal: string) => {

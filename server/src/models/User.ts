@@ -23,13 +23,19 @@ export interface IKbzhuHistory {
 export interface ITrainingHistory {
     formData: {
         gender: string
-        goal: string
+        goal?: string
         splitType: string
         splitId: string
+        // <-- Добавляем под-объект injuryFilters
+        injuryFilters?: {
+            spine?: boolean
+            knee?: boolean
+            shoulder?: boolean
+        }
     }
     timestamp: number // UNIX timestamp
     isSended?: boolean
-    plan?: any // <-- добавляем сюда объект с полным планом
+    plan?: any // <-- план тренировки
 }
 
 export interface IReferral {
@@ -114,10 +120,16 @@ const UserSchema: Schema = new Schema<IUser>({
                 goal: { type: String, required: false },
                 splitType: { type: String, required: true },
                 splitId: { type: String, required: true },
+                // <-- Добавляем схему для injuryFilters
+                injuryFilters: {
+                    spine: { type: Boolean, default: false },
+                    knee: { type: Boolean, default: false },
+                    shoulder: { type: Boolean, default: false },
+                },
             },
             timestamp: { type: Number, required: true },
             isSended: { type: Boolean, default: false },
-            plan: { type: Schema.Types.Mixed }, // <-- Здесь храним весь план
+            plan: { type: Schema.Types.Mixed }, // храним полный план
         },
     ],
     referrals: {

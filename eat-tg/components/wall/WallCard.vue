@@ -1,29 +1,44 @@
 <template>
-  <v-card class="pa-1 mb-3" elevation="3" variant="tonal" style="border-radius: 16px">
-    <!-- 🔹 Заголовок карточки -->
+  <v-card
+      class="pa-1 mb-3"
+      elevation="3"
+      variant="tonal"
+      style="border-radius: 16px"
+  >
+    <!-- 🔹 Заголовок карточки (аватар + "кОчка...") -->
     <v-card-title class="text-h6 font-weight-bold d-flex align-center">
       <v-avatar size="40" class="me-3">
-        <v-img src="https://cdn-icons-png.flaticon.com/512/4712/4712035.png" alt="User" />
+        <!-- Ставим любой placeholder или иконку -->
+        <v-img
+            src="https://cdn-icons-png.flaticon.com/512/4712/4712035.png"
+            alt="User"
+        />
       </v-avatar>
       кОчка{{ workout.telegramId || "" }}
     </v-card-title>
 
     <!-- 🔹 Подзаголовок с датой и типом тренировки -->
-    <v-card-subtitle class="d-flex align-center justify-space-between">
+    <!-- Проверяем, что formData есть. Если нет - просто не отображаем блок. -->
+    <v-card-subtitle
+        v-if="workout.formData"
+        class="d-flex align-center justify-space-between"
+    >
       <span>{{ formatDate(workout.timestamp) }}</span>
-      <v-chip color="blue-darken-1" class="text-white">{{ workout.formData.splitType }}</v-chip>
+      <v-chip color="blue-darken-1" class="text-white">
+        {{ workout.formData.splitType || '—' }}
+      </v-chip>
     </v-card-subtitle>
 
-    <!-- 🔹 Основной контент -->
+    <!-- 🔹 Основной контент (цель, комментарии и план) -->
     <v-card-text>
       <v-row dense>
         <v-col cols="12">
           <p class="text-subtitle-1 font-weight-bold">🎯 Цель:</p>
-          <p>{{ workout.formData.goal || "Не указана" }}</p>
+          <p>{{ workout.formData?.goal || "Не указана" }}</p>
         </v-col>
 
         <!-- Комментарий -->
-        <v-col cols="12" v-if="workout.formData.comment">
+        <v-col cols="12" v-if="workout.formData?.comment">
           <p class="text-subtitle-1 font-weight-bold">💬 Комментарий:</p>
           <v-alert color="info" variant="tonal">
             {{ workout.formData.comment }}
@@ -32,15 +47,22 @@
       </v-row>
 
       <!-- 🔹 Аккордеон с тренировочным планом -->
-      <v-expansion-panels variant="accordion">
-        <v-expansion-panel v-for="(day, index) in workout.plan.filter(d => d.exercises.length > 0)" :key="index">
+      <v-expansion-panels variant="accordion" v-if="workout.plan && workout.plan.length">
+        <v-expansion-panel
+            v-for="(day, index) in workout.plan.filter(d => d.exercises && d.exercises.length > 0)"
+            :key="index"
+        >
           <v-expansion-panel-title>
-            <v-icon class="me-2">mdi-calendar-check</v-icon> {{ day.dayName }}
+            <v-icon class="me-2">mdi-calendar-check</v-icon>
+            {{ day.dayName }}
           </v-expansion-panel-title>
           <v-expansion-panel-text>
             <v-list density="compact">
-              <v-list-item v-for="exercise in day.exercises" :key="exercise._id">
-                <template v-slot:prepend>
+              <v-list-item
+                  v-for="exercise in day.exercises"
+                  :key="exercise._id"
+              >
+                <template #prepend>
                   <v-avatar size="30" class="me-2">
                     <v-icon>mdi-dumbbell</v-icon>
                   </v-avatar>
@@ -58,32 +80,83 @@
       </v-expansion-panels>
     </v-card-text>
 
-        <!-- 🔹 Кнопки действий -->
+    <!-- 🔹 Кнопки действий -->
     <v-card-actions>
-      <v-btn variant="tonal" color="green" class="pl-3" rounded="xl" @click="$emit('save')">
-        <v-icon start>mdi-content-save</v-icon> Сохранить себе
+      <v-btn
+          variant="tonal"
+          color="green"
+          class="pl-3"
+          rounded="xl"
+          @click="$emit('save')"
+      >
+        <v-icon start>mdi-content-save</v-icon>
+        Сохранить себе
       </v-btn>
 
-      <v-spacer></v-spacer>
+      <v-spacer />
 
       <span class="text-body-2 mr-1">{{ workout.likes || 0 }}</span>
-      <v-btn icon variant="text" @click="$emit('like')" color="pink">
+      <v-btn
+          icon
+          variant="text"
+          color="pink"
+          @click="$emit('like')"
+      >
         <v-icon>mdi-thumb-up</v-icon>
       </v-btn>
     </v-card-actions>
   </v-card>
 </template>
 
-<script setup>
-defineProps({ workout: Object });
+<script lang="ts" setup>
+const wallStore = useWallStore();
+const userStore = useUserStore();
 
-defineEmits(["like", "save"]);
 
+/**
+ * Принимаем объект тренировки и пробрасываем
+ * события "like" и "save".
+ */
+const props = defineProps({
+  workout: {
+    type: Object,
+    default: () => ({}),
+  },
+});
+
+const emits = defineEmits(["like", "save"]);
+
+/**
+ * Функция форматирования даты
+ */
 function formatDate(timestamp) {
+  if (!timestamp) return "—";
   return new Date(timestamp).toLocaleDateString("ru-RU", {
     day: "2-digit",
     month: "long",
     year: "numeric",
   });
 }
+
+/** Пример сортировки по лайкам (descending) */
+const sortedWorkouts = computed(() => {
+  return [...wallStore.workouts].sort((a, b) => (b.likes || 0) - (a.likes || 0));
+});
+
+/** Обработка лайка */
+function handleLike(workoutId: string) {
+  console.log('Лайк для', workoutId);
+  // ... Логика лайка (можно POST/PUT к API)
+}
+
+/** Обработка "Сохранить себе" */
+function handleSave(workoutId: string) {
+  // Проверяем, есть ли уже в userStore.savedWorkouts
+  if (!userStore.savedWorkouts.some((w) => w._id === workoutId)) {
+    // Можно сохранить целиком объект, или только ID
+    // userStore.savedWorkouts.push({ _id: workoutId, dayName: '', exercises: [] });
+    console.log(`✅📢 Тут закомментирована строка с сохранением ${workoutId} сохранена в savedWorkouts`);
+  }
+}
+
 </script>

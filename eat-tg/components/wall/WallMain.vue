@@ -2,42 +2,56 @@
   <v-container>
     <v-card class="py-1">
       <v-card-title>🔥 Стена тренировок</v-card-title>
-      <v-card-subtitle>Отмечайте понравившиеся тренировки и сохраняйте в свой профиль.</v-card-subtitle>
+      <v-card-subtitle>
+        Отмечайте понравившиеся тренировки и сохраняйте в свой профиль.
+      </v-card-subtitle>
 
-      <WallList class="mt-2" :workouts="sortedWorkouts" @like="handleLike" @save="handleSave" />
+      <!--
+        Компонент, который реально рисует список тренировок (список карточек или что-то ещё).
+        Его вы тоже упоминали как WallList.vue
+      -->
+      <WallList
+          class="mt-2"
+          :workouts="sortedWorkouts"
+          @like="handleLike"
+          @save="handleSave"
+      />
     </v-card>
   </v-container>
 </template>
 
-<script setup>
-import { ref, computed } from "vue";
-import WallList from "./WallList.vue";
-import { useUserStore } from "../../stores/userStore";
+<script setup lang="ts">
+import { onMounted, computed } from 'vue';
+import WallList from './WallList.vue';
+import { useWallStore } from '~/stores/wallStore';
 
-const userStore = useUserStore();
+const wallStore = useWallStore();
 
-// Загружаем тренировки всех пользователей с isSended = true
-const allWorkouts = computed(() => {
-  console.log("📌 userStore.users", userStore.users);
 
-  return userStore.users.flatMap(user =>
-      user.trainingHistory ? user.trainingHistory.filter(w => w.isSended === true) : []
-  );
-});
 
-// Сортируем по лайкам
+/**
+ * Вычисленное свойство, которое возвращает
+ * список тренировок, отсортированных по лайкам (из wallStore)
+ */
 const sortedWorkouts = computed(() => {
-  return allWorkouts.value.sort((a, b) => (b.likes || 0) - (a.likes || 0));
+  return wallStore.sortedWorkouts;
 });
 
-const handleLike = (workoutId) => {
-  // Логика лайка (API-запрос)
-};
+/**
+ * Обработка лайка — вызываем метод из wallStore
+ */
+function handleLike(workoutId: string) {
+  wallStore.handleLike(workoutId);
+}
 
-const handleSave = (workoutId) => {
-  // Проверяем, есть ли уже в сохранённых
-  if (!userStore.savedWorkouts.some(w => w._id === workoutId)) {
-    userStore.savedWorkouts.push(workoutId);
-  }
-};
+/**
+ * Обработка сохранения — вызываем метод из wallStore
+ */
+function handleSave(workoutId: string) {
+  wallStore.handleSave(workoutId);
+}
 </script>
+
+<style scoped>
+/* Ваши стили, если нужны */
+</style>

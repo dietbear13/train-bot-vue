@@ -126,22 +126,36 @@ router.post('/analytics/save-workout', async (req: Request, res: Response) => {
  * Маршрут для сохранения "отправленной" тренировки
  * @route POST /api/analytics/save-sended-workout
  * @body {
- *   userId: number,       // telegramId пользователя
- *   gender: string,       // пол пользователя
- *   goal: string,         // цель (Похудение, Общие, ...)
- *   splitType: string,    // тип сплита
- *   splitId: string,      // конкретный ID сплита
- *   timestamp?: number,   // (опционально) Временная метка
- *   plan?: any            // Полный план (массив дней, упражнений и т.д.)
+ *   userId: number,         // telegramId пользователя
+ *   gender: string,         // пол пользователя
+ *   goal: string,           // цель (Похудение, Общие, ...)
+ *   splitType: string,      // тип сплита
+ *   splitId: string,        // конкретный ID сплита
+ *   timestamp?: number,     // Временная метка (optional)
+ *   plan?: any,             // Полный план (массив дней, упражнений и т.д.)
+ *   injuryFilters?: {       // Новые поля с травмами, необязательные
+ *     spine?: boolean
+ *     knee?: boolean
+ *     shoulder?: boolean
+ *   }
  * }
  */
 router.post('/analytics/save-sended-workout', async (req: Request, res: Response) => {
     try {
-        const { userId, gender, goal, splitType, splitId, timestamp, plan } = req.body;
+        const {
+            userId,
+            gender,
+            goal,
+            splitType,
+            splitId,
+            timestamp,
+            plan,
+            injuryFilters // <-- Новое поле
+        } = req.body;
 
         if (!userId || !gender || !splitType || !splitId || !plan) {
             return res.status(400).json({
-                error: 'Отсутствуют необходимые поля (userId, gender, splitType, splitId, goal) в теле запроса',
+                error: 'Отсутствуют необходимые поля (userId, gender, splitType, splitId, plan) в теле запроса',
             });
         }
 
@@ -152,16 +166,18 @@ router.post('/analytics/save-sended-workout', async (req: Request, res: Response
             });
         }
 
+        // Формируем новое событие в trainingHistory
         const newWorkoutEntry = {
             formData: {
                 gender,
                 goal,
                 splitType,
                 splitId,
+                injuryFilters: injuryFilters || {} // <-- Сохраняем фильтры
             },
             timestamp: timestamp || Date.now(),
             isSended: true, // отмечаем, что тренировка "отправлена"
-            plan: plan || null // <-- Сохраняем полный план
+            plan: plan || null
         };
 
         user.trainingHistory = user.trainingHistory || [];

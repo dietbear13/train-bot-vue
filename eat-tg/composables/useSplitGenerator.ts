@@ -56,7 +56,6 @@ export interface InjuryFilters {
 const { apiRequest } = useApi()
 // Здесь можно явно указать тип, чтобы TS не ругался на методы userStore.
 const userStore: ReturnType<typeof useUserStore> = useUserStore()
-// const userStore = useUserStore()
 
 const exercises = ref<Exercise[]>([]) // ожидаем массив
 
@@ -355,48 +354,34 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
     const finalPlan = ref<GeneratedDay[]>([])
 
     onMounted(async () => {
-        // 1) Вместо userStore.exercises.length:
-        //    Проверяем userStore.exercises.data.length
-        //    потому что exercises = { data: Exercise[], timestamp: number }
+        // Проверка, есть ли уже упражнения в userStore
         if (!userStore.exercises.data || userStore.exercises.data.length === 0) {
             console.log('🔄 Загружаем упражнения с API...')
             const response = await apiRequest('GET', 'exercises')
 
-            // 2) Приводим к типу, чтобы TS не ругался на .data
-            //    Или проверяем через (response as any).data
             let loadedExercises: Exercise[] = []
             if (Array.isArray(response)) {
-                // Если сразу массив
                 loadedExercises = response
             } else if (
                 response &&
                 (response as any).data &&
                 Array.isArray((response as any).data)
             ) {
-                // Если внутри есть data
                 loadedExercises = (response as { data: Exercise[] }).data
             } else {
                 loadedExercises = []
             }
 
-            // 3) Если TS не видит метод setExercises, используем as any
             ;(userStore as any).setExercises(loadedExercises)
             exercises.value = loadedExercises
         } else {
             console.log('✅ Используем кешированные упражнения.')
-            // Если userStore.exercises уже есть:
             exercises.value = userStore.exercises.data
         }
     })
 
     /**
      * Генерация плана сплита с учётом пола, выбранного сплита, цели и фильтров по травмам.
-     *
-     * @param gender - выбранный пол
-     * @param chosenSplit - выбранный сплит
-     * @param goal - цель тренировок
-     * @param injuryFilters - объект фильтров травм
-     * @param finalPlanRef - ссылка на финальный план
      */
     async function generateSplitPlan(
         gender: string,
@@ -430,12 +415,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
             const weekDays = ['пн', 'вт', 'ср', 'чт', 'пт', 'сб', 'вс']
 
             // Очищаем предыдущий результат
-            console.log('📢 finalPlanRef.value:', finalPlanRef.value)
             finalPlanRef.value = []
-            console.log('📢 finalPlanRef.value:', finalPlanRef.value)
-
-            console.log('🚨 exercises.value:', exercises.value)
-            console.log('🚨 injuryFilters:', injuryFilters)
 
             // Фильтруем (exclude) упражнения, где ограничения == true
             const filteredExercises = exercises.value.filter(e => {
@@ -444,8 +424,6 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
                 if (injuryFilters.shoulder && e.shoulderRestrictions) return false
                 return true
             })
-
-            console.log('🚨 filteredExercises:', filteredExercises)
 
             let patternIndex = 0
 
@@ -534,6 +512,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
     }
 
     // ======================= Модификация плана =======================
+
     function removeExercise(dayIndex: number, exerciseIndex: number) {
         if (finalPlan.value[dayIndex] && finalPlan.value[dayIndex].exercises[exerciseIndex]) {
             const removed = finalPlan.value[dayIndex].exercises.splice(exerciseIndex, 1)[0]
@@ -541,11 +520,15 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
         }
     }
 
+    /**
+     * Перегенерация одного упражнения, с учётом injuryFilters.
+     */
     function regenerateExercise(
         dayIndex: number,
         exerciseIndex: number,
         gender: string,
-        finalPlanRef: Ref<GeneratedDay[]>
+        finalPlanRef: Ref<GeneratedDay[]>,
+        injuryFilters: InjuryFilters
     ) {
         const day = finalPlanRef.value[dayIndex]
         if (!day) return
@@ -553,6 +536,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
         const oldEx = day.exercises[exerciseIndex]
         if (!oldEx || !oldEx.originalPattern) return
 
+        // Список использованных Id упражнений (кроме текущего)
         const usedIdsInDay = new Set<string>()
         day.exercises.forEach((ex, idx) => {
             if (idx !== exerciseIndex && ex._id) {
@@ -560,13 +544,21 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
             }
         })
 
+        // Фильтруем весь список упражнений по injuryFilters
+        const filteredExercises = exercises.value.filter(e => {
+            if (injuryFilters.spine && e.spineRestrictions) return false
+            if (injuryFilters.knee && e.kneeRestrictions) return false
+            if (injuryFilters.shoulder && e.shoulderRestrictions) return false
+            return true
+        })
+
         const newExList = generateExercisesFromPattern(
             oldEx.originalPattern,
             gender,
             usedIdsInDay,
-            exercises.value,
-            '',
-            255
+            filteredExercises,
+            '', // goal не обязательно здесь, но можете передать
+            10000
         )
 
         if (newExList.length > 0) {
@@ -574,21 +566,33 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
         }
     }
 
-    function regenerateDayPlan(dayIndex: number, gender: string) {
-        const day = finalPlan.value[dayIndex]
+    /**
+     * Перегенерация всего дня (можно было бы тоже учитывать фильтры).
+     * Не вызывается напрямую в текущем коде, но оставим для примера.
+     */
+    function regenerateDayPlan(dayIndex: number, gender: string, finalPlanRef: Ref<GeneratedDay[]>, injuryFilters: InjuryFilters) {
+        const day = finalPlanRef.value[dayIndex]
         if (!day || !day.patternOrExercise) return
 
         const exList: FoundExercise[] = []
         const usedIdsInDay = new Set<string>()
+
+        // Фильтруем весь список по injuryFilters
+        const filteredExercises = exercises.value.filter(e => {
+            if (injuryFilters.spine && e.spineRestrictions) return false
+            if (injuryFilters.knee && e.kneeRestrictions) return false
+            if (injuryFilters.shoulder && e.shoulderRestrictions) return false
+            return true
+        })
 
         for (const pat of day.patternOrExercise) {
             const result = generateExercisesFromPattern(
                 pat,
                 gender,
                 usedIdsInDay,
-                exercises.value,
+                filteredExercises,
                 '',
-                255
+                10000
             )
             exList.push(...result)
         }

@@ -1,6 +1,12 @@
+// stores/userStore.ts
+
 import { defineStore } from 'pinia';
 import type { Exercise } from "../composables/types";
 
+/**
+ * Пример интерфейса для статей блога.
+ * Можете заменить своими типами, если нужно.
+ */
 interface BlogArticle {
     id: number;
     title: string;
@@ -75,8 +81,6 @@ export const useUserStore = defineStore('user', {
             console.log('🗑️ Сбрасываем пользователей');
             this.users = [];
         },
-
-
 
         setTrainingHistory(telegramId: number, history: any[]) {
             this.trainingHistory[telegramId] = history;
