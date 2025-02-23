@@ -339,7 +339,6 @@ export default defineComponent({
           finalPlan,
           injuryFilters.value // <-- Передаём фильтры
       )
-      console.log('Генерация сплита (реальный вызов) завершена.')
     }
 
     async function generateSplitWorkout() {
@@ -349,7 +348,6 @@ export default defineComponent({
       const delayTime = 1500 + Math.random() * 1000
       await new Promise((resolve) => setTimeout(resolve, delayTime))
       await realGenerateSplitWorkout()
-      console.log('Родитель: выключаем анимацию.')
       isAnimating.value = false
       isLoading.value = false
     }

@@ -89,6 +89,8 @@ const currentTab = computed<TabKey>(() => {
   if (Array.isArray(queryTab)) {
     queryTab = queryTab[0]
   }
+  console.log('🚨 queryTab:', queryTab);
+
   return typeof queryTab === 'string' && queryTab in tabMap ? queryTab as TabKey : 'main'
 })
 console.log('🚨 currentTab:', currentTab.value);
@@ -138,7 +140,7 @@ const currentComponent = computed(() => {
     programWall: WallMain,
   }[currentTab.value] ?? TrainingOnWeek;
 });
-console.log('🚨 currentComponent:', currentComponent.value);
+console.log('🚨 currentComponent:', currentComponent);
 
 
 // Следим за изменением query-параметра tab

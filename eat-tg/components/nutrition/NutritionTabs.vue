@@ -89,18 +89,20 @@ const currentComponent = computed(() => {
 watch(
     () => route.query.tab,
     (newTab) => {
-      if (tabMap.hasOwnProperty(newTab)) {
-        activeTab.value = tabMap[newTab]
+      if (route.name !== 'nutrition') return; // ⬅️ Добавляем проверку
+      const tabKey = Array.isArray(newTab) ? newTab[0] : newTab;
+      if (tabMap.hasOwnProperty(tabKey)) {
+        activeTab.value = tabMap[tabKey];
       } else {
-        // Если параметр некорректен, переадресуем на дефолтную вкладку
-        router.replace({ path: '/nutrition', query: { tab: 'kbzhu-calculator' } })
+        router.replace({ path: '/nutrition', query: { tab: 'kbzhu-calculator' } });
       }
     },
     { immediate: true }
-)
+);
 
 // Обработка перехода на дефолтную вкладку при заходе на /nutrition
 onMounted(() => {
+  if (route.name !== 'nutrition') return; // ⬅️ Проверяем, что мы на нужной странице
   if (!route.query.tab || !tabMap.hasOwnProperty(route.query.tab as string)) {
     router.replace({ path: '/nutrition', query: { tab: 'kbzhu-calculator' } })
   }

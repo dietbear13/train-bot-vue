@@ -15,30 +15,6 @@
     📋 Сохранённые тренировки
   </v-btn>
 
-  <!-- Кнопка для стены тренировок -->
-  <v-btn
-      block
-      color="red"
-      class="my-3"
-      elevation="1"
-      rounded="xl"
-      @click="showWall = true"
-  >
-    🔥 Стена тренировок
-  </v-btn>
-
-  <!-- Диалог для стены тренировок -->
-  <v-dialog v-model="showWall" fullscreen>
-    <v-card>
-      <v-toolbar dense dark color="primary">
-        <v-btn icon @click="showWall = false">
-          <v-icon>mdi-close</v-icon>
-        </v-btn>
-        <v-toolbar-title>🔥 Стена тренировок</v-toolbar-title>
-      </v-toolbar>
-      <WallMain />
-    </v-card>
-  </v-dialog>
 
   <!-- Подключаем сохранённые тренировки -->
   <WorkoutsCardProfile v-model="showSavedWorkouts" />

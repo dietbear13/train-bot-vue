@@ -11,14 +11,14 @@
     <v-card-title class="primary white--text mb-2">
       <v-icon left>mdi-food</v-icon>
       Ваши КБЖУ
-        <v-chip
-            color="white"
-            text-color="darkgray"
-            style="align-content: flex-end"
-            v-if="userTimestamp"
-        >
-          {{ formattedDate }}
-        </v-chip>
+      <v-chip
+          color="white"
+          text-color="darkgray"
+          style="align-content: flex-end"
+          v-if="userTimestamp"
+      >
+        {{ formattedDate }}
+      </v-chip>
     </v-card-title>
 
     <!-- Если идёт загрузка -->
@@ -26,39 +26,48 @@
       <v-progress-linear
           color="#1976d2"
           indeterminate
-      ></v-progress-linear>
+      />
     </v-card-text>
 
     <!-- Если данные KБЖУ получены -->
     <v-card-text v-else-if="userKbzhu">
       <!-- Строка (row) с Калориями и Доп. Калориями -->
-
       <v-row>
         <v-col>
           <div class="title-text" style="text-align: center">Всего калорий</div>
-          <div class="value-text" style="text-align: center">{{ userKbzhu.calories }} ккал</div>
+          <div class="value-text" style="text-align: center">
+            {{ userKbzhu.calories }} ккал
+          </div>
         </v-col>
         <v-col>
           <div class="title-text" style="text-align: center">Из которых от тренировок</div>
-          <div class="value-text" style="text-align: center">{{ userKbzhu.extraCalories }} ккал</div>
+          <div class="value-text" style="text-align: center">
+            {{ userKbzhu.extraCalories }} ккал
+          </div>
         </v-col>
       </v-row>
 
-      <v-divider class="my-3"></v-divider>
+      <v-divider class="my-3" />
 
       <!-- Строка (row) с Белками, Жирами и Углеводами -->
       <v-row>
         <v-col style="text-align: center">
           <div class="title-text" style="text-align: center">Белки</div>
-          <div class="value-text" style="text-align: center">{{ userKbzhu.proteins }} г</div>
+          <div class="value-text" style="text-align: center">
+            {{ userKbzhu.proteins }} г
+          </div>
         </v-col>
         <v-col>
           <div class="title-text" style="text-align: center">Жиры</div>
-          <div class="value-text" style="text-align: center">{{ userKbzhu.fats }} г</div>
+          <div class="value-text" style="text-align: center">
+            {{ userKbzhu.fats }} г
+          </div>
         </v-col>
         <v-col>
           <div class="title-text" style="text-align: center">Углеводы</div>
-          <div class="value-text" style="text-align: center">{{ userKbzhu.carbs }} г</div>
+          <div class="value-text" style="text-align: center">
+            {{ userKbzhu.carbs }} г
+          </div>
         </v-col>
       </v-row>
     </v-card-text>
@@ -118,35 +127,50 @@ onMounted(async () => {
   try {
     console.log('🚀 Начинаем загрузку KБЖУ...');
 
-    // Получаем список пользователей
-    const response = await apiRequest<IUser[]>('get', 'users');
+    // Получаем список пользователей (может быть массив, а может { users: [] })
+    const response = await apiRequest<any>('get', 'users');
     console.log('📥 API Response:', response);
 
-    // Проверяем, что response - это массив
-    if (!Array.isArray(response)) {
-      console.error('🚨 Ошибка: API вернул не массив пользователей!', response);
+    // Приведём к массиву
+    let usersArray: IUser[] = [];
+
+    // Случай 1: сервер вернул массив напрямую
+    if (Array.isArray(response)) {
+      usersArray = response;
+    }
+        // Если у вас БЕК всегда возвращает массив, можно убрать вторую проверку
+    // Случай 2: вдруг сервер вернул объект { users: [...] }
+    else if (response.users && Array.isArray(response.users)) {
+      usersArray = response.users;
+    }
+    else {
+      console.error('🚨 Ошибка: формат /users не соответствует ожиданиям', response);
       return;
     }
 
-    // Проверяем, есть ли у нас Telegram ID в userStore
+    // Проверяем, есть ли у нас telegramId в userStore
     if (!userStore.telegramId) {
-      console.warn('⚠️ Внимание: У пользователя нет telegramId в store! userStore:', userStore);
+      console.warn('⚠️ Нет telegramId в userStore:', userStore);
       return;
     }
 
-    // Фильтруем пользователей по telegramId
-    const currentUser = response.find(
+    // Ищем пользователя
+    const currentUser = usersArray.find(
         (u) => u.telegramId === userStore.telegramId
     );
 
     console.log('🔍 Пользователь найден:', currentUser);
 
     if (!currentUser) {
-      console.warn('🚨 Ошибка: Текущий пользователь с ID', userStore.telegramId, 'не найден в списке /users');
+      console.warn(
+          '🚨 Ошибка: Текущий пользователь с ID',
+          userStore.telegramId,
+          'не найден в списке /users'
+      );
       return;
     }
 
-    // Проверяем, есть ли у пользователя история KБЖУ
+    // Есть ли у пользователя история KБЖУ
     if (!currentUser.kbzhuHistory || currentUser.kbzhuHistory.length === 0) {
       console.warn('ℹ️ У пользователя нет истории KБЖУ.');
       return;
@@ -169,7 +193,7 @@ onMounted(async () => {
     console.log('✅ Выбранная запись для KБЖУ:', userKbzhu.value);
 
   } catch (error) {
-    console.error('❌ Ошибка при получении пользователей:', error);
+    console.error('❌ Ошибка при получении /users:', error);
   } finally {
     isLoading.value = false;
     console.log('✅ Загрузка KБЖУ завершена');

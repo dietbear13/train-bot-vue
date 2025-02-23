@@ -114,10 +114,13 @@ export const useUserStore = defineStore('user', {
             this.dietsList = JSON.parse(localStorage.getItem('dietsCache') || '{"data":[],"timestamp":0}');
         },
         async forceLoadData() {
+            console.log('🌐 [userStore] Начало forceLoadData() => делаем apiRequest(GET, users) ...');
             const { apiRequest } = useApi();
 
+            // Сначала грузим splits, exercises
             this.splits = { data: await apiRequest('GET', 'splits'), timestamp: Date.now() };
             this.exercises = { data: await apiRequest('GET', 'exercises'), timestamp: Date.now() };
+
             try {
                 const blogData = await apiRequest('GET', 'blog');
                 console.log('📰 Загружены данные блога:', blogData);
@@ -126,12 +129,21 @@ export const useUserStore = defineStore('user', {
             } catch (error) {
                 console.error('❌ Ошибка при загрузке блога:', error);
             }
-            this.users = await apiRequest('GET', 'users');
 
+            // ❌ Убираем присваивание `this.users = ...`
+            // Вместо этого просто делаем запрос
+            await apiRequest('GET', 'users');
+            // Внутри useApi, когда endpoint === 'users',
+            // уже вызывается userStore.setUsers(usersArray).
+
+            // Вот теперь можно проверить, что у нас реально пришло в userStore.users:
+            console.log('🌀 [userStore] users.length:', this.users.length);
+
+            // Сохраняем в localStorage то, что нужно
             localStorage.setItem('splitsCache', JSON.stringify(this.splits));
             localStorage.setItem('exercisesCache', JSON.stringify(this.exercises));
             localStorage.setItem('blogCache', JSON.stringify(this.blogArticles));
-        }
+        },
+    persist: true
     },
-    persist: true,
 });

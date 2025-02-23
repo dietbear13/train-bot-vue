@@ -3,8 +3,6 @@
     <component
         v-for="workout in workouts"
         :key="workout._id"
-        cols="12"
-        md="6"
     >
       <!-- Передаём workout в компонент WallCard
            и пробрасываем события like/save вверх -->

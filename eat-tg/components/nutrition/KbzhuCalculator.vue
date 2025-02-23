@@ -254,11 +254,6 @@
       Тестировать КБЖУ
     </v-btn>
 
-    <!-- Компонент для тестирования КБЖУ -->
-    <KbzhuCalculatorTest
-        v-if="showTestComponent"
-        @close="toggleTestComponent"
-    />
   </div>
 </template>
 
@@ -270,7 +265,6 @@ import { useApi } from '../../composables/useApi';
 import { useKbzhu } from '../../composables/useKbzhu'; // Хук для расчёта КБЖУ
 import { useKbzhuAnalytics } from '../../composables/analytics/usersKbzhu'; // Хук для аналитики
 import BottomSheetWithClose from '../shared/BottomSheetWithClose.vue';
-import KbzhuCalculatorTest from './KbzhuCalculatorTest.vue';
 import { useUserStore } from '../../stores/userStore';
 
 // ------------------ Интерфейсы ------------------

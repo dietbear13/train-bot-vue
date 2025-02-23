@@ -1,6 +1,6 @@
 <template>
   <v-card
-      class="pa-1 mb-3"
+      class="pa-1 mb-2"
       elevation="3"
       variant="tonal"
       style="border-radius: 16px"
@@ -109,8 +109,8 @@
 </template>
 
 <script lang="ts" setup>
-const wallStore = useWallStore();
-const userStore = useUserStore();
+// const wallStore = useWallStore();
+// const userStore = useUserStore();
 
 
 /**
@@ -138,25 +138,5 @@ function formatDate(timestamp) {
   });
 }
 
-/** Пример сортировки по лайкам (descending) */
-const sortedWorkouts = computed(() => {
-  return [...wallStore.workouts].sort((a, b) => (b.likes || 0) - (a.likes || 0));
-});
-
-/** Обработка лайка */
-function handleLike(workoutId: string) {
-  console.log('Лайк для', workoutId);
-  // ... Логика лайка (можно POST/PUT к API)
-}
-
-/** Обработка "Сохранить себе" */
-function handleSave(workoutId: string) {
-  // Проверяем, есть ли уже в userStore.savedWorkouts
-  if (!userStore.savedWorkouts.some((w) => w._id === workoutId)) {
-    // Можно сохранить целиком объект, или только ID
-    // userStore.savedWorkouts.push({ _id: workoutId, dayName: '', exercises: [] });
-    console.log(`✅📢 Тут закомментирована строка с сохранением ${workoutId} сохранена в savedWorkouts`);
-  }
-}
 
 </script>

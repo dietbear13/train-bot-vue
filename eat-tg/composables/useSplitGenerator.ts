@@ -1,4 +1,5 @@
 // ~/composables/useSplitGenerator.ts
+
 import { ref, onMounted, type Ref } from 'vue'
 import { useApi } from './useApi'
 import { useUserStore } from '../stores/userStore'
@@ -99,7 +100,7 @@ function getRepsOptions(
     const normalizedLoadLevel = loadLevel.toLowerCase().replace('ё', 'е')
     const mappedLevel = levelMapping[normalizedLoadLevel]
     if (!mappedLevel) {
-        console.warn(`Неизвестный уровень нагрузки: "${loadLevel}"`)
+        console.warn(`⚠️ Неизвестный уровень нагрузки: "${loadLevel}"`)
         return null
     }
     // maleRepsLight / femaleRepsLight / etc.
@@ -122,12 +123,18 @@ function tryFindExercise(
 ): { exercise: Exercise; reps: number; sets: number } | null {
     let attempt = 0
 
+    console.log('🔎 [tryFindExercise] Начинаем подбор упражнения...', {
+        repetitionLevel,
+        genderStr,
+        goal
+    })
+
     while (attempt < maxTries) {
         attempt++
         // Фильтруем упражнения, которые ещё не использованы
         const availableExercises = matchingExercises.filter(e => !usedIds.has(e._id))
         if (availableExercises.length === 0) {
-            console.warn('Нет доступных упражнений для подбора.')
+            console.warn('⚠️ Нет доступных упражнений для подбора.')
             break
         }
 
@@ -164,6 +171,7 @@ function tryFindExercise(
 
         const sets = getSets(chosenReps)
 
+        console.log(`✅ [tryFindExercise] Успешно нашли упражнение: "${selectedExercise.name}" (reps=${chosenReps}, sets=${sets})`)
         return {
             exercise: selectedExercise,
             reps: chosenReps,
@@ -171,6 +179,7 @@ function tryFindExercise(
         }
     }
 
+    console.warn('⚠️ [tryFindExercise] Не удалось подобрать упражнение за maxTries.')
     return null
 }
 
@@ -183,6 +192,9 @@ function generateExercisesFromPattern(
     goal: string,
     maxTries: number = 55
 ): FoundExercise[] {
+    // Логируем начало
+    console.log(`🔧 [generateExercisesFromPattern] Обработка паттерна: "${pattern}"`)
+
     const exList: FoundExercise[] = []
 
     let chosenVariant = pattern
@@ -202,7 +214,7 @@ function generateExercisesFromPattern(
         const [mainMuscle, difficultyLevel] = criteria.split(',').map(s => s.trim())
 
         if (!mainMuscle || !difficultyLevel) {
-            console.warn(`Некорректные критерии ex: "${criteria}"`)
+            console.warn(`⚠️ [generateExercisesFromPattern] Некорректные критерии ex: "${criteria}"`)
             exList.push({
                 _id: '',
                 name: `Некорректные критерии: ${criteria}`,
@@ -267,7 +279,7 @@ function generateExercisesFromPattern(
 
         const bracketMatch = criteria.match(/\(\d+\)$/)
         if (bracketMatch) {
-            timesToGenerate = parseInt(bracketMatch[1], 10)
+            timesToGenerate = parseInt(bracketMatch[0].replace(/\(|\)/g, ''), 10)
             cleanedCriteria = criteria.replace(/\(\d+\)$/, '').trim()
         }
 
@@ -356,7 +368,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
     onMounted(async () => {
         // Проверка, есть ли уже упражнения в userStore
         if (!userStore.exercises.data || userStore.exercises.data.length === 0) {
-            console.log('🔄 Загружаем упражнения с API...')
+            console.log('🔄 [useSplitGenerator] Упражнений нет — загружаем из API exercises...')
             const response = await apiRequest('GET', 'exercises')
 
             let loadedExercises: Exercise[] = []
@@ -372,10 +384,11 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
                 loadedExercises = []
             }
 
+            console.log(`🗂️ [useSplitGenerator] Загружено упражнений: ${loadedExercises.length}`)
             ;(userStore as any).setExercises(loadedExercises)
             exercises.value = loadedExercises
         } else {
-            console.log('✅ Используем кешированные упражнения.')
+            console.log('✅ [useSplitGenerator] Используем кешированные упражнения из userStore.')
             exercises.value = userStore.exercises.data
         }
     })
@@ -390,6 +403,12 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
         finalPlanRef: Ref<GeneratedDay[]>,
         injuryFilters: InjuryFilters
     ) {
+        console.log('🚀 [generateSplitPlan] Начинаем генерацию сплита...', {
+            gender,
+            goal,
+            split: chosenSplit?.split
+        })
+
         params.errorMessages.value = []
         if (!chosenSplit) {
             params.errorMessages.value.push('Не выбран сплит.')
@@ -424,6 +443,9 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
                 if (injuryFilters.shoulder && e.shoulderRestrictions) return false
                 return true
             })
+
+            console.log('🎯 [generateSplitPlan] Фильтруем травмы...', injuryFilters)
+            console.log(`🔍 [generateSplitPlan] Всего после фильтра: ${filteredExercises.length} упражнений`)
 
             let patternIndex = 0
 
@@ -475,9 +497,10 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
                 }
             }
 
+            console.log(`✅ [generateSplitPlan] Генерация завершена. Всего дней: ${finalPlanRef.value.length}`)
             params.showBottomSheet.value = true
         } catch (err: any) {
-            console.error('Ошибка в generateSplitPlan:', err)
+            console.error('💥 [generateSplitPlan] Ошибка в генерации:', err)
             params.errorMessages.value.push(`Ошибка генерации: ${err.message || err}`)
             params.showSnackbar(`Ошибка генерации: ${err.message || err}`, 'error')
         } finally {
@@ -495,7 +518,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
             return
         }
 
-        console.log('Отправляемый план тренировок (из finalPlan):', plan)
+        console.log('📨 [sendWorkoutPlan] Отправляемый план тренировок:', plan)
 
         try {
             await apiRequest('post', 'send-detailed-plan', {
@@ -505,8 +528,9 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
                 splitComment: params.selectedSplitRef.value?.splitComment || ''
             })
             params.showSnackbar('Тренировка успешно отправлена!', 'success')
+            console.log('✅ [sendWorkoutPlan] Успешно отправлено пользователю.')
         } catch (err) {
-            console.error('Ошибка при отправке тренировки:', err)
+            console.error('💥 [sendWorkoutPlan] Ошибка при отправке тренировки:', err)
             params.showSnackbar('Не удалось отправить тренировку.', 'error')
         }
     }
@@ -516,7 +540,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
     function removeExercise(dayIndex: number, exerciseIndex: number) {
         if (finalPlan.value[dayIndex] && finalPlan.value[dayIndex].exercises[exerciseIndex]) {
             const removed = finalPlan.value[dayIndex].exercises.splice(exerciseIndex, 1)[0]
-            console.log(`Удалено упражнение: ${removed.name}`)
+            console.log(`🗑️ [removeExercise] Удалено упражнение: ${removed.name}`)
         }
     }
 
@@ -530,6 +554,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
         finalPlanRef: Ref<GeneratedDay[]>,
         injuryFilters: InjuryFilters
     ) {
+        console.log(`🔄 [regenerateExercise] Перегенерация упражнения в dayIndex=${dayIndex}, exIndex=${exerciseIndex}`)
         const day = finalPlanRef.value[dayIndex]
         if (!day) return
 
@@ -557,12 +582,15 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
             gender,
             usedIdsInDay,
             filteredExercises,
-            '', // goal не обязательно здесь, но можете передать
+            '',
             10000
         )
 
         if (newExList.length > 0) {
             day.exercises[exerciseIndex] = newExList[0]
+            console.log(`✨ [regenerateExercise] Упражнение перегенерировано: ${newExList[0].name}`)
+        } else {
+            console.warn('⚠️ [regenerateExercise] Не удалось перегенерировать упражнение.')
         }
     }
 
@@ -571,6 +599,7 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
      * Не вызывается напрямую в текущем коде, но оставим для примера.
      */
     function regenerateDayPlan(dayIndex: number, gender: string, finalPlanRef: Ref<GeneratedDay[]>, injuryFilters: InjuryFilters) {
+        console.log(`🔁 [regenerateDayPlan] Перегенерация целого дня: dayIndex=${dayIndex}`)
         const day = finalPlanRef.value[dayIndex]
         if (!day || !day.patternOrExercise) return
 
@@ -598,30 +627,38 @@ export default function useSplitGenerator(params: UseSplitGeneratorParams) {
         }
 
         day.exercises = exList
+        console.log('✅ [regenerateDayPlan] День перегенерирован:', day)
     }
 
     function increaseReps(dayIndex: number, exerciseIndex: number) {
         const ex = finalPlan.value[dayIndex]?.exercises[exerciseIndex]
         if (ex) {
             ex.reps++
+            console.log(`⬆️ [increaseReps] reps=${ex.reps} у упражнения "${ex.name}"`)
         }
     }
+
     function decreaseReps(dayIndex: number, exerciseIndex: number) {
         const ex = finalPlan.value[dayIndex]?.exercises[exerciseIndex]
         if (ex && ex.reps > 1) {
             ex.reps--
+            console.log(`⬇️ [decreaseReps] reps=${ex.reps} у упражнения "${ex.name}"`)
         }
     }
+
     function increaseSets(dayIndex: number, exerciseIndex: number) {
         const ex = finalPlan.value[dayIndex]?.exercises[exerciseIndex]
         if (ex) {
             ex.sets++
+            console.log(`🆙 [increaseSets] sets=${ex.sets} у упражнения "${ex.name}"`)
         }
     }
+
     function decreaseSets(dayIndex: number, exerciseIndex: number) {
         const ex = finalPlan.value[dayIndex]?.exercises[exerciseIndex]
         if (ex && ex.sets > 1) {
             ex.sets--
+            console.log(`🔽 [decreaseSets] sets=${ex.sets} у упражнения "${ex.name}"`)
         }
     }
 
