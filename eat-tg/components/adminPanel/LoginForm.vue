@@ -17,8 +17,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useUserStore } from '../../stores/userStore'
-import { useRuntimeConfig } from '#imports'
-import axios from 'axios'
+import { useApi } from '../../composables/useApi'  // проверьте корректность пути
+
+// Определяем интерфейс ответа сервера
+interface LoginResponse {
+  success: boolean;
+  adminId: number;
+}
 
 const username = ref('')
 const password = ref('')
@@ -30,7 +35,7 @@ const rules = {
 }
 
 const userStore = useUserStore()
-const config = useRuntimeConfig()
+const { apiRequest } = useApi()
 
 async function login() {
   if (!formRef.value.validate()) {
@@ -38,14 +43,17 @@ async function login() {
   }
 
   try {
-    const response = await axios.post(`${config.public.API_BASE_URL}/api/login`, {
+    // Передаём типизацию ответа через дженерик
+    const response = await apiRequest<LoginResponse>('post', 'login', {
       username: username.value,
       password: password.value,
     })
 
-    if (response.data.success) {
+    console.log('response.success', response.success)
+    if (response.success) {
       userStore.setRole('admin')
-      userStore.setTelegramId(response.data.telegramId) // Сохраняем telegramId
+      // Используем свойство adminId, которое вернул сервер
+      userStore.setTelegramId(response.adminId)
     } else {
       alert('Неверный логин или пароль')
     }
