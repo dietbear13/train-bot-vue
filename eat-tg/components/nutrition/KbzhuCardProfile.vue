@@ -176,27 +176,22 @@ onMounted(async () => {
       return;
     }
 
-    console.log('📜 История KБЖУ до сортировки:', currentUser.kbzhuHistory);
 
     // Сортируем по убыванию timestamp
     const sortedHistory = [...currentUser.kbzhuHistory].sort(
         (a, b) => b.timestamp - a.timestamp
     );
 
-    console.log('📌 Отсортированная история KБЖУ:', sortedHistory);
-    console.log('📊 Количество записей в истории:', sortedHistory.length);
 
     // Берём самую последнюю запись
     userKbzhu.value = sortedHistory[0].kbzhuResult;
     userTimestamp.value = sortedHistory[0].timestamp;
 
-    console.log('✅ Выбранная запись для KБЖУ:', userKbzhu.value);
 
   } catch (error) {
     console.error('❌ Ошибка при получении /users:', error);
   } finally {
     isLoading.value = false;
-    console.log('✅ Загрузка KБЖУ завершена');
   }
 });
 

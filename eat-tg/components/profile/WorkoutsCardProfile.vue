@@ -110,7 +110,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import BottomSheetWithClose from '../shared/BottomSheetWithClose.vue';
 import ExerciseInfo from '../training/ExerciseInfo.vue';
 import { useUserStore } from '../../stores/userStore';
-import { useApi } from '../../composables/useApi'; // <-- Ваш импорт API, поправьте путь при необходимости
+import { useApi } from '../../composables/useApi';
 
 // Типы
 interface Exercise {
@@ -119,7 +119,14 @@ interface Exercise {
   sets: number;
   reps: number;
   originalPattern?: string;
-  // Если есть другие поля (gifImage, technique и т.д.) — допишите
+  category: string;
+  subcategory: string;
+  mainMuscle: string;
+  additionalMuscles: string[];
+  difficultyLevel: string;
+  equipment: string;
+  typeExercise?: string;
+  isWarnGif?: boolean;
 }
 
 interface WorkoutDay {
@@ -206,7 +213,7 @@ const currentWorkout = computed<Workout | null>(() => {
 const currentSplit = computed<SplitData | null>(() => {
   const splitId = currentWorkout.value?.formData?.splitId;
   if (!splitId) return null;
-  return userStore.splits.find((s: SplitData) => s._id === splitId) || null;
+  return userStore.splits.data.find((s: SplitData) => s._id === splitId) || null;
 });
 
 /**
@@ -233,13 +240,9 @@ function formatDate(timestamp: number) {
  * При клике по упражнению открываем ExerciseInfo
  */
 function openExerciseInfo(exercise: Exercise) {
-  const found = userStore.exercises.find((e) => e._id === exercise._id);
+  const found = userStore.exercises.data.find((e) => e._id === exercise._id);
   if (found) {
-    selectedExercise.value = {
-      ...found,
-      sets: exercise.sets,
-      reps: exercise.reps,
-    };
+    selectedExercise.value = { ...found, sets: exercise.sets, reps: exercise.reps };
   } else {
     selectedExercise.value = exercise;
   }
@@ -253,7 +256,7 @@ function openExerciseInfo(exercise: Exercise) {
 onMounted(async () => {
   try {
     // Загружаем сплиты, если их ещё нет
-    if (userStore.splits.length === 0) {
+    if (userStore.splits.data.length === 0) {
       await apiRequest<any[]>('get', 'splits');
     }
 
