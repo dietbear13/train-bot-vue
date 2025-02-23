@@ -32,7 +32,7 @@ const routes = [
     { path: '/', module: donationsRoutes },
     { path: '/', module: adminUsersRoutes },
     { path: '/', module: dietsRoutes },
-    { path: '/', module: adminSurveysRoutes }
+    { path: '/', module: adminSurveysRoutes },
 ];
 
 // Проверяем наличие маршрутов перед добавлением
