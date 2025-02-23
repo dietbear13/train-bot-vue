@@ -2,6 +2,7 @@
 
 import { defineStore } from 'pinia';
 import type { Exercise } from "../composables/types";
+import { useApi } from "../composables/useApi";
 
 /**
  * Пример интерфейса для статей блога.
