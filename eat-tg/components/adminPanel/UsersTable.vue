@@ -1,5 +1,13 @@
 <template>
   <div>
+    <!-- Поиск по telegramId (при необходимости) -->
+    <v-text-field
+        v-model="searchId"
+        label="Поиск по Telegram ID"
+        variant="outlined"
+        class="mb-4"
+    />
+
     <!-- Таблица пользователей -->
     <v-data-table
         :headers="userHeaders"
@@ -33,19 +41,26 @@
     />
 
     <!-- Диалог редактирования пользователя -->
-    <v-dialog v-model="userDialog" persistent>
+    <v-dialog v-model="userDialog" persistent max-width="900px">
       <v-card>
         <v-card-title class="text-h6">Управление пользователем</v-card-title>
 
         <v-card-text v-if="selectedUser && editingUser">
           <!-- Табы -->
-          <v-tabs v-model="activeTab" align-tabs="center" color="deep-purple-accent-4"
-                  background-color="transparent" class="mb-4">
+          <v-tabs
+              v-model="activeTab"
+              align-tabs="center"
+              color="deep-purple-accent-4"
+              background-color="transparent"
+              class="mb-4"
+          >
             <v-tab value="main">Основное</v-tab>
             <v-tab value="kbzhu">История КБЖУ</v-tab>
             <v-tab value="training">История тренировок</v-tab>
             <v-tab value="referrals">Referrals</v-tab>
             <v-tab value="likes">Blog Likes</v-tab>
+            <v-tab value="stars">Star Donations</v-tab>
+            <v-tab value="surveys">Survey Callbacks</v-tab>
           </v-tabs>
 
           <v-tabs-window v-model="activeTab">
@@ -112,15 +127,25 @@
                 <template #item.formData="{ item }">
                   Пол: {{ item.formData.gender }},
                   Телосложение: {{ item.formData.bodyType }},
-                  ...
+                  Возраст: {{ item.formData.age }},
+                  Рост: {{ item.formData.height }},
+                  Вес: {{ item.formData.weight }},
+                  Цель: {{ item.formData.goal }},
+                  Тренировок в неделю: {{ item.formData.workoutsPerWeek }}
                 </template>
                 <template #item.kbzhuResult="{ item }">
-                  Кал: {{ item.kbzhuResult.calories }},
-                  Б: {{ item.kbzhuResult.proteins }},
-                  ...
+                  Калории: {{ item.kbzhuResult.calories }},
+                  Белки: {{ item.kbzhuResult.proteins }},
+                  Жиры: {{ item.kbzhuResult.fats }},
+                  Углеводы: {{ item.kbzhuResult.carbs }}
                 </template>
                 <template #item.actions="{ item }">
-                  <v-btn icon color="error" variant="text" @click="deleteKbzhuEntry(item._id)">
+                  <v-btn
+                      icon
+                      color="error"
+                      variant="text"
+                      @click="deleteKbzhuEntry(item._id)"
+                  >
                     <v-icon icon="mdi-delete" />
                   </v-btn>
                 </template>
@@ -142,10 +167,16 @@
                 <template #item.formData="{ item }">
                   Пол: {{ item.formData.gender }}<br />
                   Цель: {{ item.formData.goal }}<br />
+                  Тип сплита: {{ item.formData.splitType }}<br />
                   Отправлена: <strong>{{ item.isSended ? 'Да' : 'Нет' }}</strong>
                 </template>
                 <template #item.actions="{ item }">
-                  <v-btn icon color="error" variant="text" @click="deleteTrainingEntry(item._id)">
+                  <v-btn
+                      icon
+                      color="error"
+                      variant="text"
+                      @click="deleteTrainingEntry(item._id)"
+                  >
                     <v-icon icon="mdi-delete" />
                   </v-btn>
                 </template>
@@ -182,10 +213,59 @@
                       v-for="(like, index) in editingUser.blogLikes || []"
                       :key="index"
                   >
-                    postId: {{ like.postId }} - liked: {{ like.liked }}
+                    postId: {{ like.postId }} —
+                    liked: {{ like.liked ? 'Да' : 'Нет' }}
                     ({{ formatTimestamp(like.date) }})
                   </li>
                 </ul>
+              </div>
+            </v-tabs-window-item>
+
+            <!-- Вкладка: Star Donations -->
+            <v-tabs-window-item value="stars">
+              <div>
+                <p
+                    v-if="editingUser.starDonationHistory && editingUser.starDonationHistory.length"
+                >
+                  История донатов (звёзд):
+                </p>
+                <p v-else>Нет пожертвований</p>
+
+                <v-data-table
+                    :items="editingUser.starDonationHistory || []"
+                    :headers="starHeaders"
+                    dense
+                    hide-default-footer
+                    class="elevation-1 mt-3"
+                >
+                  <template #item.timestamp="{ item }">
+                    {{ formatTimestamp(item.timestamp) }}
+                  </template>
+                </v-data-table>
+              </div>
+            </v-tabs-window-item>
+
+            <!-- Вкладка: Survey Callbacks -->
+            <v-tabs-window-item value="surveys">
+              <div>
+                <p
+                    v-if="editingUser.surveyCallbacks && editingUser.surveyCallbacks.length"
+                >
+                  Обратные вызовы опросов:
+                </p>
+                <p v-else>Нет данных</p>
+
+                <v-data-table
+                    :items="editingUser.surveyCallbacks || []"
+                    :headers="surveyHeaders"
+                    dense
+                    hide-default-footer
+                    class="elevation-1 mt-3"
+                >
+                  <template #item.callbackAt="{ item }">
+                    {{ formatDateTime(item.callbackAt) }}
+                  </template>
+                </v-data-table>
               </div>
             </v-tabs-window-item>
           </v-tabs-window>
@@ -230,8 +310,12 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { useUserStore } from '~/stores/userStore'
-import { useApi } from '~/composables/useApi'
+import axios from 'axios' // NEW: импортируем axios
+import { useUserStore } from '../../stores/userStore'
+import { useApi } from '../../composables/useApi'
+
+/** Ожидаем, что ключ бота лежит в process.env.TELEGRAM_BOT_API_KEY */
+const TELEGRAM_BOT_API_KEY = process.env.TELEGRAM_BOT_API_KEY
 
 interface IUser {
   _id: string
@@ -241,21 +325,70 @@ interface IUser {
   username?: string
   role: 'admin' | 'freeUser' | 'paidUser'
   dateAdded: number
-  kbzhuHistory?: any[]
-  trainingHistory?: any[]
-  referrals?: any[]
-  blogLikes?: any[]
+  kbzhuHistory?: Array<{
+    _id: string
+    timestamp: number
+    formData: {
+      gender: string
+      bodyType: string
+      age: number
+      height: number
+      weight: number
+      goal: string
+      workoutsPerWeek: number
+    }
+    kbzhuResult: {
+      calories: number
+      extraCalories?: number
+      proteins: number
+      fats: number
+      carbs: number
+    }
+  }>
+  trainingHistory?: Array<{
+    _id: string
+    timestamp: number
+    isSended?: boolean
+    formData: {
+      gender: string
+      goal: string
+      splitType?: string
+      splitId?: string
+      // ... и т.д.
+    }
+  }>
+  referrals?: string[]
+  blogLikes?: Array<{
+    postId: string
+    liked: boolean
+    date: number
+    _id?: string
+  }>
+  starDonationHistory?: Array<{
+    telegramId: number
+    stars: number
+    timestamp: number
+    _id: string
+  }>
+  surveyCallbacks?: Array<{
+    surveyId: string
+    messageId: string
+    userChoice: string
+    callbackAt: string
+    _id: string
+  }>
 }
 
 const userStore = useUserStore()
 const { apiRequest } = useApi()
 
+/** Локальный стейт */
 const users = ref<IUser[]>([])
 const loading = ref(false)
 const saving = ref(false)
 const userError = ref<string|null>(null)
 
-/** Пагинация, поиск */
+/** Пагинация и поиск */
 const pagination = ref({ page: 1 })
 const searchId = ref('')
 const filteredUsers = computed(() => {
@@ -274,11 +407,11 @@ const pagedUsers = computed(() => {
 watch(
     () => pagination.value.page,
     () => {
-      // просто реагируем на изменение страницы, pagedUsers сам пересчитается
+      // просто реагируем на изменение страницы
     }
 )
 
-/** Табличные колонки */
+/** Заголовки таблиц */
 const userHeaders = [
   { title: 'Telegram ID', key: 'telegramId', width: 150 },
   { title: 'Роль', key: 'role', width: 100 },
@@ -296,26 +429,69 @@ const trainingHeaders = [
   { title: 'Данные формы', key: 'formData' },
   { title: 'Действия', key: 'actions', sortable: false, width: 80 }
 ]
+const starHeaders = [
+  { title: 'Telegram ID', key: 'telegramId', width: 140 },
+  { title: 'Stars', key: 'stars', width: 60 },
+  { title: 'Дата (timestamp)', key: 'timestamp', width: 140 }
+]
+const surveyHeaders = [
+  { title: 'Survey ID', key: 'surveyId' },
+  { title: 'Message ID', key: 'messageId' },
+  { title: 'Ответ пользователя', key: 'userChoice' },
+  { title: 'Время', key: 'callbackAt' }
+]
+
 const roleItems = ['admin', 'freeUser', 'paidUser']
 
-/** Диалог и выбранный пользователь */
+/** Диалог и выбор пользователя */
 const userDialog = ref(false)
 const selectedUser = ref<IUser|null>(null)
 const editingUser = ref<IUser|null>(null)
 const activeTab = ref<string>('main')
 
-function openUserDialog(user: IUser) {
+/** При открытии диалога грузим данные из Telegram (если есть ключ бота и корректный telegramId) */
+async function openUserDialog(user: IUser) {
   selectedUser.value = user
-  editingUser.value = { ...user } // копия
+  editingUser.value = JSON.parse(JSON.stringify(user)) // копия
+
+
+  // NEW: Пытаемся подтянуть реальные имя/фамилию/username из Телеграма
+  if (TELEGRAM_BOT_API_KEY && user.telegramId) {
+    try {
+      await fetchTelegramUserData(user.telegramId)
+    } catch (err: any) {
+      console.warn('Ошибка при запросе к TG API:', err.message)
+    }
+  }
+
   userDialog.value = true
 }
+
+/** Запрос к Telegram API, чтобы получить getChat(...) */
+async function fetchTelegramUserData(telegramId: number) {
+  console.log('📌 TELEGRAM_BOT_API_KEY, telegramId:', TELEGRAM_BOT_API_KEY, telegramId)
+  const url = `https://api.telegram.org/bot${TELEGRAM_BOT_API_KEY}/getChat?chat_id=${telegramId}`
+  const response = await axios.get(url)
+  console.log('📌 response:', response)
+
+  if (response.data?.ok && response.data.result) {
+    const result = response.data.result
+    // Заполняем поля в editingUser
+    if (editingUser.value) {
+      editingUser.value.firstName = result.first_name ?? ''
+      editingUser.value.lastName = result.last_name ?? ''
+      editingUser.value.username = result.username ?? ''
+    }
+  }
+}
+
 function closeUserDialog() {
   userDialog.value = false
   selectedUser.value = null
   editingUser.value = null
 }
 
-/** Пример сохранения (меняем роль) */
+/** Пример сохранения изменений (меняем роль) */
 async function saveUserChanges() {
   if (!editingUser.value) return
   saving.value = true
@@ -323,10 +499,12 @@ async function saveUserChanges() {
   try {
     const payload = {
       role: editingUser.value.role
+      // Вы можете также сохранить firstName/lastName/username, если захотите
+      // но по условию они не хранятся в БД, значит, не нужно
     }
     await apiRequest('PATCH', `users/${editingUser.value._id}`, payload)
 
-    // Обновляем в локальном массиве
+    // Обновляем локально
     const idx = users.value.findIndex(u => u._id === editingUser.value?._id)
     if (idx !== -1 && editingUser.value) {
       users.value[idx].role = editingUser.value.role
@@ -377,7 +555,8 @@ async function deleteTrainingEntry(trainId?: string) {
 /** Форматирование дат */
 function formatDate(timestamp: number) {
   if (!timestamp) return '—'
-  const date = new Date(timestamp * 1000) // или без *1000, если у вас уже ms
+  // У нас dateAdded вроде бы в секундах, умножим на 1000
+  const date = new Date(timestamp * 1000)
   return date.toLocaleDateString('ru-RU', {
     day: 'numeric',
     month: 'long',
@@ -386,19 +565,24 @@ function formatDate(timestamp: number) {
 }
 function formatTimestamp(ts: number) {
   if (!ts) return '—'
+  // kbzhuHistory и др. timestamps в миллисекундах
   const d = new Date(ts)
   return d.toLocaleDateString('ru-RU', {
-    day: 'numeric', month: 'long', year: 'numeric'
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
   })
 }
+function formatDateTime(str: string) {
+  if (!str) return '—'
+  const d = new Date(str)
+  return d.toLocaleString('ru-RU')
+}
 
-/** При монтировании можете сразу грузить пользователей,
- *  или положиться на родителя, который передаёт пропы
- */
 onMounted(async () => {
   loading.value = true
   try {
-    // Пример загрузки:
+    // Загружаем список пользователей
     const data = await apiRequest<{ users: IUser[] }>('GET', 'users')
     users.value = data.users
   } catch (err: any) {
