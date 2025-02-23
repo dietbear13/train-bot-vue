@@ -99,8 +99,8 @@
 
     <!-- Компонент с подробной информацией об упражнении -->
     <ExerciseInfo
-        :exercise="selectedExercise"
-        v-model="showExerciseInfoSheet"
+      :exercise="selectedExercise"
+      v-model="showExerciseInfoSheet"
     />
   </BottomSheetWithClose>
 </template>
@@ -241,11 +241,23 @@ function formatDate(timestamp: number) {
  */
 function openExerciseInfo(exercise: Exercise) {
   const found = userStore.exercises.data.find((e) => e._id === exercise._id);
-  if (found) {
-    selectedExercise.value = { ...found, sets: exercise.sets, reps: exercise.reps };
-  } else {
-    selectedExercise.value = exercise;
-  }
+
+  selectedExercise.value = {
+    _id: exercise._id,
+    name: exercise.name,
+    sets: exercise.sets,
+    reps: exercise.reps,
+    originalPattern: exercise.originalPattern ?? '',
+    category: found?.category ?? 'unknown',
+    subcategory: found?.subcategory ?? 'unknown',
+    mainMuscle: found?.mainMuscle ?? 'unknown',
+    additionalMuscles: found?.additionalMuscles ?? [],
+    difficultyLevel: found?.difficultyLevel ?? 'unknown',
+    equipment: found?.equipment ?? 'unknown',
+    typeExercise: found?.typeExercise ?? '',
+    isWarnGif: found?.isWarnGif ?? false
+  };
+
   showExerciseInfoSheet.value = true;
 }
 
