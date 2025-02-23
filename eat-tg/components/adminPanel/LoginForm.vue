@@ -38,14 +38,14 @@ async function login() {
   }
 
   try {
-    const response = await axios.post(`${config.public.API_BASE_URL}/auth/login`, {
+    const response = await axios.post(`${config.public.API_BASE_URL}/api/login`, {
       username: username.value,
       password: password.value,
     })
 
     if (response.data.success) {
       userStore.setRole('admin')
-      userStore.setTelegramId(response.data.adminId)
+      userStore.setTelegramId(response.data.telegramId) // Сохраняем telegramId
     } else {
       alert('Неверный логин или пароль')
     }

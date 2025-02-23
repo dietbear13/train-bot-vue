@@ -1,34 +1,25 @@
 import { Router, Request, Response } from 'express';
 import User from '../models/User';
 import Admin from "../models/Admin"; // ваш mongoose-модель User
-import bcrypt from 'bcryptjs'
-import jwt from 'jsonwebtoken'
-import { config } from '../config/env'
 
 const router = Router();
 
 
-// Авторизация администратора
+// Авторизация администратора без bcrypt
 router.post('/login', async (req, res) => {
-    const { username, password } = req.body
+    const { username, password } = req.body;
 
     try {
-        const admin = await Admin.findOne({ username })
+        const admin = await Admin.findOne({ username, password });
         if (!admin) {
-            return res.status(401).json({ success: false, message: 'Неверные учетные данные' })
+            return res.status(401).json({ success: false, message: 'Неверные учетные данные' });
         }
 
-        const isMatch = await bcrypt.compare(password, admin.password)
-        if (!isMatch) {
-            return res.status(401).json({ success: false, message: 'Неверные учетные данные' })
-        }
-
-        const token = jwt.sign({ id: admin._id }, config.jwtSecret, { expiresIn: '1h' })
-        res.json({ success: true, token, adminId: admin._id })
+        res.json({ success: true, adminId: admin.telegramId });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Ошибка сервера' })
+        res.status(500).json({ success: false, message: 'Ошибка сервера' });
     }
-})
+});
 
 
 /**
@@ -111,28 +102,6 @@ router.delete('/users/:userId/training/:trainId', async (req: Request, res: Resp
         return res.status(500).json({ error: 'Ошибка сервера при удалении записи тренировки' });
     }
 });
-
-// Авторизация администратора
-router.post('/login', async (req, res) => {
-    const { username, password } = req.body
-
-    try {
-        const admin = await Admin.findOne({ username })
-        if (!admin) {
-            return res.status(401).json({ success: false, message: 'Неверные учетные данные' })
-        }
-
-        const isMatch = await bcrypt.compare(password, admin.password)
-        if (!isMatch) {
-            return res.status(401).json({ success: false, message: 'Неверные учетные данные' })
-        }
-
-        const token = jwt.sign({ id: admin._id }, config.jwtSecret, { expiresIn: '1h' })
-        res.json({ success: true, token, adminId: admin._id })
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Ошибка сервера' })
-    }
-})
 
 
 export default router;
