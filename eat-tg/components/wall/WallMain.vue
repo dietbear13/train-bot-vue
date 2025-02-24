@@ -1,6 +1,5 @@
 <template>
-<!--  TODO убрать подложку background у v-card-->
-    <v-card class="py-1" color="18,18,18">
+    <v-card class="py-1" style="background-color: #121212!important">
       <v-card-text>
         Отмечайте понравившиеся тренировки и сохраняйте в свой профиль.
       </v-card-text>
@@ -19,7 +18,7 @@
 
 <script setup lang="ts">
 import { onMounted, computed } from 'vue';
-import { useWallStore } from '~/stores/wallStore';
+import { useWallStore } from '../../stores/wallStore';
 import WallList from './WallList.vue';
 
 const wallStore = useWallStore();
