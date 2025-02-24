@@ -63,9 +63,10 @@
               <v-list-item
                   v-for="exercise in day.exercises"
                   :key="exercise._id"
+                  class="px-2 py-1"
               >
                 <template #prepend>
-                  <v-avatar size="30" class="me-2">
+                  <v-avatar size="30">
                     <v-icon>mdi-dumbbell</v-icon>
                   </v-avatar>
                 </template>

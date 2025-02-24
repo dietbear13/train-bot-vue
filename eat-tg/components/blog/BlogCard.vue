@@ -58,7 +58,6 @@
               <!-- Вывод HTML контента -->
               <div class="blog-content d-block" v-html="post.text"></div>
             </v-card-text>
-            <a :href="'#post-${post.id}'">Перейти к заголовку поста</a>
 
             <v-card-actions>
               <v-spacer></v-spacer>
@@ -278,15 +277,11 @@ function toggleLike(postId: string) {
   const post = posts.value.find(p => p.id === postId)
   if (!post) return
 
-  // Переключаем визуальное состояние "лайкнутости"
+  // Изменяем userLiked и предвосхищаем изменение лайков
   post.userLiked = !post.userLiked
+  post.likesCount += post.userLiked ? 1 : -1
 
-  // Отправляем данные на сервер для обновления общего количества лайков
-  sendLikeToServer(
-      telegramUserId.value ? telegramUserId.value.toString() : null,
-      postId,
-      post.userLiked
-  )
+  sendLikeToServer(telegramUserId.value?.toString() ?? null, postId, post.userLiked)
 }
 
 // Отслеживаем изменения лайков и отправляем их на сервер
@@ -329,8 +324,11 @@ async function sendLikeToServer(
     )
     log('sendLikeToServer response =>', response)
     if (response.success && typeof response.newLikesCount === 'number') {
-      // Обновляем общее количество лайков без затрагивания состояния userLiked
       aggregatedLikes.value[postId] = response.newLikesCount
+
+      const post = posts.value.find(p => p.id === postId)
+      if (post) post.likesCount = response.newLikesCount
+
     } else if (!response.success) {
       console.error('Ошибка при обновлении лайка на сервере:', response.message)
     }
